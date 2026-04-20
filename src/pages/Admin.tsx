@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
-import { AlertCircle, Loader2, RefreshCw, Shield } from "lucide-react";
+import { AlertCircle, Database, Loader2, RefreshCw, Shield } from "lucide-react";
 import { useClsconfig } from "@/hooks/useClsconfig";
 import { ClsconfigList } from "@/components/admin/ClsconfigList";
 import { ClsconfigEditor } from "@/components/admin/ClsconfigEditor";
 
 const Admin = () => {
-  const { data, loading, error, reload } = useClsconfig();
+  const { data, raw, loading, error, reload } = useClsconfig();
   const [selected, setSelected] = useState<string | null>(null);
 
   useEffect(() => {
@@ -15,6 +15,7 @@ const Admin = () => {
   }, [data, selected]);
 
   const entry = data?.entries.find((e) => e.key_hex === selected) ?? null;
+  const isEmpty = !loading && !error && data && data.entries.length === 0;
 
   return (
     <main className="flex h-screen flex-col bg-hero">
@@ -74,6 +75,26 @@ const Admin = () => {
           ) : loading && !data ? (
             <div className="flex h-full items-center justify-center">
               <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            </div>
+          ) : isEmpty ? (
+            <div className="m-6 overflow-auto rounded-xl border border-border bg-card/40 p-6 text-sm">
+              <div className="flex items-center gap-2 font-semibold text-foreground">
+                <Database className="h-4 w-4 text-primary" />
+                Nenhum template retornado (count = 0)
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                O endpoint <code className="font-mono">/apicls/api_cls.php?action=getClsconfig</code>{" "}
+                respondeu com sucesso, mas <code className="font-mono">entries</code> está vazio.
+                Verifique se há templates cadastrados no servidor.
+              </p>
+              <div className="mt-4">
+                <div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  JSON bruto (debug)
+                </div>
+                <pre className="max-h-[60vh] overflow-auto rounded-md bg-background/60 p-3 font-mono text-[11px] text-foreground/80">
+                  {JSON.stringify(raw, null, 2)}
+                </pre>
+              </div>
             </div>
           ) : entry ? (
             <ClsconfigEditor entry={entry} />
