@@ -5,12 +5,13 @@ import type { ClsconfigResponse } from "@/types/clsconfig";
 
 interface State {
   data: ClsconfigResponse | null;
+  raw: unknown;
   loading: boolean;
   error: string | null;
 }
 
 export function useClsconfig() {
-  const [state, setState] = useState<State>({ data: null, loading: true, error: null });
+  const [state, setState] = useState<State>({ data: null, raw: null, loading: true, error: null });
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
@@ -38,10 +39,10 @@ export function useClsconfig() {
           throw new Error(JSON.stringify(data, null, 2));
         }
         const normalized = normalizeClsconfigResponse(data);
-        if (!cancelled) setState({ data: normalized, loading: false, error: null });
+        if (!cancelled) setState({ data: normalized, raw: data, loading: false, error: null });
       } catch (e) {
         const msg = e instanceof Error ? e.message : "Falha ao carregar clsconfig";
-        if (!cancelled) setState({ data: null, loading: false, error: msg });
+        if (!cancelled) setState({ data: null, raw: null, loading: false, error: msg });
       }
     })();
     return () => {
