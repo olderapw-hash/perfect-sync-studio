@@ -1,5 +1,5 @@
 import { useState, KeyboardEvent } from "react";
-import { X, Plus } from "lucide-react";
+import { X, Plus, Package } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ItemsEditorProps {
@@ -30,21 +30,27 @@ export const ItemsEditor = ({ items, onChange }: ItemsEditorProps) => {
 
   return (
     <div className="space-y-2">
-      <label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-        Itens iniciais
-      </label>
+      <div className="flex items-center justify-between">
+        <label className="flex items-center gap-1.5 uppercase-label">
+          <Package className="h-3 w-3" />
+          Itens iniciais
+        </label>
+        <span className="rounded-md bg-white/5 px-2 py-0.5 text-[10px] font-bold text-primary">
+          {items.length}
+        </span>
+      </div>
       <div
         className={cn(
-          "flex min-h-[44px] flex-wrap gap-1.5 rounded-md border border-border bg-input/60 p-2",
-          "focus-within:border-primary/60 focus-within:shadow-glow transition-smooth"
+          "flex min-h-[48px] flex-wrap gap-1.5 rounded-lg border border-white/10 bg-white/[0.03] p-2",
+          "transition-smooth focus-within:border-primary focus-within:bg-white/[0.06]"
         )}
       >
         {items.map((id, idx) => (
           <span
             key={`${id}-${idx}`}
-            className="group inline-flex items-center gap-1 rounded-md bg-secondary px-2 py-1 text-sm font-medium text-secondary-foreground ring-1 ring-border"
+            className="group inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2 py-1 text-sm font-bold"
           >
-            <span className="font-mono text-accent">#{id}</span>
+            <span className="font-mono text-primary">#{id}</span>
             <button
               type="button"
               onClick={() => removeAt(idx)}
@@ -63,7 +69,7 @@ export const ItemsEditor = ({ items, onChange }: ItemsEditorProps) => {
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={onKey}
             placeholder="ID do item"
-            className="flex-1 bg-transparent px-1 py-0.5 text-sm outline-none placeholder:text-muted-foreground/60"
+            className="flex-1 bg-transparent px-1 py-0.5 text-sm outline-none placeholder:text-muted-foreground/50"
           />
           <button
             type="button"
@@ -77,7 +83,7 @@ export const ItemsEditor = ({ items, onChange }: ItemsEditorProps) => {
         </div>
       </div>
       <p className="text-[11px] text-muted-foreground">
-        Digite o ID do item e pressione Enter para adicionar.
+        Digite o ID e pressione Enter.
       </p>
     </div>
   );

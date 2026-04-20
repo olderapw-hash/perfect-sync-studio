@@ -8,41 +8,55 @@
 
 @layer base {
   :root {
-    /* Dark MMORPG palette — forced dark regardless of system */
-    --background: 224 32% 6%;
-    --foreground: 40 30% 92%;
+    /* Dark palette inspired by PHP profile (#0a0a0a bg, #c5a059 gold) */
+    --background: 0 0% 4%;
+    --foreground: 0 0% 96%;
 
-    --card: 225 28% 9%;
-    --card-foreground: 40 30% 92%;
+    --card: 0 0% 6%;
+    --card-foreground: 0 0% 96%;
 
-    --popover: 225 30% 8%;
-    --popover-foreground: 40 30% 92%;
+    --popover: 0 0% 8%;
+    --popover-foreground: 0 0% 96%;
 
-    /* Gold primary — the MMORPG accent */
-    --primary: 41 90% 55%;
-    --primary-foreground: 225 40% 8%;
+    /* Gold primary — #c5a059 */
+    --primary: 38 47% 53%;
+    --primary-rgb: 197, 160, 89;
+    --primary-foreground: 0 0% 100%;
+    --primary-dark: 38 51% 37%;
 
-    --secondary: 225 22% 14%;
-    --secondary-foreground: 40 25% 88%;
+    --secondary: 0 0% 10%;
+    --secondary-foreground: 0 0% 92%;
 
-    --muted: 225 18% 13%;
-    --muted-foreground: 220 10% 62%;
+    --muted: 0 0% 8%;
+    --muted-foreground: 0 0% 55%;
 
-    /* Cyan magical accent */
-    --accent: 188 85% 52%;
-    --accent-foreground: 225 40% 8%;
+    /* Accent uses primary tone for cohesion */
+    --accent: 38 47% 53%;
+    --accent-foreground: 0 0% 4%;
 
-    --destructive: 0 75% 55%;
-    --destructive-foreground: 40 30% 96%;
+    --destructive: 1 71% 64%;
+    --destructive-foreground: 0 0% 100%;
 
-    --success: 142 70% 48%;
-    --success-foreground: 225 40% 8%;
+    --success: 145 39% 56%;
+    --success-foreground: 0 0% 4%;
 
-    --border: 225 22% 18%;
-    --input: 225 22% 14%;
-    --ring: 41 90% 55%;
+    --warning: 38 80% 58%;
+    --warning-rgb: 232, 168, 56;
+
+    --error: 1 71% 64%;
+    --error-rgb: 229, 115, 115;
+
+    --border: 0 0% 12%;
+    --border-light: 0 0% 8%;
+    --input: 0 0% 9%;
+    --ring: 38 47% 53%;
+
+    --text-primary: 0 0% 96%;
+    --text-secondary: 0 0% 75%;
+    --text-muted: 0 0% 50%;
 
     --radius: 0.75rem;
+    --radius-lg: 16px;
 
     /* Per-class aura colors (HSL triplets) */
     --class-warrior: 0 72% 55%;
@@ -50,18 +64,18 @@
     --class-archer: 140 60% 50%;
     --class-priest: 45 95% 60%;
     --class-assassin: 280 50% 45%;
-    --class-default: 188 85% 52%;
+    --class-default: 38 47% 53%;
 
     /* Gradients */
-    --gradient-hero: linear-gradient(135deg, hsl(225 40% 10%) 0%, hsl(230 50% 6%) 50%, hsl(260 40% 10%) 100%);
-    --gradient-card: linear-gradient(160deg, hsl(225 28% 11%) 0%, hsl(225 30% 7%) 100%);
-    --gradient-gold: linear-gradient(135deg, hsl(45 95% 62%) 0%, hsl(38 85% 48%) 100%);
-    --gradient-border: linear-gradient(135deg, hsl(41 90% 55% / 0.5), hsl(188 85% 52% / 0.3));
+    --gradient-hero: linear-gradient(180deg, hsl(0 0% 5%) 0%, hsl(0 0% 3%) 100%);
+    --gradient-card: linear-gradient(135deg, hsl(0 0% 6% / 0.6) 0%, hsl(0 0% 4% / 0.6) 100%);
+    --gradient-gold: linear-gradient(135deg, hsl(38 47% 58%) 0%, hsl(38 51% 37%) 100%);
+    --gradient-border: linear-gradient(135deg, hsl(38 47% 53% / 0.5), hsl(38 47% 53% / 0.2));
 
     /* Shadows & glow */
-    --shadow-elegant: 0 10px 40px -12px hsl(225 60% 2% / 0.7);
-    --shadow-glow: 0 0 30px hsl(41 90% 55% / 0.25);
-    --shadow-accent-glow: 0 0 24px hsl(188 85% 52% / 0.3);
+    --shadow-elegant: 0 15px 40px -12px hsl(0 0% 0% / 0.5);
+    --shadow-glow: 0 6px 20px hsl(38 47% 53% / 0.35);
+    --shadow-accent-glow: 0 4px 15px hsl(38 47% 53% / 0.3);
 
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
@@ -132,17 +146,17 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-feature-settings: "ss01", "cv11";
+    font-family: 'Inter', system-ui, sans-serif;
     background-image:
-      radial-gradient(ellipse 80% 50% at 50% -10%, hsl(41 90% 55% / 0.08), transparent),
-      radial-gradient(ellipse 60% 50% at 90% 100%, hsl(188 85% 52% / 0.06), transparent);
+      radial-gradient(ellipse 60% 40% at 50% -5%, hsl(38 47% 53% / 0.06), transparent),
+      radial-gradient(ellipse 50% 40% at 100% 100%, hsl(38 47% 53% / 0.04), transparent);
     background-attachment: fixed;
   }
 }
 
 @layer utilities {
   .bg-hero { background: var(--gradient-hero); }
-  .bg-card-gradient { background: var(--gradient-card); }
+  .bg-card-gradient { background: var(--gradient-card); backdrop-filter: blur(15px); }
   .bg-gold { background: var(--gradient-gold); }
   .shadow-elegant { box-shadow: var(--shadow-elegant); }
   .shadow-glow { box-shadow: var(--shadow-glow); }
@@ -150,12 +164,32 @@
   .transition-smooth { transition: var(--transition-smooth); }
 
   .text-glow-gold {
-    text-shadow: 0 0 20px hsl(41 90% 55% / 0.45);
+    text-shadow: 0 0 20px hsl(var(--primary) / 0.4);
   }
 
   .ornate-divider {
     background-image: linear-gradient(90deg, transparent, hsl(var(--primary) / 0.6), transparent);
     height: 1px;
+  }
+
+  .glass-card {
+    background: rgba(15, 15, 15, 0.6);
+    backdrop-filter: blur(15px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .glass-card-hover:hover {
+    border-color: hsl(var(--border));
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+    transform: translateY(-4px);
+  }
+
+  .uppercase-label {
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 700;
+    font-size: 0.8rem;
+    color: hsl(var(--muted-foreground));
   }
 }
 

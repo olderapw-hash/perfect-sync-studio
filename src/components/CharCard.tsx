@@ -1,4 +1,4 @@
-import { Heart, Sparkles, Shield } from "lucide-react";
+import { Heart, Sparkles } from "lucide-react";
 import { StarterChar } from "@/lib/api";
 import { ItemsEditor } from "./ItemsEditor";
 import { cn } from "@/lib/utils";
@@ -25,61 +25,59 @@ export const CharCard = ({ data, index, onChange }: CharCardProps) => {
     <article
       style={{ ...auraStyle, animationDelay: `${index * 60}ms` }}
       className={cn(
-        "group relative overflow-hidden rounded-xl border border-border bg-card-gradient p-5",
-        "shadow-elegant transition-smooth animate-fade-in-up",
-        "hover:border-primary/40 hover:shadow-glow"
+        "group glass-card glass-card-hover relative overflow-hidden rounded-2xl p-0",
+        "animate-fade-in-up transition-smooth"
       )}
     >
-      {/* Aura decorativa */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -right-12 -top-12 h-40 w-40 rounded-full opacity-30 blur-3xl transition-smooth group-hover:opacity-50"
-        style={{ background: `var(--aura)` }}
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-px"
-        style={{ background: `linear-gradient(90deg, transparent, var(--aura), transparent)` }}
-      />
-
-      <header className="relative mb-4 flex items-center justify-between">
+      {/* Header strip */}
+      <header
+        className="relative flex items-center justify-between px-5 py-4"
+        style={{
+          background:
+            "linear-gradient(135deg, hsl(var(--primary) / 0.08) 0%, rgba(15,15,15,0.6) 100%)",
+          borderBottom: "1px solid rgba(255,255,255,0.05)",
+        }}
+      >
         <div className="flex items-center gap-3">
           <div
-            className="flex h-11 w-11 items-center justify-center rounded-lg text-xl ring-1 ring-border"
-            style={{ background: `color-mix(in hsl, var(--aura) 18%, hsl(var(--card)))` }}
+            className="flex h-11 w-11 items-center justify-center rounded-xl text-xl ring-1 ring-white/10"
+            style={{ background: `color-mix(in hsl, var(--aura) 20%, hsl(var(--card)))` }}
           >
             <span>{meta.icon}</span>
           </div>
           <div>
-            <h3 className="font-display text-lg font-semibold tracking-wide text-foreground">
+            <h3 className="text-xl font-extrabold tracking-tight text-primary">
               {data.class}
             </h3>
-            <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+            <p className="text-[11px] font-mono text-muted-foreground">
               clsconfig · id 16
             </p>
           </div>
         </div>
-        <Shield className="h-4 w-4 text-muted-foreground/60" />
+        <span className="rounded-md border border-white/10 bg-white/5 px-2 py-1 text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground">
+          Inicial
+        </span>
       </header>
 
-      <div className="relative grid grid-cols-2 gap-3">
-        <StatField
-          label="HP"
-          icon={<Heart className="h-3.5 w-3.5" />}
-          value={data.hp}
-          color="text-destructive"
-          onChange={(v) => onChange({ ...data, hp: v })}
-        />
-        <StatField
-          label="MP"
-          icon={<Sparkles className="h-3.5 w-3.5" />}
-          value={data.mp}
-          color="text-accent"
-          onChange={(v) => onChange({ ...data, mp: v })}
-        />
-      </div>
+      {/* Body */}
+      <div className="space-y-4 p-5">
+        <div className="grid grid-cols-2 gap-3">
+          <StatField
+            label="HP"
+            icon={<Heart className="h-3.5 w-3.5" />}
+            value={data.hp}
+            color="text-destructive"
+            onChange={(v) => onChange({ ...data, hp: v })}
+          />
+          <StatField
+            label="MP"
+            icon={<Sparkles className="h-3.5 w-3.5" />}
+            value={data.mp}
+            color="text-accent"
+            onChange={(v) => onChange({ ...data, mp: v })}
+          />
+        </div>
 
-      <div className="relative mt-4">
         <ItemsEditor
           items={data.items}
           onChange={(items) => onChange({ ...data, items })}
@@ -99,7 +97,7 @@ interface StatFieldProps {
 
 const StatField = ({ label, icon, value, color, onChange }: StatFieldProps) => (
   <label className="block">
-    <span className="mb-1 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+    <span className="mb-1.5 flex items-center gap-1.5 uppercase-label">
       <span className={color}>{icon}</span>
       {label}
     </span>
@@ -109,9 +107,10 @@ const StatField = ({ label, icon, value, color, onChange }: StatFieldProps) => (
       value={Number.isFinite(value) ? value : 0}
       onChange={(e) => onChange(parseInt(e.target.value, 10) || 0)}
       className={cn(
-        "w-full rounded-md border border-border bg-input/60 px-3 py-2",
-        "font-mono text-base font-semibold text-foreground",
-        "outline-none transition-smooth focus:border-primary/60 focus:shadow-glow"
+        "w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2.5",
+        "font-mono text-base font-bold text-foreground",
+        "outline-none transition-smooth",
+        "focus:border-primary focus:bg-white/[0.06]"
       )}
     />
   </label>

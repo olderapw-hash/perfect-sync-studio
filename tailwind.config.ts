@@ -51,9 +51,12 @@ export default {
           DEFAULT: "hsl(var(--success))",
           foreground: "hsl(var(--success-foreground))",
         },
+        warning: {
+          DEFAULT: "hsl(var(--warning))",
+        },
       },
       fontFamily: {
-        display: ["Cinzel", "serif"],
+        display: ["Inter", "system-ui", "sans-serif"],
         sans: ["Inter", "system-ui", "sans-serif"],
       },
       borderRadius: {

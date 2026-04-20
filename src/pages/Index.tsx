@@ -60,14 +60,16 @@ const Index = () => {
 
   const isBusy = status.kind === "loading" || status.kind === "saving";
 
+  const totalItems = chars.reduce((sum, c) => sum + c.items.length, 0);
+
   return (
     <main className="min-h-screen bg-hero pb-40">
-      <SyncHeader />
+      <SyncHeader totalClasses={chars.length} totalItems={totalItems} />
 
       <section className="mx-auto max-w-6xl px-4">
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <h2 className="font-display text-xl font-semibold">Classes</h2>
+            <h2 className="text-lg font-extrabold uppercase tracking-wider text-foreground">Classes</h2>
             <p className="text-sm text-muted-foreground">
               {chars.length > 0
                 ? `${chars.length} classes carregadas`
