@@ -2,41 +2,68 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
+/* Perfect World Sync Panel — Dark MMORPG design system.
+   All colors MUST be HSL.
 */
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Dark MMORPG palette — forced dark regardless of system */
+    --background: 224 32% 6%;
+    --foreground: 40 30% 92%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card: 225 28% 9%;
+    --card-foreground: 40 30% 92%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover: 225 30% 8%;
+    --popover-foreground: 40 30% 92%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    /* Gold primary — the MMORPG accent */
+    --primary: 41 90% 55%;
+    --primary-foreground: 225 40% 8%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 225 22% 14%;
+    --secondary-foreground: 40 25% 88%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 225 18% 13%;
+    --muted-foreground: 220 10% 62%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    /* Cyan magical accent */
+    --accent: 188 85% 52%;
+    --accent-foreground: 225 40% 8%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 75% 55%;
+    --destructive-foreground: 40 30% 96%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --success: 142 70% 48%;
+    --success-foreground: 225 40% 8%;
 
-    --radius: 0.5rem;
+    --border: 225 22% 18%;
+    --input: 225 22% 14%;
+    --ring: 41 90% 55%;
+
+    --radius: 0.75rem;
+
+    /* Per-class aura colors (HSL triplets) */
+    --class-warrior: 0 72% 55%;
+    --class-mage: 260 78% 65%;
+    --class-archer: 140 60% 50%;
+    --class-priest: 45 95% 60%;
+    --class-assassin: 280 50% 45%;
+    --class-default: 188 85% 52%;
+
+    /* Gradients */
+    --gradient-hero: linear-gradient(135deg, hsl(225 40% 10%) 0%, hsl(230 50% 6%) 50%, hsl(260 40% 10%) 100%);
+    --gradient-card: linear-gradient(160deg, hsl(225 28% 11%) 0%, hsl(225 30% 7%) 100%);
+    --gradient-gold: linear-gradient(135deg, hsl(45 95% 62%) 0%, hsl(38 85% 48%) 100%);
+    --gradient-border: linear-gradient(135deg, hsl(41 90% 55% / 0.5), hsl(188 85% 52% / 0.3));
+
+    /* Shadows & glow */
+    --shadow-elegant: 0 10px 40px -12px hsl(225 60% 2% / 0.7);
+    --shadow-glow: 0 0 30px hsl(41 90% 55% / 0.25);
+    --shadow-accent-glow: 0 0 24px hsl(188 85% 52% / 0.3);
+
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
     --sidebar-background: 0 0% 98%;
 
@@ -99,7 +126,48 @@ All colors MUST be HSL.
     @apply border-border;
   }
 
+  html {
+    @apply dark;
+  }
+
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "ss01", "cv11";
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% -10%, hsl(41 90% 55% / 0.08), transparent),
+      radial-gradient(ellipse 60% 50% at 90% 100%, hsl(188 85% 52% / 0.06), transparent);
+    background-attachment: fixed;
   }
 }
+
+@layer utilities {
+  .bg-hero { background: var(--gradient-hero); }
+  .bg-card-gradient { background: var(--gradient-card); }
+  .bg-gold { background: var(--gradient-gold); }
+  .shadow-elegant { box-shadow: var(--shadow-elegant); }
+  .shadow-glow { box-shadow: var(--shadow-glow); }
+  .shadow-accent-glow { box-shadow: var(--shadow-accent-glow); }
+  .transition-smooth { transition: var(--transition-smooth); }
+
+  .text-glow-gold {
+    text-shadow: 0 0 20px hsl(41 90% 55% / 0.45);
+  }
+
+  .ornate-divider {
+    background-image: linear-gradient(90deg, transparent, hsl(var(--primary) / 0.6), transparent);
+    height: 1px;
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 hsl(var(--primary) / 0.4); }
+  50% { box-shadow: 0 0 24px 4px hsl(var(--primary) / 0.15); }
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-pulse-glow { animation: pulse-glow 2.4s ease-in-out infinite; }
+.animate-fade-in-up { animation: fade-in-up 0.4s ease-out both; }
