@@ -55,16 +55,20 @@ const Admin = () => {
 
         <section className="overflow-hidden">
           {error ? (
-            <div className="m-6 rounded-xl border border-destructive/40 bg-destructive/10 p-6 text-sm text-destructive">
+            <div className="m-6 overflow-auto rounded-xl border border-destructive/40 bg-destructive/10 p-6 text-sm text-destructive">
               <div className="flex items-center gap-2 font-semibold">
                 <AlertCircle className="h-4 w-4" />
                 Erro ao carregar clsconfig
               </div>
-              <p className="mt-1 text-destructive/80">{error}</p>
+              <pre className="mt-2 whitespace-pre-wrap break-all rounded-md bg-background/40 p-3 text-xs text-destructive/90">
+                {error}
+              </pre>
               <p className="mt-3 text-xs text-destructive/70">
-                Confirme as variáveis <code className="font-mono">PW_API_BASE_URL</code> e{" "}
-                <code className="font-mono">PW_API_SECRET</code> no projeto Cloud, e que o
-                endpoint externo está acessível.
+                Endpoint: <code className="font-mono">/apicls/api_cls.php?action=getClsconfig</code>{" "}
+                — secret enviado server-side via header{" "}
+                <code className="font-mono">x-sync-secret</code>. Confirme{" "}
+                <code className="font-mono">PW_API_BASE_URL</code> (domínio/base) e{" "}
+                <code className="font-mono">PW_API_SECRET</code> nas configurações do backend.
               </p>
             </div>
           ) : loading && !data ? (

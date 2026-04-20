@@ -34,26 +34,31 @@ Deno.serve(async (req: Request) => {
     if (req.method === "GET" && (route === "clsconfig" || route === "clsconfig-proxy")) {
       const base = PW_API_BASE_URL.replace(/\/+$/, "");
 
-      // Validate that the secret looks like a real URL
+      // Validate that the base looks like a real URL
       if (!/^https?:\/\//i.test(base)) {
         return new Response(
           JSON.stringify({
             success: false,
             error:
-              "PW_API_BASE_URL inválida. Deve começar com http:// ou https:// (ex.: https://seusite.com/apicls). Valor recebido: " +
+              "PW_API_BASE_URL inválida. Deve ser o domínio/base do servidor (ex.: https://seusite.com). Valor recebido: " +
               base.slice(0, 80),
           }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
 
+      // Endpoint fixo: /apicls/api_cls.php?action=getClsconfig
+      // Se PW_API_BASE_URL já terminar em .php, usa direto; senão, anexa /apicls/api_cls.php.
       const target = base.endsWith(".php")
-        ? `${base}?action=getClsconfig&secret=${encodeURIComponent(PW_API_SECRET)}`
-        : `${base}/api_cls.php?action=getClsconfig&secret=${encodeURIComponent(PW_API_SECRET)}`;
+        ? `${base}?action=getClsconfig`
+        : `${base}/apicls/api_cls.php?action=getClsconfig`;
 
       const upstream = await fetch(target, {
         method: "GET",
-        headers: { Accept: "application/json" },
+        headers: {
+          Accept: "application/json",
+          "x-sync-secret": PW_API_SECRET,
+        },
       });
 
       const text = await upstream.text();

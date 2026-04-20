@@ -21,7 +21,22 @@ export function useClsconfig() {
         const { data, error } = await supabase.functions.invoke("clsconfig-proxy/clsconfig", {
           method: "GET",
         });
-        if (error) throw error;
+        if (error) {
+          // Surface upstream JSON body when present (FunctionsHttpError exposes .context)
+          const ctx = (error as unknown as { context?: Response }).context;
+          let extra = "";
+          if (ctx && typeof ctx.text === "function") {
+            try {
+              extra = await ctx.text();
+            } catch {
+              /* ignore */
+            }
+          }
+          throw new Error(extra ? `${error.message}\n\n${extra}` : error.message);
+        }
+        if (data && typeof data === "object" && (data as { success?: boolean }).success === false) {
+          throw new Error(JSON.stringify(data, null, 2));
+        }
         const normalized = normalizeClsconfigResponse(data);
         if (!cancelled) setState({ data: normalized, loading: false, error: null });
       } catch (e) {
