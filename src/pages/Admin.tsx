@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
-import { AlertCircle, Loader2, RefreshCw, Shield } from "lucide-react";
+import { AlertCircle, Database, Loader2, RefreshCw, Shield } from "lucide-react";
 import { useClsconfig } from "@/hooks/useClsconfig";
 import { ClsconfigList } from "@/components/admin/ClsconfigList";
 import { ClsconfigEditor } from "@/components/admin/ClsconfigEditor";
 
 const Admin = () => {
-  const { data, loading, error, reload } = useClsconfig();
+  const { data, raw, loading, error, reload } = useClsconfig();
   const [selected, setSelected] = useState<string | null>(null);
 
   useEffect(() => {
@@ -15,6 +15,7 @@ const Admin = () => {
   }, [data, selected]);
 
   const entry = data?.entries.find((e) => e.key_hex === selected) ?? null;
+  const isEmpty = !loading && !error && data && data.entries.length === 0;
 
   return (
     <main className="flex h-screen flex-col bg-hero">
