@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { AlertCircle, Database, Loader2, RefreshCw, Shield } from "lucide-react";
+import { AlertCircle, Database, Loader2, LogOut, RefreshCw, Shield } from "lucide-react";
 import { useClsconfig } from "@/hooks/useClsconfig";
+import { useAuth } from "@/hooks/useAuth";
 import { ClsconfigEditor } from "@/components/admin/ClsconfigEditor";
 import { ItemCatalogManager } from "@/components/admin/ItemCatalogManager";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
