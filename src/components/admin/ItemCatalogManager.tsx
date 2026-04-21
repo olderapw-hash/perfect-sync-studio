@@ -47,32 +47,53 @@ export const ItemCatalogManager = () => {
   }, [open]);
 
   const handleUpload = async () => {
-    if (!tabFile) {
-      toast.error("Selecione o arquivo .tab");
-      return;
+    // Se já existe catálogo ativo e o usuário não escolheu .tab, faz upload só de ícones pro catálogo ativo
+    const onlyIcons = !tabFile && catalog && iconFiles.length > 0;
+
+    if (!onlyIcons) {
+      if (!tabFile) {
+        toast.error("Selecione o arquivo .tab (ou ative um catálogo antes pra mandar só ícones)");
+        return;
+      }
+      if (!name.trim()) {
+        toast.error("Dê um nome ao catálogo");
+        return;
+      }
     }
-    if (!name.trim()) {
-      toast.error("Dê um nome ao catálogo");
-      return;
+    if (!onlyIcons && iconFiles.length === 0) {
+      // permite criar catálogo só com .tab — mas avisa
+      console.info("[catalog] enviando catálogo sem ícones");
     }
+
     setBusy(true);
     try {
-      const slug = `${Date.now()}-${name.trim().replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`;
-      const tabPath = `tabs/${slug}.tab`;
-      const iconsPrefix = `icons/${slug}/`;
+      let iconsPrefix: string;
+      let tabPath: string | null = null;
+      let parsedSize = 0;
 
-      // 1) Upload .tab
-      const tabBuf = await tabFile.text();
-      const parsed = parseItemTab(tabBuf);
-      const { error: tabErr } = await supabase.storage
-        .from("pw-assets")
-        .upload(tabPath, new Blob([tabBuf], { type: "text/tab-separated-values" }), {
-          upsert: true,
-        });
-      if (tabErr) throw tabErr;
+      if (onlyIcons && catalog) {
+        iconsPrefix = catalog.icons_prefix;
+      } else {
+        const slug = `${Date.now()}-${name.trim().replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`;
+        tabPath = `tabs/${slug}.tab`;
+        iconsPrefix = `icons/${slug}/`;
+
+        // 1) Upload .tab
+        const tabBuf = await tabFile!.text();
+        const parsed = parseItemTab(tabBuf);
+        parsedSize = parsed.size;
+        const { error: tabErr } = await supabase.storage
+          .from("pw-assets")
+          .upload(tabPath, new Blob([tabBuf], { type: "text/tab-separated-values" }), {
+            upsert: true,
+          });
+        if (tabErr) throw tabErr;
+      }
 
       // 2) Upload de ícones (em lotes paralelos)
+      let failed = 0;
       if (iconFiles.length > 0) {
+        const prefix = iconsPrefix.replace(/\/+$/, "") + "/";
         setProgress({ done: 0, total: iconFiles.length });
         const concurrency = 6;
         let done = 0;
@@ -82,11 +103,14 @@ export const ItemCatalogManager = () => {
             while (queue.length) {
               const f = queue.shift();
               if (!f) break;
-              const path = `${iconsPrefix}${f.name}`;
+              const path = `${prefix}${f.name}`;
               const { error } = await supabase.storage
                 .from("pw-assets")
                 .upload(path, f, { upsert: true, contentType: f.type || "image/jpeg" });
-              if (error) console.warn("[icons] falhou", f.name, error.message);
+              if (error) {
+                console.warn("[icons] falhou", f.name, error.message);
+                failed += 1;
+              }
               done += 1;
               setProgress({ done, total: iconFiles.length });
             }
@@ -94,17 +118,23 @@ export const ItemCatalogManager = () => {
         );
       }
 
-      // 3) Insere catálogo ativo
-      const { error: dbErr } = await supabase.from("item_catalogs").insert({
-        name: name.trim(),
-        tab_path: tabPath,
-        icons_prefix: iconsPrefix,
-        item_count: parsed.size,
-        is_active: true,
-      });
-      if (dbErr) throw dbErr;
+      // 3) Insere catálogo ativo (apenas no modo de criação)
+      if (!onlyIcons && tabPath) {
+        const { error: dbErr } = await supabase.from("item_catalogs").insert({
+          name: name.trim(),
+          tab_path: tabPath,
+          icons_prefix: iconsPrefix,
+          item_count: parsedSize,
+          is_active: true,
+        });
+        if (dbErr) throw dbErr;
+        toast.success(`Catálogo "${name}" salvo (${parsedSize} itens, ${iconFiles.length - failed} ícones)`);
+      } else {
+        toast.success(`${iconFiles.length - failed} ícone(s) enviado(s) ao catálogo "${catalog!.name}"`);
+      }
 
-      toast.success(`Catálogo "${name}" salvo (${parsed.size} itens)`);
+      if (failed > 0) toast.warning(`${failed} ícone(s) falharam — veja o console`);
+
       setName("");
       setTabFile(null);
       setIconFiles([]);
@@ -112,6 +142,7 @@ export const ItemCatalogManager = () => {
       setProgress(null);
       await Promise.all([reload(), fetchList()]);
     } catch (e) {
+      console.error("[catalog] upload error", e);
       toast.error(e instanceof Error ? e.message : String(e));
     } finally {
       setBusy(false);
