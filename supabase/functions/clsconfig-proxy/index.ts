@@ -1,7 +1,8 @@
 // Edge Function: clsconfig-proxy
 // Proxies requests to the external PW API so the secret is never exposed to the browser.
 // Routes:
-//   GET /clsconfig  -> calls `${PW_API_BASE_URL}/api_cls.php?action=getClsconfig&secret=${PW_API_SECRET}`
+//   GET  /clsconfig  -> calls `${PW_API_BASE_URL}/apicls/api_cls.php?action=getClsconfig`
+//   POST /clsconfig  -> calls `${PW_API_BASE_URL}/apicls/api_cls.php?action=saveClsconfig` with JSON body
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -30,29 +31,28 @@ Deno.serve(async (req: Request) => {
     );
   }
 
+  const base = PW_API_BASE_URL.replace(/\/+$/, "");
+
+  if (!/^https?:\/\//i.test(base)) {
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error:
+          "PW_API_BASE_URL inválida. Deve ser o domínio/base do servidor (ex.: https://seusite.com). Valor recebido: " +
+          base.slice(0, 80),
+      }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  }
+
+  // Endpoint base: se PW_API_BASE_URL já terminar em .php, usa direto; senão, anexa /apicls/api_cls.php.
+  const endpoint = base.endsWith(".php") ? base : `${base}/apicls/api_cls.php`;
+
+  const isClsRoute = route === "clsconfig" || route === "clsconfig-proxy";
+
   try {
-    if (req.method === "GET" && (route === "clsconfig" || route === "clsconfig-proxy")) {
-      const base = PW_API_BASE_URL.replace(/\/+$/, "");
-
-      // Validate that the base looks like a real URL
-      if (!/^https?:\/\//i.test(base)) {
-        return new Response(
-          JSON.stringify({
-            success: false,
-            error:
-              "PW_API_BASE_URL inválida. Deve ser o domínio/base do servidor (ex.: https://seusite.com). Valor recebido: " +
-              base.slice(0, 80),
-          }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
-      }
-
-      // Endpoint fixo: /apicls/api_cls.php?action=getClsconfig
-      // Se PW_API_BASE_URL já terminar em .php, usa direto; senão, anexa /apicls/api_cls.php.
-      const target = base.endsWith(".php")
-        ? `${base}?action=getClsconfig`
-        : `${base}/apicls/api_cls.php?action=getClsconfig`;
-
+    if (req.method === "GET" && isClsRoute) {
+      const target = `${endpoint}?action=getClsconfig`;
       const upstream = await fetch(target, {
         method: "GET",
         headers: {
@@ -60,31 +60,47 @@ Deno.serve(async (req: Request) => {
           "x-sync-secret": PW_API_SECRET,
         },
       });
+      return await relay(upstream);
+    }
 
-      const text = await upstream.text();
-      let json: unknown;
+    if (req.method === "POST" && isClsRoute) {
+      let body: unknown;
       try {
-        json = JSON.parse(text);
+        body = await req.json();
       } catch {
         return new Response(
-          JSON.stringify({
-            success: false,
-            error: "Upstream returned non-JSON",
-            status: upstream.status,
-            body: text.slice(0, 2000),
-          }),
-          { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          JSON.stringify({ success: false, error: "Body inválido (esperado JSON)" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
 
-      return new Response(JSON.stringify(json), {
-        status: upstream.ok ? 200 : upstream.status,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      // Validação mínima do payload
+      const b = (body ?? {}) as Record<string, unknown>;
+      if (!b.key_hex || !b.template) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: "Payload incompleto: requer key_hex e template",
+          }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      const target = `${endpoint}?action=saveClsconfig`;
+      const upstream = await fetch(target, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          "x-sync-secret": PW_API_SECRET,
+        },
+        body: JSON.stringify(body),
       });
+      return await relay(upstream);
     }
 
     return new Response(
-      JSON.stringify({ success: false, error: "Not found", path: url.pathname }),
+      JSON.stringify({ success: false, error: "Not found", path: url.pathname, method: req.method }),
       { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (e) {
@@ -95,3 +111,25 @@ Deno.serve(async (req: Request) => {
     });
   }
 });
+
+async function relay(upstream: Response): Promise<Response> {
+  const text = await upstream.text();
+  let json: unknown;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: "Upstream returned non-JSON",
+        status: upstream.status,
+        body: text.slice(0, 2000),
+      }),
+      { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  }
+  return new Response(JSON.stringify(json), {
+    status: upstream.ok ? 200 : upstream.status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}

@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { RotateCcw, Save, User, Activity, Backpack, Sword, Warehouse } from "lucide-react";
+import { RotateCcw, Save, User, Activity, Backpack, Sword, Warehouse, Loader2 } from "lucide-react";
 import type { ClsEntry, ClsTemplate } from "@/types/clsconfig";
 import { buildSavePayload } from "@/lib/clsconfig";
 import { buildClassIconUrl } from "@/lib/pwIcons";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { BaseTab } from "./BaseTab";
@@ -28,6 +29,7 @@ const TABS: { key: TabKey; label: string; icon: React.ComponentType<{ className?
 export const ClsconfigEditor = ({ entry }: Props) => {
   const [template, setTemplate] = useState<ClsTemplate>(entry.template);
   const [tab, setTab] = useState<TabKey>("base");
+  const [saving, setSaving] = useState(false);
 
   // Reset when switching entry
   useEffect(() => {
@@ -42,12 +44,37 @@ export const ClsconfigEditor = ({ entry }: Props) => {
     toast.info("Template restaurado para a versão original");
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (saving) return;
     const payload = buildSavePayload(entry, template);
-    // Por enquanto apenas loga — ainda não há endpoint de save.
-    // eslint-disable-next-line no-console
-    console.log("[clsconfig] save payload →", payload);
-    toast.success("Payload montado e logado no console (modo preview)");
+    setSaving(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("clsconfig-proxy/clsconfig", {
+        method: "POST",
+        body: payload,
+      });
+      if (error) {
+        const ctx = (error as unknown as { context?: Response }).context;
+        let extra = "";
+        if (ctx && typeof ctx.text === "function") {
+          try { extra = await ctx.text(); } catch { /* ignore */ }
+        }
+        throw new Error(extra ? `${error.message}\n\n${extra}` : error.message);
+      }
+      if (data && typeof data === "object" && (data as { success?: boolean }).success === false) {
+        throw new Error((data as { error?: string }).error || "Falha ao salvar");
+      }
+      toast.success("Alterações enviadas para a VPS");
+      // Atualiza o "baseline" local para limpar o estado dirty
+      entry.template = template;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Erro desconhecido ao salvar";
+      // eslint-disable-next-line no-console
+      console.error("[clsconfig] save error →", e);
+      toast.error(msg);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const iconUrl = buildClassIconUrl(template.summary.class_icon_path);
@@ -109,10 +136,11 @@ export const ClsconfigEditor = ({ entry }: Props) => {
             </button>
             <button
               onClick={handleSave}
-              className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-glow transition-smooth hover:brightness-110"
+              disabled={saving || !dirty}
+              className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-glow transition-smooth hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <Save className="h-4 w-4" />
-              Salvar
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              {saving ? "Salvando..." : "Salvar"}
             </button>
           </div>
         </div>
