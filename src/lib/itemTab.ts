@@ -3,17 +3,26 @@
 //   col 0: id (numérico)
 //   col 1: cor (hex RRGGBB) — usado como cor do nome
 //   col 2: nome localizado (pode ter prefixos como ☆)
-//   col 3: descrição (geralmente vazia nesse export)
-//   col 4..: flags / ids auxiliares
-//
-// Mantemos só o essencial pro UI: id, name, color, raw (linha original
-// caso queiramos ler outras colunas depois).
+//   col 3: descrição com markup PW (^RRGGBB para cor inline, \r para quebra)
+//   col 4..6: flags
+//   col 7: vazio
+//   col 8: lista de ids auxiliares (refinos/sets)
+
+export interface DescSegment {
+  text: string;
+  color?: string; // #RRGGBB
+}
+export type DescParagraph = DescSegment[];
 
 export interface ItemMeta {
   id: number;
   name: string;
   /** Cor do nome em #RRGGBB (default branco). */
   color: string;
+  /** Descrição parseada em parágrafos (cada parágrafo = lista de segmentos coloridos). */
+  description?: DescParagraph[];
+  /** Texto cru da descrição, útil pra debug. */
+  descriptionRaw?: string;
   /** Linha original (debug/extensão). */
   raw?: string;
 }
@@ -21,11 +30,38 @@ export interface ItemMeta {
 export type ItemCatalogMap = Map<number, ItemMeta>;
 
 const HEX_RE = /^[0-9a-fA-F]{6}$/;
+const INLINE_COLOR_RE = /\^([0-9a-fA-F]{6})/;
 
 const cleanName = (s: string): string => {
   // remove caractere de marcação inicial (☆, ★, ♦, etc.)
   return s.replace(/^[\s\u2605\u2606\u2666\u2663\u2660\u2665]+/, "").trim();
 };
+
+/** Parseia o markup do PW: ^RRGGBB muda cor; \r quebra linha. */
+export function parseDescription(raw: string): DescParagraph[] {
+  if (!raw) return [];
+  // O export usa \r (literal) como quebra. Também aceita \n caso venha normalizado.
+  const paragraphs = raw.split(/\\r|\r|\n/).map((p) => p.trim()).filter(Boolean);
+  return paragraphs.map((p) => {
+    const segments: DescSegment[] = [];
+    let cursor = 0;
+    let currentColor: string | undefined;
+    while (cursor < p.length) {
+      const rest = p.slice(cursor);
+      const m = rest.match(INLINE_COLOR_RE);
+      if (!m || m.index === undefined) {
+        segments.push({ text: rest, color: currentColor });
+        break;
+      }
+      if (m.index > 0) {
+        segments.push({ text: rest.slice(0, m.index), color: currentColor });
+      }
+      currentColor = `#${m[1]}`;
+      cursor += m.index + m[0].length;
+    }
+    return segments.filter((s) => s.text.length > 0);
+  });
+}
 
 export function parseItemTab(content: string): ItemCatalogMap {
   const map: ItemCatalogMap = new Map();
@@ -40,7 +76,16 @@ export function parseItemTab(content: string): ItemCatalogMap {
     const colorRaw = (cols[1] ?? "").trim();
     const color = HEX_RE.test(colorRaw) ? `#${colorRaw}` : "#FFFFFF";
     const name = cleanName(cols[2] ?? "");
-    map.set(idNum, { id: idNum, name, color, raw: line });
+    const descRaw = (cols[3] ?? "").trim();
+    const description = descRaw ? parseDescription(descRaw) : undefined;
+    map.set(idNum, {
+      id: idNum,
+      name,
+      color,
+      description,
+      descriptionRaw: descRaw || undefined,
+      raw: line,
+    });
   }
   return map;
 }
