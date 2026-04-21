@@ -37,8 +37,10 @@ export interface ApiClass {
   id: number;
   name: string;
   icon_path: string;
-  race: number;
-  gender: number;
+  /** Nome legível da raça (ex: "Humano", "Alada"). */
+  race: string;
+  /** Gênero (0=M, 1=F). Pode não vir na response — opcional. */
+  gender?: number;
 }
 
 export interface ClsBase {

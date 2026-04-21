@@ -166,9 +166,21 @@ const normApiClass = (raw: unknown): ApiClass => {
     id: num(r.id),
     name: str(r.name),
     icon_path: str(r.icon_path),
-    race: num(r.race),
-    gender: num(r.gender),
+    race: str(r.race),
+    gender: r.gender != null ? num(r.gender) : undefined,
   };
+};
+
+/** Aceita used_classes como array de números OU array de objetos {id,...}. */
+const normUsedClasses = (raw: unknown): number[] => {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((v) => {
+      if (typeof v === "number") return v;
+      if (v && typeof v === "object" && "id" in v) return num((v as { id: unknown }).id);
+      return num(v);
+    })
+    .filter((n) => Number.isFinite(n));
 };
 
 export function normalizeClsconfigResponse(raw: unknown): ClsconfigResponse {
@@ -186,9 +198,10 @@ export function normalizeClsconfigResponse(raw: unknown): ClsconfigResponse {
     ? r.classes.map(normApiClass)
     : [];
 
-  const used_classes: number[] = Array.isArray(r.used_classes)
-    ? r.used_classes.map((v: unknown) => num(v))
-    : Array.from(new Set(entries.map((e) => e.template.summary.cls)));
+  let used_classes = normUsedClasses(r.used_classes);
+  if (used_classes.length === 0 && entries.length > 0) {
+    used_classes = Array.from(new Set(entries.map((e) => e.template.summary.cls)));
+  }
 
   return {
     success: Boolean(r.success),
