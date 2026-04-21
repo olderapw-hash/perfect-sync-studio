@@ -75,12 +75,28 @@ Deno.serve(async (req: Request) => {
       }
 
       // Validação mínima do payload: a VPS indexa o template por roleid (não por cls).
+      // 0 NÃO é roleid válido aqui (não existe na VPS), mas tratamos campos numéricos como
+      // valores reais — usamos checagens explícitas, nunca `if (value)`.
       const b = (body ?? {}) as Record<string, unknown>;
-      if (!b.key_hex || !b.template || b.roleid == null) {
+      const hasKey = Object.prototype.hasOwnProperty.call(b, "key_hex");
+      const hasRoleid = Object.prototype.hasOwnProperty.call(b, "roleid");
+      const hasTemplate = Object.prototype.hasOwnProperty.call(b, "template");
+      const hasStatus = Object.prototype.hasOwnProperty.call(b, "status");
+
+      // Aceita dois formatos:
+      //  1) Save completo: { key_hex, roleid, template }
+      //  2) Save parcial de fama: { roleid, status: { reputation } }
+      const roleidNum = Number(b.roleid);
+      const roleidValid = hasRoleid && Number.isFinite(roleidNum) && roleidNum > 0;
+      const isFullSave = hasKey && hasTemplate && roleidValid;
+      const isPartialReputation = roleidValid && hasStatus && !hasTemplate;
+
+      if (!isFullSave && !isPartialReputation) {
         return new Response(
           JSON.stringify({
             success: false,
-            error: "Payload incompleto: requer key_hex, roleid e template",
+            error:
+              "Payload inválido. Esperado { key_hex, roleid, template } ou { roleid, status: { reputation } }",
           }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
