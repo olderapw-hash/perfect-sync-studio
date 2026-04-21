@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { RotateCcw, Save, User, Activity, Backpack, Sword, Warehouse, Loader2 } from "lucide-react";
 import type { ClsEntry, ClsTemplate } from "@/types/clsconfig";
-import { buildSavePayload, normalizeClsconfigResponse } from "@/lib/clsconfig";
+import { buildReputationPayload, buildSavePayload, normalizeClsconfigResponse } from "@/lib/clsconfig";
 import { buildClassIconUrl } from "@/lib/pwIcons";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -46,23 +46,63 @@ export const ClsconfigEditor = ({ entry }: Props) => {
 
   const handleSave = async () => {
     if (saving) return;
-    const payload = buildSavePayload(entry, template);
+
+    // Se estamos na aba Status e SÓ a fama mudou, usamos o payload mínimo:
+    //   { roleid: entry.template.roleid, status: { reputation: Number(form.status.reputation) } }
+    // Caso contrário, fazemos o save completo do template.
+    const onlyReputationChanged = (() => {
+      const orig = { ...entry.template, status: { ...entry.template.status, reputation: 0 } };
+      const curr = { ...template, status: { ...template.status, reputation: 0 } };
+      return (
+        tab === "status" &&
+        template.status.reputation !== entry.template.status.reputation &&
+        JSON.stringify(orig) === JSON.stringify(curr)
+      );
+    })();
+
     setSaving(true);
     try {
-      const { data, error } = await supabase.functions.invoke("clsconfig-proxy/clsconfig", {
-        method: "POST",
-        body: payload,
-      });
-      if (error) {
-        const ctx = (error as unknown as { context?: Response }).context;
-        let extra = "";
-        if (ctx && typeof ctx.text === "function") {
-          try { extra = await ctx.text(); } catch { /* ignore */ }
+      let expectedReputation: number;
+      let savedRoleid: number;
+
+      if (onlyReputationChanged) {
+        const repPayload = buildReputationPayload(entry, template.status.reputation);
+        expectedReputation = repPayload.status.reputation;
+        savedRoleid = repPayload.roleid;
+        const { data, error } = await supabase.functions.invoke("clsconfig-proxy/clsconfig", {
+          method: "POST",
+          body: repPayload,
+        });
+        if (error) {
+          const ctx = (error as unknown as { context?: Response }).context;
+          let extra = "";
+          if (ctx && typeof ctx.text === "function") {
+            try { extra = await ctx.text(); } catch { /* ignore */ }
+          }
+          throw new Error(extra ? `${error.message}\n\n${extra}` : error.message);
         }
-        throw new Error(extra ? `${error.message}\n\n${extra}` : error.message);
-      }
-      if (data && typeof data === "object" && (data as { success?: boolean }).success === false) {
-        throw new Error((data as { error?: string }).error || "Falha ao salvar");
+        if (data && typeof data === "object" && (data as { success?: boolean }).success === false) {
+          throw new Error((data as { error?: string }).error || "Falha ao salvar fama");
+        }
+      } else {
+        const payload = buildSavePayload(entry, template);
+        expectedReputation = payload.template.status.reputation;
+        savedRoleid = payload.roleid;
+        const { data, error } = await supabase.functions.invoke("clsconfig-proxy/clsconfig", {
+          method: "POST",
+          body: payload,
+        });
+        if (error) {
+          const ctx = (error as unknown as { context?: Response }).context;
+          let extra = "";
+          if (ctx && typeof ctx.text === "function") {
+            try { extra = await ctx.text(); } catch { /* ignore */ }
+          }
+          throw new Error(extra ? `${error.message}\n\n${extra}` : error.message);
+        }
+        if (data && typeof data === "object" && (data as { success?: boolean }).success === false) {
+          throw new Error((data as { error?: string }).error || "Falha ao salvar");
+        }
       }
 
       // Recarrega o clsconfig completo da VPS para validar persistência real.
@@ -72,33 +112,31 @@ export const ClsconfigEditor = ({ entry }: Props) => {
       }
 
       const normalized = normalizeClsconfigResponse(reread.data);
-      // IMPORTANTE: localizar pelo roleid (NÃO por cls). Ex.: Sacerdote = roleid 31, cls 7.
+      // Localizar pelo roleid (NÃO por cls). Ex.: Sacerdote = roleid 31, cls 7.
       const freshEntry = normalized.entries.find(
-        (item) => item.template.roleid === payload.roleid,
+        (item) => item.template.roleid === savedRoleid,
       );
 
       if (!freshEntry) {
         throw new Error(
-          `A VPS não retornou nenhum entry para roleid ${payload.roleid} após o save`,
+          `A VPS não retornou nenhum entry para roleid ${savedRoleid} após o save`,
         );
       }
 
       // Validação canônica: status.reputation é a fonte da verdade para fama.
-      const expectedReputation = payload.template.status.reputation;
+      // Comparação explícita por igualdade — 0 é valor válido.
       const persistedReputation = freshEntry.template.status.reputation;
       if (persistedReputation !== expectedReputation) {
         throw new Error(
-          `Persistência divergente em status.reputation (roleid ${payload.roleid}): enviado ${expectedReputation}, persistido ${persistedReputation}`,
+          `Persistência divergente em status.reputation (roleid ${savedRoleid}): enviado ${expectedReputation}, persistido ${persistedReputation}`,
         );
       }
 
-      // Confere o restante do template como sanity-check secundário.
-      const fullMatch = JSON.stringify(freshEntry.template) === JSON.stringify(payload.template);
-      if (!fullMatch) {
-        console.warn("[clsconfig] reputation OK mas template difere — verificar campos extras");
-      }
-
-      toast.success("Alterações persistidas na VPS");
+      toast.success(
+        onlyReputationChanged
+          ? `Fama atualizada (roleid ${savedRoleid}): ${persistedReputation}`
+          : "Alterações persistidas na VPS",
+      );
       entry.template = freshEntry.template;
       setTemplate(freshEntry.template);
     } catch (e) {
