@@ -293,15 +293,36 @@ export const ItemCatalogManager = () => {
             </div>
           )}
 
-          <button
-            type="button"
-            onClick={handleUpload}
-            disabled={busy || !tabFile}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-smooth hover:brightness-110 disabled:opacity-50"
-          >
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-            Enviar e ativar
-          </button>
+          {(() => {
+            const onlyIconsMode = !tabFile && !!catalog && iconFiles.length > 0;
+            const canSubmit = !busy && (tabFile || onlyIconsMode);
+            const label = onlyIconsMode
+              ? `Enviar ${iconFiles.length} ícone(s) ao catálogo "${catalog!.name}"`
+              : "Criar catálogo e enviar";
+            return (
+              <>
+                <button
+                  type="button"
+                  onClick={handleUpload}
+                  disabled={!canSubmit}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-smooth hover:brightness-110 disabled:opacity-50"
+                >
+                  {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                  {label}
+                </button>
+                {!tabFile && !catalog && (
+                  <p className="text-center text-[11px] text-warning">
+                    Suba o .tab primeiro para criar o catálogo. Depois você pode adicionar mais ícones quando quiser.
+                  </p>
+                )}
+                {!tabFile && catalog && iconFiles.length === 0 && (
+                  <p className="text-center text-[11px] text-muted-foreground">
+                    Selecione pelo menos um .jpg para enviar ao catálogo ativo.
+                  </p>
+                )}
+              </>
+            );
+          })()}
         </div>
 
         {/* Lista */}
