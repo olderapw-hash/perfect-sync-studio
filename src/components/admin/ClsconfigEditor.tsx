@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { RotateCcw, Save, User, Activity, Backpack, Sword, Warehouse, Loader2 } from "lucide-react";
 import type { ClsEntry, ClsTemplate } from "@/types/clsconfig";
-import { buildSavePayload } from "@/lib/clsconfig";
+import { buildSavePayload, normalizeClsconfigResponse } from "@/lib/clsconfig";
 import { buildClassIconUrl } from "@/lib/pwIcons";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -64,12 +64,25 @@ export const ClsconfigEditor = ({ entry }: Props) => {
       if (data && typeof data === "object" && (data as { success?: boolean }).success === false) {
         throw new Error((data as { error?: string }).error || "Falha ao salvar");
       }
-      toast.success("Alterações enviadas para a VPS");
-      // Atualiza o "baseline" local para limpar o estado dirty
-      entry.template = template;
+
+      const reread = await supabase.functions.invoke("clsconfig-proxy/clsconfig", { method: "GET" });
+      if (reread.error) {
+        throw new Error("A VPS respondeu ao save, mas falhou na confirmação de leitura");
+      }
+
+      const normalized = normalizeClsconfigResponse(reread.data);
+      const freshEntry = normalized.entries.find((item) => item.key_hex === entry.key_hex);
+      const persisted = freshEntry && JSON.stringify(freshEntry.template) === JSON.stringify(payload.template);
+
+      if (!persisted) {
+        throw new Error("A VPS aceitou a requisição, mas não persistiu as alterações reais do template");
+      }
+
+      toast.success("Alterações persistidas na VPS");
+      entry.template = payload.template;
+      setTemplate(payload.template);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Erro desconhecido ao salvar";
-      // eslint-disable-next-line no-console
       console.error("[clsconfig] save error →", e);
       toast.error(msg);
     } finally {
