@@ -86,7 +86,7 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      const target = `${endpoint}?action=saveClsconfig`;
+      const target = `${endpoint}?action=saveClsconfigTemplate`;
       const upstream = await fetch(target, {
         method: "POST",
         headers: {
