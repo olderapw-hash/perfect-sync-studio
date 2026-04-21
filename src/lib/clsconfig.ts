@@ -233,18 +233,29 @@ export interface SavePayload {
   template: ClsTemplate;
 }
 
-export function buildSavePayload(entry: ClsEntry, template: ClsTemplate): SavePayload {
-  // status.reputation é a fonte da verdade para fama. Sincronizamos summary.reputation só por consistência.
-  const reputation = template.status.reputation;
+/**
+ * Resolve o roleid canônico a partir do entry/template.
+ * 0 NÃO é considerado válido aqui (a VPS não tem roleid 0).
+ * Usa fallback via CLS_TO_ROLEID apenas se necessário — checagem explícita,
+ * nunca truthy genérico (porque 0 é valor válido em outros campos).
+ */
+function resolveRoleid(entry: ClsEntry, template: ClsTemplate): number {
+  const candidates: Array<number | undefined> = [
+    template.roleid,
+    entry.template.roleid,
+    CLS_TO_ROLEID[template.summary?.cls],
+    CLS_TO_ROLEID[template.base?.cls],
+  ];
+  for (const c of candidates) {
+    if (typeof c === "number" && Number.isFinite(c) && c > 0) return c;
+  }
+  return 0;
+}
 
-  // CHAVE CANÔNICA: SEMPRE entry.template.roleid. Nunca usar cls como roleid.
-  // Se por algum motivo vier 0, derivamos do mapa cls→roleid como último recurso.
-  const roleid =
-    template.roleid ||
-    entry.template.roleid ||
-    CLS_TO_ROLEID[template.summary.cls] ||
-    CLS_TO_ROLEID[template.base.cls] ||
-    0;
+export function buildSavePayload(entry: ClsEntry, template: ClsTemplate): SavePayload {
+  const roleid = resolveRoleid(entry, template);
+  // Coerção explícita — Number(0) === 0 (válido). Nunca usar `if (value)`.
+  const reputation = Number(template.status.reputation);
 
   // Recompute summary counters from the edited template so they stay in sync.
   const synced: ClsTemplate = {
@@ -269,14 +280,46 @@ export function buildSavePayload(entry: ClsEntry, template: ClsTemplate): SavePa
         template.storehouse.material.filter((i) => i.id > 0).length +
         template.storehouse.generalcard.filter((i) => i.id > 0).length,
     },
+    status: {
+      ...template.status,
+      reputation,
+    },
   };
   return {
     source: entry.source,
     key_hex: entry.key_hex,
     version: entry.version,
-    // Chave canônica para a VPS: SEMPRE roleid (ex.: Sacerdote = 31), nunca cls (ex.: 7).
     roleid,
     template: synced,
+  };
+}
+
+/**
+ * Payload mínimo para salvar SOMENTE fama. Estrutura exigida pela VPS:
+ *   { roleid: entry.template.roleid, status: { reputation: Number(form.status.reputation) } }
+ *
+ * 0 é valor válido — usamos checagem explícita por undefined/null/"".
+ */
+export interface ReputationPayload {
+  roleid: number;
+  status: { reputation: number };
+}
+
+export function buildReputationPayload(
+  entry: ClsEntry,
+  reputation: number | string,
+): ReputationPayload {
+  const roleid = resolveRoleid(entry, entry.template);
+  const num =
+    reputation === undefined || reputation === null || reputation === ""
+      ? entry.template.status.reputation
+      : Number(reputation);
+  if (!Number.isFinite(num)) {
+    throw new Error(`reputation inválido: ${String(reputation)}`);
+  }
+  return {
+    roleid,
+    status: { reputation: num },
   };
 }
 
