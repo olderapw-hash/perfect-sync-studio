@@ -233,20 +233,30 @@ export interface SavePayload {
   template: ClsTemplate;
 }
 
-export function buildSavePayload(entry: ClsEntry, template: ClsTemplate): SavePayload {
-  // status.reputation é a fonte da verdade para fama. Sincronizamos summary.reputation só por consistência.
-  const reputation = template.status.reputation;
+/**
+ * Resolve o roleid canônico a partir do entry/template.
+ * 0 NÃO é considerado válido aqui (a VPS não tem roleid 0).
+ * Usa fallback via CLS_TO_ROLEID apenas se necessário.
+ */
+function resolveRoleid(entry: ClsEntry, template: ClsTemplate): number {
+  const candidates: Array<number | undefined> = [
+    template.roleid,
+    entry.template.roleid,
+    CLS_TO_ROLEID[template.summary?.cls],
+    CLS_TO_ROLEID[template.base?.cls],
+  ];
+  for (const c of candidates) {
+    if (typeof c === "number" && Number.isFinite(c) && c > 0) return c;
+  }
+  return 0;
+}
 
-  // CHAVE CANÔNICA: SEMPRE entry.template.roleid. Nunca usar cls como roleid.
-  // Se por algum motivo vier 0, derivamos do mapa cls→roleid como último recurso.
-  const roleid =
-    template.roleid ||
-    entry.template.roleid ||
-    CLS_TO_ROLEID[template.summary.cls] ||
-    CLS_TO_ROLEID[template.base.cls] ||
-    0;
+export function buildSavePayload(entry: ClsEntry, template: ClsTemplate): SavePayload {
+  const roleid = resolveRoleid(entry, template);
 
   // Recompute summary counters from the edited template so they stay in sync.
+  // IMPORTANTE: 0 é valor válido em todos os campos numéricos. Nunca usamos `if (value)` —
+  // o spread do template original preserva 0 e tudo é copiado por valor explícito.
   const synced: ClsTemplate = {
     ...template,
     roleid,
@@ -259,7 +269,8 @@ export function buildSavePayload(entry: ClsEntry, template: ClsTemplate): SavePa
       level: template.status.level,
       level2: template.status.level2,
       cultivation: template.status.cultivation,
-      reputation,
+      // status.reputation é a fonte da verdade — coerce explícito para Number (0 é válido).
+      reputation: Number(template.status.reputation),
       inventory_money: template.inventory.money,
       inventory_items: template.inventory.items.filter((i) => i.id > 0).length,
       equipment_items: template.equipment.items.filter((i) => i.id > 0).length,
@@ -268,6 +279,11 @@ export function buildSavePayload(entry: ClsEntry, template: ClsTemplate): SavePa
         template.storehouse.dress.filter((i) => i.id > 0).length +
         template.storehouse.material.filter((i) => i.id > 0).length +
         template.storehouse.generalcard.filter((i) => i.id > 0).length,
+    },
+    status: {
+      ...template.status,
+      // Coerce explícito; 0 deve passar.
+      reputation: Number(template.status.reputation),
     },
   };
   return {
@@ -279,5 +295,37 @@ export function buildSavePayload(entry: ClsEntry, template: ClsTemplate): SavePa
     template: synced,
   };
 }
+
+/**
+ * Payload mínimo para salvar SOMENTE fama (status.reputation).
+ * Estrutura exata exigida pela VPS:
+ *   { roleid: entry.template.roleid, status: { reputation: Number(form.status.reputation) } }
+ *
+ * Use quando quiser persistir só a fama sem reenviar o template inteiro.
+ */
+export interface ReputationPayload {
+  roleid: number;
+  status: { reputation: number };
+}
+
+export function buildReputationPayload(
+  entry: ClsEntry,
+  reputation: number | string,
+): ReputationPayload {
+  const roleid = resolveRoleid(entry, entry.template);
+  // Number(0) === 0 (válido). Number("") === 0 também — checamos explicitamente.
+  const num =
+    reputation === undefined || reputation === null || reputation === ""
+      ? entry.template.status.reputation
+      : Number(reputation);
+  if (!Number.isFinite(num)) {
+    throw new Error(`reputation inválido: ${String(reputation)}`);
+  }
+  return {
+    roleid,
+    status: { reputation: num },
+  };
+}
+
 
 export const newEmptyItem = emptyItem;
