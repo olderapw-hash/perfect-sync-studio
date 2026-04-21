@@ -1,7 +1,15 @@
 import { useEffect, useState } from "react";
 import { RotateCcw, Save, User, Activity, Backpack, Sword, Warehouse, Loader2 } from "lucide-react";
 import type { ClsEntry, ClsTemplate } from "@/types/clsconfig";
-import { buildReputationPayload, buildSavePayload, normalizeClsconfigResponse } from "@/lib/clsconfig";
+import {
+  buildSavePayload,
+  buildStatusPayload,
+  diffSimpleStatus,
+  normalizeClsconfigResponse,
+  onlySimpleStatusChanged,
+  SIMPLE_STATUS_FIELDS,
+  type SimpleStatusField,
+} from "@/lib/clsconfig";
 import { buildClassIconUrl } from "@/lib/pwIcons";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -47,31 +55,30 @@ export const ClsconfigEditor = ({ entry }: Props) => {
   const handleSave = async () => {
     if (saving) return;
 
-    // Se estamos na aba Status e SÓ a fama mudou, usamos o payload mínimo:
-    //   { roleid: entry.template.roleid, status: { reputation: Number(form.status.reputation) } }
-    // Caso contrário, fazemos o save completo do template.
-    const onlyReputationChanged = (() => {
-      const orig = { ...entry.template, status: { ...entry.template.status, reputation: 0 } };
-      const curr = { ...template, status: { ...template.status, reputation: 0 } };
-      return (
-        tab === "status" &&
-        template.status.reputation !== entry.template.status.reputation &&
-        JSON.stringify(orig) === JSON.stringify(curr)
-      );
-    })();
+    // Quando estamos na aba Status e SÓ campos simples mudaram (level, level2,
+    // exp, sp, pp, hp, mp, reputation), enviamos o payload mínimo:
+    //   { roleid: entry.template.roleid, status: { <fieldsAlterados>: Number(...) } }
+    // 0 é valor válido — usamos hasOwnProperty + checagem explícita, nunca `if (value)`.
+    const statusDiff = diffSimpleStatus(entry.template, template);
+    const useStatusPatch =
+      tab === "status" &&
+      Object.keys(statusDiff).length > 0 &&
+      onlySimpleStatusChanged(entry.template, template);
 
     setSaving(true);
     try {
-      let expectedReputation: number;
       let savedRoleid: number;
+      const expectedStatus: Partial<Record<SimpleStatusField, number>> = {};
 
-      if (onlyReputationChanged) {
-        const repPayload = buildReputationPayload(entry, template.status.reputation);
-        expectedReputation = repPayload.status.reputation;
-        savedRoleid = repPayload.roleid;
+      if (useStatusPatch) {
+        const patchPayload = buildStatusPayload(entry, statusDiff);
+        savedRoleid = patchPayload.roleid;
+        for (const [k, v] of Object.entries(patchPayload.status)) {
+          expectedStatus[k as SimpleStatusField] = v as number;
+        }
         const { data, error } = await supabase.functions.invoke("clsconfig-proxy/clsconfig", {
           method: "POST",
-          body: repPayload,
+          body: patchPayload,
         });
         if (error) {
           const ctx = (error as unknown as { context?: Response }).context;
@@ -82,12 +89,15 @@ export const ClsconfigEditor = ({ entry }: Props) => {
           throw new Error(extra ? `${error.message}\n\n${extra}` : error.message);
         }
         if (data && typeof data === "object" && (data as { success?: boolean }).success === false) {
-          throw new Error((data as { error?: string }).error || "Falha ao salvar fama");
+          throw new Error((data as { error?: string }).error || "Falha ao salvar status");
         }
       } else {
         const payload = buildSavePayload(entry, template);
-        expectedReputation = payload.template.status.reputation;
         savedRoleid = payload.roleid;
+        // No save completo, validamos TODOS os campos simples.
+        for (const f of SIMPLE_STATUS_FIELDS) {
+          expectedStatus[f] = Number(payload.template.status[f]);
+        }
         const { data, error } = await supabase.functions.invoke("clsconfig-proxy/clsconfig", {
           method: "POST",
           body: payload,
@@ -112,7 +122,6 @@ export const ClsconfigEditor = ({ entry }: Props) => {
       }
 
       const normalized = normalizeClsconfigResponse(reread.data);
-      // Localizar pelo roleid (NÃO por cls). Ex.: Sacerdote = roleid 31, cls 7.
       const freshEntry = normalized.entries.find(
         (item) => item.template.roleid === savedRoleid,
       );
@@ -123,18 +132,29 @@ export const ClsconfigEditor = ({ entry }: Props) => {
         );
       }
 
-      // Validação canônica: status.reputation é a fonte da verdade para fama.
-      // Comparação explícita por igualdade — 0 é valor válido.
-      const persistedReputation = freshEntry.template.status.reputation;
-      if (persistedReputation !== expectedReputation) {
+      // Valida CADA campo enviado. Comparação por igualdade estrita — 0 é válido.
+      const divergent: string[] = [];
+      for (const field of Object.keys(expectedStatus) as SimpleStatusField[]) {
+        const expected = expectedStatus[field];
+        const persisted = freshEntry.template.status[field];
+        if (expected !== persisted) {
+          divergent.push(`${field}: enviado ${expected}, persistido ${persisted}`);
+        }
+      }
+      if (divergent.length > 0) {
         throw new Error(
-          `Persistência divergente em status.reputation (roleid ${savedRoleid}): enviado ${expectedReputation}, persistido ${persistedReputation}`,
+          `Persistência divergente (roleid ${savedRoleid}):\n${divergent.join("\n")}`,
         );
       }
 
+      const summary = useStatusPatch
+        ? Object.entries(expectedStatus)
+            .map(([k, v]) => `${k}=${v}`)
+            .join(", ")
+        : "";
       toast.success(
-        onlyReputationChanged
-          ? `Fama atualizada (roleid ${savedRoleid}): ${persistedReputation}`
+        useStatusPatch
+          ? `Status atualizado (roleid ${savedRoleid}): ${summary}`
           : "Alterações persistidas na VPS",
       );
       entry.template = freshEntry.template;

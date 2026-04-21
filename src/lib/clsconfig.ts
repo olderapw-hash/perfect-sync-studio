@@ -295,11 +295,60 @@ export function buildSavePayload(entry: ClsEntry, template: ClsTemplate): SavePa
 }
 
 /**
- * Payload mínimo para salvar SOMENTE fama. Estrutura exigida pela VPS:
- *   { roleid: entry.template.roleid, status: { reputation: Number(form.status.reputation) } }
- *
- * 0 é valor válido — usamos checagem explícita por undefined/null/"".
+ * Lista canônica de campos simples de status que podem ser persistidos
+ * via payload parcial. Aplica a mesma lógica de fama: 0 é válido,
+ * coerção explícita com Number(), nunca `if (value)`.
  */
+export const SIMPLE_STATUS_FIELDS = [
+  "level",
+  "level2",
+  "exp",
+  "sp",
+  "pp",
+  "hp",
+  "mp",
+  "reputation",
+] as const;
+
+export type SimpleStatusField = (typeof SIMPLE_STATUS_FIELDS)[number];
+
+/**
+ * Payload mínimo para salvar SOMENTE campos simples de status. Estrutura:
+ *   { roleid: entry.template.roleid, status: { <field>: Number(form.status.<field>), ... } }
+ *
+ * 0 é valor válido — usamos hasOwnProperty + checagem explícita, nunca truthy.
+ */
+export interface StatusPayload {
+  roleid: number;
+  status: Partial<Record<SimpleStatusField, number>>;
+}
+
+export function buildStatusPayload(
+  entry: ClsEntry,
+  patch: Partial<Record<SimpleStatusField, number | string>>,
+): StatusPayload {
+  const roleid = resolveRoleid(entry, entry.template);
+  const status: Partial<Record<SimpleStatusField, number>> = {};
+
+  for (const field of SIMPLE_STATUS_FIELDS) {
+    if (!Object.prototype.hasOwnProperty.call(patch, field)) continue;
+    const raw = patch[field];
+    // undefined/null/"" → ignorar (não foi enviado). 0 PASSA.
+    if (raw === undefined || raw === null || raw === "") continue;
+    const num = Number(raw);
+    if (!Number.isFinite(num)) {
+      throw new Error(`status.${field} inválido: ${String(raw)}`);
+    }
+    status[field] = num;
+  }
+
+  if (Object.keys(status).length === 0) {
+    throw new Error("Nenhum campo de status válido para salvar");
+  }
+  return { roleid, status };
+}
+
+/** Mantido por compatibilidade. Equivalente a buildStatusPayload(entry, { reputation }). */
 export interface ReputationPayload {
   roleid: number;
   status: { reputation: number };
@@ -309,18 +358,37 @@ export function buildReputationPayload(
   entry: ClsEntry,
   reputation: number | string,
 ): ReputationPayload {
-  const roleid = resolveRoleid(entry, entry.template);
-  const num =
-    reputation === undefined || reputation === null || reputation === ""
-      ? entry.template.status.reputation
-      : Number(reputation);
-  if (!Number.isFinite(num)) {
-    throw new Error(`reputation inválido: ${String(reputation)}`);
+  return buildStatusPayload(entry, { reputation }) as ReputationPayload;
+}
+
+/**
+ * Retorna apenas os campos simples (SIMPLE_STATUS_FIELDS) que diferem.
+ * Comparação estrita — 0 vs 0 não conta como mudança; 0 vs 1 conta.
+ */
+export function diffSimpleStatus(
+  original: ClsTemplate,
+  current: ClsTemplate,
+): Partial<Record<SimpleStatusField, number>> {
+  const out: Partial<Record<SimpleStatusField, number>> = {};
+  for (const field of SIMPLE_STATUS_FIELDS) {
+    const a = original.status[field];
+    const b = current.status[field];
+    if (a !== b) out[field] = Number(b);
   }
-  return {
-    roleid,
-    status: { reputation: num },
+  return out;
+}
+
+/** True se a única diferença está em SIMPLE_STATUS_FIELDS (qualquer subconjunto). */
+export function onlySimpleStatusChanged(
+  original: ClsTemplate,
+  current: ClsTemplate,
+): boolean {
+  const stripStatus = (t: ClsTemplate) => {
+    const stripped: Record<string, unknown> = { ...t.status } as unknown as Record<string, unknown>;
+    for (const f of SIMPLE_STATUS_FIELDS) stripped[f] = 0;
+    return { ...t, status: stripped };
   };
+  return JSON.stringify(stripStatus(original)) === JSON.stringify(stripStatus(current));
 }
 
 export const newEmptyItem = emptyItem;
