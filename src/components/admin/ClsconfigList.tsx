@@ -68,7 +68,7 @@ export const ClsconfigList = ({ entries, selectedKey, onSelect, loading }: Props
   const activeGroup = openGroup ? groups.find((g) => g.id === openGroup) ?? null : null;
 
   return (
-    <aside className="flex h-full w-full flex-col border-r border-border bg-card/40 backdrop-blur-md">
+    <div className="flex w-full flex-col">
       <div className="border-b border-border p-4">
         <div className="mb-3 flex items-center gap-2">
           {activeGroup ? (
@@ -108,7 +108,7 @@ export const ClsconfigList = ({ entries, selectedKey, onSelect, loading }: Props
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-3">
+      <div className="max-h-[calc(100vh-12rem)] overflow-y-auto p-3">
         {loading ? (
           <div className="flex items-center justify-center p-6 text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -135,7 +135,7 @@ export const ClsconfigList = ({ entries, selectedKey, onSelect, loading }: Props
           </ul>
         )}
       </div>
-    </aside>
+    </div>
   );
 };
 
