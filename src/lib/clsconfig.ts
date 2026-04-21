@@ -183,9 +183,14 @@ const normUsedClasses = (raw: unknown): number[] => {
     .filter((n) => Number.isFinite(n));
 };
 
+/** Whitelist de roleids que devem ser exibidos. Mantenha em sincronia com a lista do servidor. */
+export const ALLOWED_ROLEIDS: ReadonlySet<number> = new Set([
+  16, 17, 18, 19, 20, 21, 22, 23, 24, 27, 28, 31,
+]);
+
 export function normalizeClsconfigResponse(raw: unknown): ClsconfigResponse {
   const r = (raw ?? {}) as Record<string, any>;
-  const entries: ClsEntry[] = Array.isArray(r.entries)
+  const allEntries: ClsEntry[] = Array.isArray(r.entries)
     ? r.entries.map((e: any) => ({
         source: str(e?.source),
         key_hex: str(e?.key_hex),
@@ -194,18 +199,19 @@ export function normalizeClsconfigResponse(raw: unknown): ClsconfigResponse {
       }))
     : [];
 
+  // Filtro pela whitelist de roleids reais.
+  const entries = allEntries.filter((e) => ALLOWED_ROLEIDS.has(e.template.roleid));
+
   const classes: ApiClass[] = Array.isArray(r.classes)
     ? r.classes.map(normApiClass)
     : [];
 
-  let used_classes = normUsedClasses(r.used_classes);
-  if (used_classes.length === 0 && entries.length > 0) {
-    used_classes = Array.from(new Set(entries.map((e) => e.template.summary.cls)));
-  }
+  // used_classes agora deriva apenas dos entries filtrados — ignora o que a API mandou.
+  const used_classes = Array.from(new Set(entries.map((e) => e.template.summary.cls)));
 
   return {
     success: Boolean(r.success),
-    count: num(r.count, entries.length),
+    count: entries.length,
     entries,
     classes,
     used_classes,
