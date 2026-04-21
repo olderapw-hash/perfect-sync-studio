@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Loader2, Search, ShieldAlert, Users } from "lucide-react";
 import type { ApiClass, ClsEntry } from "@/types/clsconfig";
 import { getClassInfo, getGenderInfo, getInitials, getRaceName } from "@/lib/pwClasses";
@@ -15,11 +15,13 @@ interface Props {
 }
 
 interface CharacterGroup {
-  /** chave única cls-gender */
+  /** chave única — usa cls (gender é só descritivo). */
   id: string;
   cls: number;
-  race: number;
-  gender: number;
+  /** Nome legível da raça (já vindo da API ou derivado). */
+  raceName: string;
+  /** Gênero, quando aplicável (entries específicas). */
+  gender?: number;
   /** Nome real vindo da API (summary.class_name) — fallback para mapa local. */
   className: string;
   /** Caminho do ícone (relativo) — pode ser undefined. */
@@ -68,9 +70,9 @@ export const ClsconfigList = ({
     for (const c of classes) {
       const clsEntries = entriesByCls.get(c.id) ?? [];
       list.push({
-        id: `${c.id}-${c.gender}`,
+        id: `cls-${c.id}`,
         cls: c.id,
-        race: c.race,
+        raceName: c.race,
         gender: c.gender,
         className: c.name,
         iconPath: c.icon_path,
@@ -85,9 +87,9 @@ export const ClsconfigList = ({
       const first = arr[0];
       const s = first.template.summary;
       list.push({
-        id: `${cls}-${s.gender}`,
+        id: `cls-${cls}`,
         cls,
-        race: s.race,
+        raceName: getRaceName(s.race),
         gender: s.gender,
         className: s.class_name ?? `Classe ${cls}`,
         iconPath: s.class_icon_path,
@@ -100,11 +102,11 @@ export const ClsconfigList = ({
   }, [classes, entriesByCls, classById, usedSet]);
 
   // Auto-abre o grupo do entry selecionado
-  useMemo(() => {
+  useEffect(() => {
     if (!selectedKey) return;
     const found = entries.find((e) => e.key_hex === selectedKey);
     if (found) {
-      const id = `${found.template.summary.cls}-${found.template.summary.gender}`;
+      const id = `cls-${found.template.summary.cls}`;
       setOpenGroup((prev) => prev ?? id);
     }
   }, [selectedKey, entries]);
@@ -114,7 +116,7 @@ export const ClsconfigList = ({
     if (!term) return groups;
     return groups.filter((g) => {
       if (g.className.toLowerCase().includes(term)) return true;
-      if (getRaceName(g.race).toLowerCase().includes(term)) return true;
+      if (g.raceName.toLowerCase().includes(term)) return true;
       return g.entries.some((e) => e.template.summary.name.toLowerCase().includes(term));
     });
   }, [groups, q]);
@@ -196,11 +198,29 @@ export const ClsconfigList = ({
   );
 };
 
-/** Card grande de um personagem (cls+gender). */
+/** Resolve a cor da classe a partir do cls id, varrendo o mapa local. */
+const colorForCls = (cls: number): string => {
+  // Tenta nas raças 0..5 — getClassInfo aceita race+cls; usamos a primeira que casa.
+  for (let race = 0; race <= 5; race++) {
+    const info = getClassInfo(race, cls);
+    if (info.short !== "???") return info.color;
+  }
+  return "0 0% 50%";
+};
+
+const shortForCls = (cls: number): string => {
+  for (let race = 0; race <= 5; race++) {
+    const info = getClassInfo(race, cls);
+    if (info.short !== "???") return info.short;
+  }
+  return "??";
+};
+
+/** Card grande de um personagem (uma classe). */
 const CharacterCard = ({ group, onOpen }: { group: CharacterGroup; onOpen: () => void }) => {
-  const klass = getClassInfo(group.race, group.cls);
-  const raceName = getRaceName(group.race);
-  const gender = getGenderInfo(group.gender);
+  const color = colorForCls(group.cls);
+  const short = shortForCls(group.cls);
+  const gender = group.gender != null ? getGenderInfo(group.gender) : null;
   const count = group.entries.length;
   const iconUrl = buildClassIconUrl(group.iconPath);
   const disabled = !group.used;
@@ -219,14 +239,14 @@ const CharacterCard = ({ group, onOpen }: { group: CharacterGroup; onOpen: () =>
     >
       <span
         className="absolute inset-y-0 left-0 w-1"
-        style={{ background: `hsl(${klass.color})` }}
+        style={{ background: `hsl(${color})` }}
       />
       <div className="flex items-center gap-3 pl-1.5">
         <div
           className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border text-base font-extrabold text-white shadow-md"
           style={{
-            background: `linear-gradient(135deg, hsl(${klass.color} / 0.9), hsl(${klass.color} / 0.55))`,
-            borderColor: `hsl(${klass.color} / 0.6)`,
+            background: `linear-gradient(135deg, hsl(${color} / 0.9), hsl(${color} / 0.55))`,
+            borderColor: `hsl(${color} / 0.6)`,
             textShadow: "0 1px 2px rgba(0,0,0,0.5)",
           }}
         >
@@ -237,33 +257,34 @@ const CharacterCard = ({ group, onOpen }: { group: CharacterGroup; onOpen: () =>
               className="h-full w-full object-cover"
               loading="lazy"
               onError={(e) => {
-                // Fallback para sigla se a imagem falhar
                 (e.currentTarget as HTMLImageElement).style.display = "none";
               }}
             />
           ) : (
-            klass.short
+            short
           )}
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline gap-1.5">
             <span
               className="truncate text-sm font-extrabold"
-              style={{ color: `hsl(${klass.color})` }}
+              style={{ color: `hsl(${color})` }}
             >
               {group.className}
             </span>
-            <span
-              className="text-sm leading-none"
-              title={gender.label}
-              style={{
-                color: group.gender === 0 ? "hsl(210 80% 65%)" : "hsl(330 70% 70%)",
-              }}
-            >
-              {gender.symbol}
-            </span>
+            {gender && (
+              <span
+                className="text-sm leading-none"
+                title={gender.label}
+                style={{
+                  color: group.gender === 0 ? "hsl(210 80% 65%)" : "hsl(330 70% 70%)",
+                }}
+              >
+                {gender.symbol}
+              </span>
+            )}
           </div>
-          <div className="mt-0.5 truncate text-xs text-muted-foreground">{raceName}</div>
+          <div className="mt-0.5 truncate text-xs text-muted-foreground">{group.raceName}</div>
           <div className="mt-1 flex items-center gap-1">
             {group.used ? (
               <span className="rounded bg-primary/15 px-1.5 py-0.5 text-[10px] font-bold text-primary">
@@ -293,9 +314,8 @@ const ClsList = ({
   selectedKey: string | null;
   onSelect: (key: string) => void;
 }) => {
-  const klass = getClassInfo(group.race, group.cls);
-  const raceName = getRaceName(group.race);
-  const gender = getGenderInfo(group.gender);
+  const color = colorForCls(group.cls);
+  const short = shortForCls(group.cls);
   const iconUrl = buildClassIconUrl(group.iconPath);
 
   const filtered = useMemo(() => {
@@ -312,15 +332,15 @@ const ClsList = ({
       <div
         className="flex items-center gap-3 rounded-xl border p-3"
         style={{
-          borderColor: `hsl(${klass.color} / 0.5)`,
-          background: `linear-gradient(135deg, hsl(${klass.color} / 0.12), transparent)`,
+          borderColor: `hsl(${color} / 0.5)`,
+          background: `linear-gradient(135deg, hsl(${color} / 0.12), transparent)`,
         }}
       >
         <div
           className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg border text-xs font-extrabold text-white shadow"
           style={{
-            background: `linear-gradient(135deg, hsl(${klass.color} / 0.9), hsl(${klass.color} / 0.55))`,
-            borderColor: `hsl(${klass.color} / 0.6)`,
+            background: `linear-gradient(135deg, hsl(${color} / 0.9), hsl(${color} / 0.55))`,
+            borderColor: `hsl(${color} / 0.6)`,
           }}
         >
           {iconUrl ? (
@@ -334,21 +354,14 @@ const ClsList = ({
               }}
             />
           ) : (
-            klass.short
+            short
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <div className="flex items-baseline gap-1.5 text-sm font-extrabold">
-            <span style={{ color: `hsl(${klass.color})` }}>{group.className}</span>
-            <span
-              style={{
-                color: group.gender === 0 ? "hsl(210 80% 65%)" : "hsl(330 70% 70%)",
-              }}
-            >
-              {gender.symbol}
-            </span>
+          <div className="text-sm font-extrabold" style={{ color: `hsl(${color})` }}>
+            {group.className}
           </div>
-          <div className="text-[11px] text-muted-foreground">{raceName}</div>
+          <div className="text-[11px] text-muted-foreground">{group.raceName}</div>
         </div>
       </div>
 
@@ -363,6 +376,7 @@ const ClsList = ({
             const t = e.template;
             const active = e.key_hex === selectedKey;
             const initials = getInitials(t.summary.name);
+            const entryGender = getGenderInfo(t.summary.gender);
             return (
               <li key={e.key_hex}>
                 <button
@@ -378,14 +392,25 @@ const ClsList = ({
                   <div
                     className="flex h-8 w-8 shrink-0 items-center justify-center rounded font-mono text-[10px] font-bold text-white"
                     style={{
-                      background: `linear-gradient(135deg, hsl(${klass.color} / 0.85), hsl(${klass.color} / 0.5))`,
+                      background: `linear-gradient(135deg, hsl(${color} / 0.85), hsl(${color} / 0.5))`,
                     }}
                   >
                     {initials}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-bold text-foreground">
-                      {t.summary.name || "(sem nome)"}
+                    <div className="flex items-center gap-1.5">
+                      <span className="truncate text-sm font-bold text-foreground">
+                        {t.summary.name || "(sem nome)"}
+                      </span>
+                      <span
+                        className="text-xs leading-none"
+                        title={entryGender.label}
+                        style={{
+                          color: t.summary.gender === 0 ? "hsl(210 80% 65%)" : "hsl(330 70% 70%)",
+                        }}
+                      >
+                        {entryGender.symbol}
+                      </span>
                     </div>
                     <div className="font-mono text-[10px] text-muted-foreground">
                       lvl {t.summary.level} · cult {t.summary.level2} · v{e.version}
