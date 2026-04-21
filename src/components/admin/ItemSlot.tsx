@@ -87,6 +87,21 @@ export const ItemSlot = ({ item, onClick }: Props) => {
             </div>
           </div>
         </div>
+
+        {meta?.description && meta.description.length > 0 && (
+          <div className="max-h-56 overflow-y-auto border-t border-border/60 px-3 py-2 text-[12px] leading-snug">
+            {meta.description.map((para, pi) => (
+              <p key={pi} className={pi > 0 ? "mt-1.5" : ""}>
+                {para.map((seg, si) => (
+                  <span key={si} style={seg.color ? { color: seg.color } : undefined}>
+                    {seg.text}
+                  </span>
+                ))}
+              </p>
+            ))}
+          </div>
+        )}
+
         <div className="grid grid-cols-2 gap-x-3 gap-y-1 border-t border-border/60 px-3 py-2 font-mono text-[11px]">
           <Row label="count" value={`${item.count}/${item.max_count || "∞"}`} />
           <Row label="proctype" value={item.proctype} />
