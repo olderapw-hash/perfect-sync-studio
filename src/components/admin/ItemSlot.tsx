@@ -99,7 +99,12 @@ export const ItemSlot = ({ item, onClick, size = 44, emptyLabel }: Props) => {
     <HoverCard openDelay={120} closeDelay={50}>
       <HoverCardTrigger asChild>{slotInner}</HoverCardTrigger>
       <HoverCardContent
-        className="w-80 rounded-sm border-0 p-0 shadow-2xl"
+        side="right"
+        align="start"
+        sideOffset={10}
+        collisionPadding={16}
+        avoidCollisions
+        className="z-[100] w-72 rounded-sm border-0 p-0 shadow-2xl"
         style={{
           background: "linear-gradient(180deg, hsl(35 30% 8% / 0.96), hsl(20 25% 5% / 0.96))",
           boxShadow:
