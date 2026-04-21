@@ -76,7 +76,13 @@ export const InventoryGrid = ({ title, items, onChange, gridSize }: Props) => {
         </button>
       </header>
 
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(3.5rem,1fr))] gap-1.5 rounded-xl border border-border/60 bg-background/30 p-3">
+      <div
+        className="grid grid-cols-8 gap-[3px] rounded-sm p-2"
+        style={{
+          background: "linear-gradient(180deg, hsl(30 20% 10%), hsl(20 25% 6%))",
+          boxShadow: "inset 0 0 0 1px hsl(40 50% 35%), inset 0 0 12px hsl(0 0% 0% / 0.8)",
+        }}
+      >
         {Array.from({ length: totalSlots }, (_, pos) => {
           const it = byPos.get(pos) ?? newEmptyItem(pos);
           return <ItemSlot key={pos} item={it} onClick={() => openSlot(pos)} />;
