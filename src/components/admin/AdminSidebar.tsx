@@ -10,11 +10,13 @@ import {
 } from "@/components/ui/sidebar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ClsconfigList } from "@/components/admin/ClsconfigList";
-import type { ClsEntry } from "@/types/clsconfig";
+import type { ApiClass, ClsEntry } from "@/types/clsconfig";
 import { cn } from "@/lib/utils";
 
 interface Props {
   entries: ClsEntry[];
+  classes: ApiClass[];
+  usedClasses: number[];
   selectedKey: string | null;
   onSelect: (key: string) => void;
   loading?: boolean;
@@ -25,7 +27,14 @@ interface Props {
  * Atualmente expõe a seção "Personagens iniciais".
  * Para adicionar novas seções no futuro, crie outro <SectionGroup /> abaixo.
  */
-export const AdminSidebar = ({ entries, selectedKey, onSelect, loading }: Props) => {
+export const AdminSidebar = ({
+  entries,
+  classes,
+  usedClasses,
+  selectedKey,
+  onSelect,
+  loading,
+}: Props) => {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
 
@@ -40,6 +49,8 @@ export const AdminSidebar = ({ entries, selectedKey, onSelect, loading }: Props)
         >
           <ClsconfigList
             entries={entries}
+            classes={classes}
+            usedClasses={usedClasses}
             selectedKey={selectedKey}
             onSelect={onSelect}
             loading={loading}

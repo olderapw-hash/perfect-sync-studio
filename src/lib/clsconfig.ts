@@ -1,5 +1,6 @@
 // Helpers to normalize the upstream payload and rebuild a save payload.
 import type {
+  ApiClass,
   ClsEntry,
   ClsItem,
   ClsTemplate,
@@ -71,6 +72,8 @@ const normTemplate = (raw: unknown): ClsTemplate => {
       inventory_items: num(summary.inventory_items),
       equipment_items: num(summary.equipment_items),
       storehouse_items: num(summary.storehouse_items),
+      class_name: summary.class_name != null ? str(summary.class_name) : undefined,
+      class_icon_path: summary.class_icon_path != null ? str(summary.class_icon_path) : undefined,
     },
     base: {
       id: num(base.id),
@@ -157,6 +160,17 @@ const normTemplate = (raw: unknown): ClsTemplate => {
   };
 };
 
+const normApiClass = (raw: unknown): ApiClass => {
+  const r = (raw ?? {}) as Record<string, unknown>;
+  return {
+    id: num(r.id),
+    name: str(r.name),
+    icon_path: str(r.icon_path),
+    race: num(r.race),
+    gender: num(r.gender),
+  };
+};
+
 export function normalizeClsconfigResponse(raw: unknown): ClsconfigResponse {
   const r = (raw ?? {}) as Record<string, any>;
   const entries: ClsEntry[] = Array.isArray(r.entries)
@@ -168,10 +182,20 @@ export function normalizeClsconfigResponse(raw: unknown): ClsconfigResponse {
       }))
     : [];
 
+  const classes: ApiClass[] = Array.isArray(r.classes)
+    ? r.classes.map(normApiClass)
+    : [];
+
+  const used_classes: number[] = Array.isArray(r.used_classes)
+    ? r.used_classes.map((v: unknown) => num(v))
+    : Array.from(new Set(entries.map((e) => e.template.summary.cls)));
+
   return {
     success: Boolean(r.success),
     count: num(r.count, entries.length),
     entries,
+    classes,
+    used_classes,
   };
 }
 

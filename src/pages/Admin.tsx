@@ -24,6 +24,8 @@ const Admin = () => {
       <div className="flex h-screen w-full bg-hero">
         <AdminSidebar
           entries={data?.entries ?? []}
+          classes={data?.classes ?? []}
+          usedClasses={data?.used_classes ?? []}
           selectedKey={selected}
           onSelect={setSelected}
           loading={loading}

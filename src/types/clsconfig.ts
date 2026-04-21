@@ -26,6 +26,19 @@ export interface ClsSummary {
   inventory_items: number;
   equipment_items: number;
   storehouse_items: number;
+  /** Nome legível da classe vindo da API (ex: "Guerreiro"). */
+  class_name?: string;
+  /** Caminho relativo do ícone da classe (ex: "img/guerreiro.png"). */
+  class_icon_path?: string;
+}
+
+/** Item de response.classes — catálogo completo de classes disponíveis. */
+export interface ApiClass {
+  id: number;
+  name: string;
+  icon_path: string;
+  race: number;
+  gender: number;
 }
 
 export interface ClsBase {
@@ -144,4 +157,8 @@ export interface ClsconfigResponse {
   success: boolean;
   count: number;
   entries: ClsEntry[];
+  /** Catálogo completo de classes (todas que existem no servidor). */
+  classes: ApiClass[];
+  /** IDs das classes que realmente possuem entries no payload. */
+  used_classes: number[];
 }

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { RotateCcw, Save, User, Activity, Backpack, Sword, Warehouse } from "lucide-react";
 import type { ClsEntry, ClsTemplate } from "@/types/clsconfig";
 import { buildSavePayload } from "@/lib/clsconfig";
+import { buildClassIconUrl } from "@/lib/pwIcons";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { BaseTab } from "./BaseTab";
@@ -49,30 +50,48 @@ export const ClsconfigEditor = ({ entry }: Props) => {
     toast.success("Payload montado e logado no console (modo preview)");
   };
 
+  const iconUrl = buildClassIconUrl(template.summary.class_icon_path);
+  const className = template.summary.class_name ?? `Classe ${template.summary.cls}`;
+
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
       <header className="border-b border-border bg-card/40 px-6 py-4 backdrop-blur-md">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="text-xl font-extrabold tracking-tight text-foreground">
-              {template.summary.name || "(sem nome)"}
-            </h2>
-            <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-              <span className="font-mono">key {entry.key_hex.slice(0, 12)}…</span>
-              <span>·</span>
-              <span>cls {template.base.cls}</span>
-              <span>·</span>
-              <span>raça {template.base.race}</span>
-              <span>·</span>
-              <span>gen {template.base.gender}</span>
-              <span>·</span>
-              <span>lvl {template.status.level}</span>
-              <span>·</span>
-              <span>cult {template.status.level2}</span>
-              <span>·</span>
-              <span>fama {template.status.reputation}</span>
-            </p>
+          <div className="flex min-w-0 items-center gap-3">
+            {iconUrl && (
+              <img
+                src={iconUrl}
+                alt={className}
+                className="h-10 w-10 shrink-0 rounded-lg border border-border object-cover"
+                loading="lazy"
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).style.display = "none";
+                }}
+              />
+            )}
+            <div className="min-w-0">
+              <h2 className="truncate text-xl font-extrabold tracking-tight text-foreground">
+                {template.summary.name || "(sem nome)"}
+              </h2>
+              <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                <span className="font-semibold text-foreground/80">{className}</span>
+                <span>·</span>
+                <span className="font-mono">key {entry.key_hex.slice(0, 12)}…</span>
+                <span>·</span>
+                <span>cls {template.summary.cls}</span>
+                <span>·</span>
+                <span>raça {template.base.race}</span>
+                <span>·</span>
+                <span>gen {template.base.gender}</span>
+                <span>·</span>
+                <span>lvl {template.status.level}</span>
+                <span>·</span>
+                <span>cult {template.status.level2}</span>
+                <span>·</span>
+                <span>fama {template.status.reputation}</span>
+              </p>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             {dirty && (
