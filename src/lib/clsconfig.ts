@@ -222,10 +222,15 @@ export interface SavePayload {
   source: string;
   key_hex: string;
   version: number;
+  /** Sempre o roleid do template (NÃO usar cls como chave). Ex.: Sacerdote (cls 7) = roleid 31. */
+  roleid: number;
   template: ClsTemplate;
 }
 
 export function buildSavePayload(entry: ClsEntry, template: ClsTemplate): SavePayload {
+  // status.reputation é a fonte da verdade para fama. Sincronizamos summary.reputation só por consistência.
+  const reputation = template.status.reputation;
+
   // Recompute summary counters from the edited template so they stay in sync.
   const synced: ClsTemplate = {
     ...template,
@@ -238,7 +243,7 @@ export function buildSavePayload(entry: ClsEntry, template: ClsTemplate): SavePa
       level: template.status.level,
       level2: template.status.level2,
       cultivation: template.status.cultivation,
-      reputation: template.status.reputation,
+      reputation,
       inventory_money: template.inventory.money,
       inventory_items: template.inventory.items.filter((i) => i.id > 0).length,
       equipment_items: template.equipment.items.filter((i) => i.id > 0).length,
@@ -253,6 +258,8 @@ export function buildSavePayload(entry: ClsEntry, template: ClsTemplate): SavePa
     source: entry.source,
     key_hex: entry.key_hex,
     version: entry.version,
+    // Chave canônica para a VPS: SEMPRE roleid (ex.: Sacerdote = 31), nunca cls (ex.: 7).
+    roleid: template.roleid,
     template: synced,
   };
 }

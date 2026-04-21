@@ -74,20 +74,28 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      // Validação mínima do payload
+      // Validação mínima do payload: a VPS indexa o template por roleid (não por cls).
       const b = (body ?? {}) as Record<string, unknown>;
-      if (!b.key_hex || !b.template) {
+      if (!b.key_hex || !b.template || b.roleid == null) {
         return new Response(
           JSON.stringify({
             success: false,
-            error: "Payload incompleto: requer key_hex e template",
+            error: "Payload incompleto: requer key_hex, roleid e template",
           }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
 
-      const target = `${endpoint}?action=saveClsconfigTemplate`;
-      console.log("[clsconfig-proxy] POST →", target, "key_hex:", String((body as Record<string, unknown>).key_hex));
+      const roleidParam = encodeURIComponent(String(b.roleid));
+      const target = `${endpoint}?action=saveClsconfigTemplate&roleid=${roleidParam}`;
+      console.log(
+        "[clsconfig-proxy] POST →",
+        target,
+        "key_hex:",
+        String((body as Record<string, unknown>).key_hex),
+        "roleid:",
+        String(b.roleid),
+      );
       const upstream = await fetch(target, {
         method: "POST",
         headers: {

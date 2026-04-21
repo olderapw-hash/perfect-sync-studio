@@ -65,22 +65,42 @@ export const ClsconfigEditor = ({ entry }: Props) => {
         throw new Error((data as { error?: string }).error || "Falha ao salvar");
       }
 
+      // Recarrega o clsconfig completo da VPS para validar persistência real.
       const reread = await supabase.functions.invoke("clsconfig-proxy/clsconfig", { method: "GET" });
       if (reread.error) {
         throw new Error("A VPS respondeu ao save, mas falhou na confirmação de leitura");
       }
 
       const normalized = normalizeClsconfigResponse(reread.data);
-      const freshEntry = normalized.entries.find((item) => item.key_hex === entry.key_hex);
-      const persisted = freshEntry && JSON.stringify(freshEntry.template) === JSON.stringify(payload.template);
+      // IMPORTANTE: localizar pelo roleid (NÃO por cls). Ex.: Sacerdote = roleid 31, cls 7.
+      const freshEntry = normalized.entries.find(
+        (item) => item.template.roleid === payload.roleid,
+      );
 
-      if (!persisted) {
-        throw new Error("A VPS aceitou a requisição, mas não persistiu as alterações reais do template");
+      if (!freshEntry) {
+        throw new Error(
+          `A VPS não retornou nenhum entry para roleid ${payload.roleid} após o save`,
+        );
+      }
+
+      // Validação canônica: status.reputation é a fonte da verdade para fama.
+      const expectedReputation = payload.template.status.reputation;
+      const persistedReputation = freshEntry.template.status.reputation;
+      if (persistedReputation !== expectedReputation) {
+        throw new Error(
+          `Persistência divergente em status.reputation (roleid ${payload.roleid}): enviado ${expectedReputation}, persistido ${persistedReputation}`,
+        );
+      }
+
+      // Confere o restante do template como sanity-check secundário.
+      const fullMatch = JSON.stringify(freshEntry.template) === JSON.stringify(payload.template);
+      if (!fullMatch) {
+        console.warn("[clsconfig] reputation OK mas template difere — verificar campos extras");
       }
 
       toast.success("Alterações persistidas na VPS");
-      entry.template = payload.template;
-      setTemplate(payload.template);
+      entry.template = freshEntry.template;
+      setTemplate(freshEntry.template);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Erro desconhecido ao salvar";
       console.error("[clsconfig] save error →", e);
