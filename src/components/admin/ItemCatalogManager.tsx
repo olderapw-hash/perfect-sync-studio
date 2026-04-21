@@ -191,7 +191,7 @@ export const ItemCatalogManager = () => {
             </label>
 
             <label className="block">
-              <span className="uppercase-label mb-1 block">Pasta de ícones (.jpg)</span>
+              <span className="uppercase-label mb-1 block">Ícones (.jpg) — selecione um ou vários</span>
               <div className="flex items-center gap-2 rounded-md border border-dashed border-border bg-background/40 p-3 text-xs">
                 <FolderUp className="h-4 w-4 text-primary" />
                 <input
@@ -199,17 +199,53 @@ export const ItemCatalogManager = () => {
                   type="file"
                   accept="image/jpeg,image/jpg,image/png"
                   multiple
-                  // @ts-expect-error - atributo não-padrão
-                  webkitdirectory=""
-                  directory=""
-                  onChange={(e) => setIconFiles(Array.from(e.target.files ?? []))}
+                  onChange={(e) => {
+                    const picked = Array.from(e.target.files ?? []);
+                    if (!picked.length) return;
+                    // acrescenta sem duplicar (por nome)
+                    setIconFiles((prev) => {
+                      const seen = new Set(prev.map((f) => f.name));
+                      return [...prev, ...picked.filter((f) => !seen.has(f.name))];
+                    });
+                    // permite re-selecionar o mesmo arquivo depois
+                    if (iconsInputRef.current) iconsInputRef.current.value = "";
+                  }}
                   className="block w-full text-xs file:mr-2 file:rounded file:border-0 file:bg-primary file:px-2 file:py-1 file:text-primary-foreground"
                 />
               </div>
               {iconFiles.length > 0 && (
-                <p className="mt-1 font-mono text-[11px] text-muted-foreground">
-                  {iconFiles.length} arquivos selecionados
-                </p>
+                <div className="mt-2 space-y-1">
+                  <div className="flex items-center justify-between font-mono text-[11px] text-muted-foreground">
+                    <span>{iconFiles.length} ícone(s) na fila</span>
+                    <button
+                      type="button"
+                      onClick={() => setIconFiles([])}
+                      className="text-destructive hover:underline"
+                    >
+                      limpar
+                    </button>
+                  </div>
+                  <ul className="max-h-32 space-y-0.5 overflow-y-auto rounded border border-border/60 bg-background/40 p-1">
+                    {iconFiles.map((f, i) => (
+                      <li
+                        key={`${f.name}-${i}`}
+                        className="flex items-center justify-between gap-2 rounded px-1.5 py-0.5 font-mono text-[10px] hover:bg-muted/30"
+                      >
+                        <span className="truncate">{f.name}</span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setIconFiles((prev) => prev.filter((_, idx) => idx !== i))
+                          }
+                          className="text-destructive opacity-60 hover:opacity-100"
+                          aria-label={`remover ${f.name}`}
+                        >
+                          ×
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               )}
             </label>
           </div>
