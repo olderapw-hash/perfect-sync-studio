@@ -44,8 +44,12 @@ export function useSubscription() {
 
     if (!session?.user) return;
 
+    // Unique channel name per hook instance — multiple components mount this
+    // hook (ProtectedRoute, Onboarding, etc.) and Supabase Realtime errors
+    // out if two channels share a name and one is re-subscribed.
+    const channelName = `subscriptions-${session.user.id}-${Math.random().toString(36).slice(2, 10)}`;
     const channel = supabase
-      .channel(`subscriptions-${session.user.id}`)
+      .channel(channelName)
       .on(
         "postgres_changes",
         {
