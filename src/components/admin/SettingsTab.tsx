@@ -35,6 +35,7 @@ export const SettingsTab = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showSecret, setShowSecret] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   // Superadmin edits the global app_settings; everyone else edits their own tenant row.
   const editingTenant = !isSuperadmin;
