@@ -29,11 +29,32 @@ export const StatusTab = ({ template, onChange }: Props) => {
       </Section>
 
       <Section title="Posição e mundo">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() =>
+              onChange(
+                setStatus(template, {
+                  posx: 1250.386 as unknown as number,
+                  posy: 219.618 as unknown as number,
+                  posz: 1145.902 as unknown as number,
+                }),
+              )
+            }
+            className="inline-flex items-center gap-2 rounded-md border border-primary/40 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary transition-smooth hover:bg-primary/20"
+            title="Define posx/posy/posz para a cidade inicial (1250.386, 219.618, 1145.902)"
+          >
+            🏙️ Teleportar para Cidade Inicial
+          </button>
+          <span className="font-mono text-[11px] text-muted-foreground">
+            1250.386, 219.618, 1145.902
+          </span>
+        </div>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           <NumField label="World tag" value={s.worldtag} onChange={(v) => onChange(setStatus(template, { worldtag: v }))} />
-          <NumField label="Pos X" value={s.posx} onChange={(v) => onChange(setStatus(template, { posx: v }))} />
-          <NumField label="Pos Y" value={s.posy} onChange={(v) => onChange(setStatus(template, { posy: v }))} />
-          <NumField label="Pos Z" value={s.posz} onChange={(v) => onChange(setStatus(template, { posz: v }))} />
+          <NumField label="Pos X" value={s.posx} step="any" onChange={(v) => onChange(setStatus(template, { posx: v }))} />
+          <NumField label="Pos Y" value={s.posy} step="any" onChange={(v) => onChange(setStatus(template, { posy: v }))} />
+          <NumField label="Pos Z" value={s.posz} step="any" onChange={(v) => onChange(setStatus(template, { posz: v }))} />
           <NumField label="Storesize" value={s.storesize} onChange={(v) => onChange(setStatus(template, { storesize: v }))} />
           <NumField label="Charactermode" value={s.charactermode} onChange={(v) => onChange(setStatus(template, { charactermode: v }))} />
         </div>
@@ -72,13 +93,28 @@ const Section = ({ title, children }: { title: string; children: React.ReactNode
   </section>
 );
 
-const NumField = ({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) => (
+const NumField = ({
+  label,
+  value,
+  onChange,
+  step,
+}: {
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+  step?: string;
+}) => (
   <label className="block">
     <span className="uppercase-label mb-1.5 block">{label}</span>
     <input
       type="number"
+      step={step}
       value={Number.isFinite(value) ? value : 0}
-      onChange={(e) => onChange(parseInt(e.target.value, 10) || 0)}
+      onChange={(e) => {
+        const raw = e.target.value;
+        const n = step === "any" ? parseFloat(raw) : parseInt(raw, 10);
+        onChange(Number.isFinite(n) ? n : 0);
+      }}
       className="w-full rounded-lg border border-border bg-background/60 px-3 py-2 font-mono text-sm outline-none transition-smooth focus:border-primary"
     />
   </label>
