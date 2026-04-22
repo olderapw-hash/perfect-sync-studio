@@ -1,10 +1,17 @@
 import { useMemo, useState } from "react";
-import { Plus, X } from "lucide-react";
+import { Eraser, Plus, X } from "lucide-react";
+import { toast } from "sonner";
 import type { ClsItem } from "@/types/clsconfig";
 import { newEmptyItem } from "@/lib/clsconfig";
 import { ItemSlot } from "./ItemSlot";
 import { ItemEditor } from "./ItemEditor";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  clearItems,
+  summarizeSection,
+  type SectionKey,
+} from "@/lib/clearSection";
+import { ClearSectionDialog } from "./ClearSectionDialog";
 
 interface Props {
   title: string;
@@ -12,6 +19,14 @@ interface Props {
   onChange: (next: ClsItem[]) => void;
   /** Tamanho do grid visual (slots). Default: max(items.length, 32). */
   gridSize?: number;
+  /** Identifica a seção para o "Limpar Seção". Sem isso, o botão não aparece. */
+  sectionKey?: SectionKey;
+  /** Capacidade declarada (mostrada como "preservada" no preview). */
+  capacity?: number;
+  /** Dinheiro associado à seção (apenas para seções com money). */
+  money?: number;
+  /** Callback para zerar money quando o usuário marca "limpar dinheiro". */
+  onClearMoney?: () => void;
 }
 
 /** Grid visual estilo PWOld — slots fixos, ícones do catálogo .tab, edição em modal. */
