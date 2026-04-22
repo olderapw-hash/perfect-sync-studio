@@ -29,6 +29,7 @@ import { saveHistory } from "@/lib/saveHistory";
 import { seenBackups } from "@/lib/seenBackups";
 import { buildClassIconUrl } from "@/lib/pwIcons";
 import { supabase } from "@/integrations/supabase/client";
+import { pwApi, EndpointMissingError } from "@/lib/pwApiActions";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { BaseTab } from "./BaseTab";
@@ -42,10 +43,21 @@ import { PresetsDialog } from "./PresetsDialog";
 import { BulkApplyDialog } from "./BulkApplyDialog";
 import { CompareClsDialog } from "./CompareClsDialog";
 
+/**
+ * Modo de operação:
+ *  - "template" → editor original do CLS (saveClsconfigTemplate, exportclsconfig automático).
+ *  - "role"     → personagem real existente (saveRoleEditable, sem export por padrão).
+ */
+export type ClsconfigEditorMode = "template" | "role";
+
 interface Props {
   entry: ClsEntry;
   /** Todas as entries carregadas — necessário para "Aplicar em massa" e "Comparar". */
   allEntries?: ClsEntry[];
+  /** Modo de save. Default: "template". */
+  mode?: ClsconfigEditorMode;
+  /** Callback chamado após save bem-sucedido com o template recém-persistido. */
+  onSaved?: (template: ClsTemplate) => void;
 }
 
 type TabKey = "base" | "status" | "inventory" | "equipment" | "storehouse";
