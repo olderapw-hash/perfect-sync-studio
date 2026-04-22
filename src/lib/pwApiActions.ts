@@ -203,11 +203,7 @@ export const pwApi = {
     if (params.limit != null) query.limit = params.limit;
     return callAction<ListBackupsResponse>("listBackups", { method: "GET", query });
   },
-  restoreBackup(body: {
-    roleid: number;
-    backup_role_json?: string;
-    backup_clsconfig_file?: string;
-  }) {
+  restoreBackup(body: RestoreBackupRequest) {
     return callAction<RestoreBackupResponse>("restoreBackup", { method: "POST", body });
   },
   saveRoleEditable(body: SaveRoleEditablePayload) {
