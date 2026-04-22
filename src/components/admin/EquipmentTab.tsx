@@ -140,9 +140,30 @@ export const EquipmentTab = ({ template, onChange }: Props) => {
   extras.forEach((it) => extrasByPos.set(it.pos, it));
 
   // Slots ativos conforme a aba. "Provador" usa as roupas para preview.
-  const activeLeft   = invTab === "normal" ? NORMAL_LEFT   : FASHION_LEFT;
-  const activeRight  = invTab === "normal" ? NORMAL_RIGHT  : FASHION_RIGHT;
-  const activeBottom = invTab === "normal" ? NORMAL_BOTTOM : FASHION_BOTTOM;
+  const activeLeft   = invTab === "normal" ? NORMAL_LEFT   : [];
+  const activeRight  = invTab === "normal" ? NORMAL_RIGHT  : [];
+  const activeBottom = invTab === "normal" ? NORMAL_BOTTOM : [];
+
+  // Roupas: lê direto do storehouse.dress (array de fashion do servidor PW).
+  // Garante pelo menos FASHION_TOTAL slots renderizados (vazios viram placeholders).
+  const dress = template.storehouse?.dress ?? [];
+  const dressSlots: ClsItem[] = Array.from({ length: FASHION_TOTAL }, (_, i) =>
+    dress[i] ?? newEmptyItem(i),
+  );
+  const dressLeft  = dressSlots.slice(0, FASHION_LEFT_COUNT);
+  const dressRight = dressSlots.slice(FASHION_LEFT_COUNT, FASHION_TOTAL);
+
+  const updateDressAt = (idx: number, next: ClsItem) => {
+    const arr = dressSlots.map((it, i) => (i === idx ? next : it));
+    onChange({
+      ...template,
+      storehouse: { ...template.storehouse, dress: arr },
+    });
+  };
+  const removeDressAt = (idx: number) => {
+    updateDressAt(idx, newEmptyItem(idx));
+    setDressEditingIdx(null);
+  };
 
   return (
     <div className="space-y-3">
