@@ -14,6 +14,7 @@ import { saveHistory } from "@/lib/saveHistory";
 import { supabase } from "@/integrations/supabase/client";
 import type { ClsEntry, ClsTemplate } from "@/types/clsconfig";
 import { toast } from "sonner";
+import { handleMaybeAuthError } from "@/lib/authErrors";
 
 type SectionKey = "status" | "position";
 
