@@ -634,6 +634,8 @@ export const EquipmentTab = ({ template, onChange }: Props) => {
               item={editing}
               onChange={(next) => upsertAt(next.pos, next)}
               onRemove={() => removeAt(editing.pos)}
+              peerItems={items}
+              onSlotsChange={(next) => onChange({ ...template, equipment: { items: next } })}
             />
           )}
           <div className="flex justify-end gap-2 border-t border-border pt-3">
@@ -686,6 +688,11 @@ export const EquipmentTab = ({ template, onChange }: Props) => {
               item={dressSlots[dressEditingIdx]}
               onChange={(next) => updateDressAt(dressEditingIdx, next)}
               onRemove={() => removeDressAt(dressEditingIdx)}
+              peerItems={dressSlots}
+              onSlotsChange={(next) =>
+                onChange({ ...template, storehouse: { ...template.storehouse, dress: next } })
+              }
+              capacity={FASHION_TOTAL}
             />
           )}
           <div className="flex justify-end gap-2 border-t border-border pt-3">

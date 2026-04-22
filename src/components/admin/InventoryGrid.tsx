@@ -111,6 +111,9 @@ export const InventoryGrid = ({ title, items, onChange, gridSize }: Props) => {
               item={editing}
               onChange={(next) => upsertAt(next.pos, next)}
               onRemove={() => removeAt(editing.pos)}
+              peerItems={items}
+              onSlotsChange={onChange}
+              capacity={totalSlots}
             />
           )}
           <div className="flex justify-end gap-2 border-t border-border pt-3">

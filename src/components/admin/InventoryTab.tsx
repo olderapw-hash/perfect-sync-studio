@@ -234,6 +234,9 @@ export const InventoryTab = ({ template, onChange }: Props) => {
               item={editing}
               onChange={(next) => upsertAt(next.pos, next)}
               onRemove={() => removeAt(editing.pos)}
+              peerItems={inv.items}
+              onSlotsChange={setItems}
+              capacity={totalSlots}
             />
           )}
           <div className="flex justify-end gap-2 border-t border-border pt-3">
