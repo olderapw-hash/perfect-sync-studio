@@ -50,6 +50,45 @@ export type Database = {
         }
         Relationships: []
       }
+      audit_logs: {
+        Row: {
+          action: string
+          created_at: string
+          error: string | null
+          http_status: number | null
+          id: string
+          metadata: Json | null
+          status: string
+          target: string | null
+          tenant_id: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          error?: string | null
+          http_status?: number | null
+          id?: string
+          metadata?: Json | null
+          status?: string
+          target?: string | null
+          tenant_id?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          error?: string | null
+          http_status?: number | null
+          id?: string
+          metadata?: Json | null
+          status?: string
+          target?: string | null
+          tenant_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       character_photos: {
         Row: {
           public_url: string
@@ -178,9 +217,13 @@ export type Database = {
       }
       tenants: {
         Row: {
+          connection_error: string | null
+          connection_status: string | null
+          connection_tested_at: string | null
           created_at: string
           icon_base_url: string | null
           id: string
+          is_active: boolean
           logo_url: string | null
           onboarding_completed: boolean
           owner_id: string
@@ -191,9 +234,13 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          connection_error?: string | null
+          connection_status?: string | null
+          connection_tested_at?: string | null
           created_at?: string
           icon_base_url?: string | null
           id?: string
+          is_active?: boolean
           logo_url?: string | null
           onboarding_completed?: boolean
           owner_id: string
@@ -204,9 +251,13 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          connection_error?: string | null
+          connection_status?: string | null
+          connection_tested_at?: string | null
           created_at?: string
           icon_base_url?: string | null
           id?: string
+          is_active?: boolean
           logo_url?: string | null
           onboarding_completed?: boolean
           owner_id?: string
@@ -284,6 +335,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      set_active_tenant: {
+        Args: { target_tenant_id: string }
+        Returns: undefined
       }
     }
     Enums: {
