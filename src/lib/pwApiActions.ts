@@ -206,8 +206,9 @@ async function callAction<T>(
 }
 
 export const pwApi = {
-  getItemCatalog(params: { q?: string; limit?: number; offset?: number } = {}) {
+  getItemCatalog(params: { q?: string; id?: number | string; limit?: number; offset?: number } = {}) {
     const query: Record<string, string | number> = {};
+    if (params.id != null && params.id !== "") query.id = params.id;
     if (params.q) query.q = params.q;
     if (params.limit != null) query.limit = params.limit;
     if (params.offset != null) query.offset = params.offset;
