@@ -537,7 +537,13 @@ export const ClsconfigEditor = ({ entry, allEntries = [], mode = "template", onS
               <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                 <span className="font-semibold text-foreground/80">{className}</span>
                 <span>·</span>
-                <span className="font-mono">key {entry.key_hex.slice(0, 12)}…</span>
+                {isRoleMode ? (
+                  <span className="font-mono text-destructive">
+                    Personagem REAL · roleid {entry.template.roleid}
+                  </span>
+                ) : (
+                  <span className="font-mono">key {entry.key_hex.slice(0, 12)}…</span>
+                )}
                 <span>·</span>
                 <span>cls {template.summary.cls}</span>
                 <span>·</span>
