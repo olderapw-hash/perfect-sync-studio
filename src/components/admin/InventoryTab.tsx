@@ -159,13 +159,25 @@ export const InventoryTab = ({ template, onChange }: Props) => {
             <span className="font-mono">
               {filledCount}/{totalSlots} slots preenchidos
             </span>
-            <button
-              type="button"
-              onClick={() => upsertAt(totalSlots, newEmptyItem(totalSlots))}
-              className="rounded border border-amber-700/40 bg-black/40 px-2 py-0.5 font-semibold uppercase tracking-wider text-amber-200/70 transition-smooth hover:border-amber-500 hover:text-amber-200"
-            >
-              + Slot
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setClearOpen(true)}
+                disabled={filledCount === 0 && (inv.money ?? 0) === 0}
+                className="inline-flex items-center gap-1 rounded border border-destructive/40 bg-black/40 px-2 py-0.5 font-semibold uppercase tracking-wider text-destructive transition-smooth hover:border-destructive hover:text-destructive disabled:opacity-40"
+                title="Esvazia todos os slots do inventário"
+              >
+                <Eraser className="h-3 w-3" />
+                Limpar seção
+              </button>
+              <button
+                type="button"
+                onClick={() => upsertAt(totalSlots, newEmptyItem(totalSlots))}
+                className="rounded border border-amber-700/40 bg-black/40 px-2 py-0.5 font-semibold uppercase tracking-wider text-amber-200/70 transition-smooth hover:border-amber-500 hover:text-amber-200"
+              >
+                + Slot
+              </button>
+            </div>
           </div>
         </div>
       </div>
