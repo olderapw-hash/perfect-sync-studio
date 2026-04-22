@@ -248,12 +248,17 @@ export const RoleidHistoryDialog = ({
     setDetail({ ...emptyDetail, loading: true });
     const name = backup.name || basename(backup.file);
     try {
-      // Carrega backup content (com fallback dry_run).
+      // Carrega backup content via POST JSON. Fallback dry_run só se 404/missing.
       let bTpl: Record<string, unknown> | null = null;
       try {
-        const bc = await pwApi.getBackupContent(name);
+        const bc = await pwApi.getBackupContent(name, "role_json");
         if (!bc?.success) throw new Error(bc?.error || "getBackupContent retornou success:false");
-        bTpl = extractTemplate(bc.template ?? bc.role);
+        // Shape novo: bc.backup.template. Legado: bc.template / bc.role.
+        const raw = bc.backup?.template ?? bc.template ?? bc.role;
+        bTpl = extractTemplate(raw);
+        if (!bTpl) {
+          throw new Error("getBackupContent respondeu success mas sem backup.template.");
+        }
       } catch (e) {
         if (e instanceof EndpointMissingError) {
           const dry = await pwApi.restoreBackup({ type: "role_json", name, dry_run: true });
