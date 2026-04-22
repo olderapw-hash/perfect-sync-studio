@@ -6,6 +6,8 @@ import { WarAvatarPicker } from "./WarAvatarPicker";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useState } from "react";
 import { X } from "lucide-react";
+import { buildClassIconUrl } from "@/lib/pwIcons";
+import { getClassInfo, getInitials } from "@/lib/pwClasses";
 
 interface Props {
   template: ClsTemplate;
