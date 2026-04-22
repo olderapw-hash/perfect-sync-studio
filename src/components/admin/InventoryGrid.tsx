@@ -30,8 +30,18 @@ interface Props {
 }
 
 /** Grid visual estilo PWOld — slots fixos, ícones do catálogo .tab, edição em modal. */
-export const InventoryGrid = ({ title, items, onChange, gridSize }: Props) => {
+export const InventoryGrid = ({
+  title,
+  items,
+  onChange,
+  gridSize,
+  sectionKey,
+  capacity,
+  money,
+  onClearMoney,
+}: Props) => {
   const [editingPos, setEditingPos] = useState<number | null>(null);
+  const [clearOpen, setClearOpen] = useState(false);
 
   const totalSlots = gridSize ?? Math.max(items.length, 32);
   const filledCount = items.filter((i) => i.id > 0).length;
