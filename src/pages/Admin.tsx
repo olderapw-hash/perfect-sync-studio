@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import {
   AlertCircle,
   Database,
+  Image as ImageIcon,
   Loader2,
   LogOut,
   RefreshCw,
@@ -20,10 +21,11 @@ import { HistoryDrawer } from "@/components/admin/HistoryDrawer";
 import { BackupsDialog } from "@/components/admin/BackupsDialog";
 import { ItemCatalogSearchDialog } from "@/components/admin/ItemCatalogSearchDialog";
 import { RolePersonagemTab } from "@/components/admin/RolePersonagemTab";
+import { ClassPhotosTab } from "@/components/admin/ClassPhotosTab";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 
-type AdminMode = "template" | "role";
+type AdminMode = "template" | "role" | "photos";
 
 const Admin = () => {
   const { data, raw, loading, error, reload } = useClsconfig();
