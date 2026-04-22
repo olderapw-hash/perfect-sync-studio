@@ -299,7 +299,8 @@ export const SettingsTab = () => {
               <button
                 type="button"
                 onClick={downloadApiCls}
-                disabled={downloading || !originalSecret}
+                disabled={downloading || !originalSecret || !canExport}
+                title={!canExport ? NO_EXPORT_TIP : undefined}
                 className="inline-flex items-center gap-2 rounded-md border border-primary/40 bg-primary/10 px-4 py-2 text-xs font-semibold text-primary hover:bg-primary/20 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {downloading ? (
@@ -309,11 +310,13 @@ export const SettingsTab = () => {
                 )}
                 Baixar api_cls.php personalizado
               </button>
-              {!originalSecret && (
+              {!canExport ? (
+                <p className="mt-2 text-[11px] text-destructive">{NO_EXPORT_TIP}</p>
+              ) : !originalSecret ? (
                 <p className="mt-2 text-[11px] text-destructive">
                   Defina e salve o secret antes de baixar.
                 </p>
-              )}
+              ) : null}
             </div>
           )}
         </div>
