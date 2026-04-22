@@ -42,26 +42,30 @@ const NORMAL_BOTTOM: { pos: number; label: string }[] = [
   { pos: 7,  label: "Anel D" },
 ];
 
+// Roupas: grid 4 linhas × 3 colunas de cada lado da silhueta (estilo cliente PW BR).
+// Pos seguem a convenção fashion do cliente (equipPos + 16) + acessórios extras.
 const FASHION_LEFT: { pos: number; label: string }[] = [
-  { pos: 16, label: "Capacete (R)" },
-  { pos: 18, label: "Armadura (R)" },
-  { pos: 19, label: "Cinto (R)" },
-  { pos: 20, label: "Calça (R)" },
+  // linha 1
+  { pos: 16, label: "Capacete (R)" }, { pos: 32, label: "Slot" }, { pos: 33, label: "Asa (R)" },
+  // linha 2
+  { pos: 34, label: "Brinco" }, { pos: 35, label: "Pulseira" }, { pos: 18, label: "Armadura (R)" },
+  // linha 3
+  { pos: 19, label: "Cinto (R)" }, { pos: 36, label: "Anel (R)" }, { pos: 37, label: "Acess." },
+  // linha 4
+  { pos: 38, label: "Carta E" }, { pos: 39, label: "Carta D" }, { pos: 40, label: "Marca" },
 ];
 const FASHION_RIGHT: { pos: number; label: string }[] = [
-  { pos: 26, label: "Capa (R)" },
-  { pos: 24, label: "Arma (R)" },
-  { pos: 25, label: "Sub-arma (R)" },
-  { pos: 21, label: "Botas (R)" },
+  // linha 1
+  { pos: 26, label: "Capa (R)" }, { pos: 41, label: "Slot" }, { pos: 42, label: "Aura" },
+  // linha 2
+  { pos: 43, label: "Pet (R)" }, { pos: 24, label: "Arma (R)" }, { pos: 44, label: "Acess." },
+  // linha 3
+  { pos: 45, label: "Acess." }, { pos: 20, label: "Calça (R)" }, { pos: 21, label: "Botas (R)" },
+  // linha 4
+  { pos: 46, label: "Carta" }, { pos: 47, label: "Slot" }, { pos: 48, label: "Selo" },
 ];
-const FASHION_BOTTOM: { pos: number; label: string }[] = [
-  { pos: 22, label: "Acess. 1" },
-  { pos: 23, label: "Acess. 2" },
-  { pos: 27, label: "Acess. 3" },
-  { pos: 28, label: "Acess. 4" },
-  { pos: 29, label: "Acess. 5" },
-  { pos: 30, label: "Acess. 6" },
-];
+const FASHION_BOTTOM: { pos: number; label: string }[] = [];
+
 
 // Mantido para compatibilidade com lógica de "extras" / editingLabel.
 const SLOTS = [
