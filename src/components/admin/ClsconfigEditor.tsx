@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { RotateCcw, Save, User, Activity, Backpack, Sword, Warehouse, Loader2 } from "lucide-react";
-import type { ClsEntry, ClsTemplate } from "@/types/clsconfig";
+import type { ClsEntry, ClsItem, ClsTemplate } from "@/types/clsconfig";
 import {
+  buildInventoryPayload,
   buildSavePayload,
   buildStatusPayload,
   diffSimpleStatus,
   normalizeClsconfigResponse,
+  onlyInventoryChanged,
   onlySimpleStatusChanged,
   SIMPLE_STATUS_FIELDS,
   type SimpleStatusField,
