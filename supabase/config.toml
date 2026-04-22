@@ -2,3 +2,9 @@ project_id = "ezgjmioxmyqgxgdpigeb"
 
 [functions.clsconfig-proxy]
 verify_jwt = false
+
+[functions.payments-webhook]
+verify_jwt = false
+
+[functions.get-paddle-price]
+verify_jwt = false

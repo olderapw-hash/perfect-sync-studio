@@ -10,6 +10,9 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Admin from "./pages/Admin.tsx";
 import Auth from "./pages/Auth.tsx";
 import Landing from "./pages/Landing.tsx";
+import Pricing from "./pages/Pricing.tsx";
+import CheckoutSuccess from "./pages/CheckoutSuccess.tsx";
+import Onboarding from "./pages/Onboarding.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -26,10 +29,20 @@ const App = () => (
               <Routes>
                 <Route path="/" element={<Landing />} />
                 <Route path="/auth" element={<Auth />} />
+                <Route path="/pricing" element={<Pricing />} />
+                <Route path="/checkout/success" element={<CheckoutSuccess />} />
+                <Route
+                  path="/onboarding"
+                  element={
+                    <ProtectedRoute requireAdmin={false}>
+                      <Onboarding />
+                    </ProtectedRoute>
+                  }
+                />
                 <Route
                   path="/admin"
                   element={
-                    <ProtectedRoute requireAdmin>
+                    <ProtectedRoute requireAdmin requireSubscription>
                       <Admin />
                     </ProtectedRoute>
                   }

@@ -1,16 +1,26 @@
 import { Navigate } from "react-router-dom";
 import { Loader2, ShieldAlert } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useSubscription } from "@/hooks/useSubscription";
+import { useTenant } from "@/hooks/useTenant";
 
 interface Props {
   children: React.ReactNode;
   requireAdmin?: boolean;
+  /** Also require an active paid subscription + completed onboarding */
+  requireSubscription?: boolean;
 }
 
-export const ProtectedRoute = ({ children, requireAdmin = true }: Props) => {
-  const { session, isAdmin, loading, signOut } = useAuth();
+export const ProtectedRoute = ({
+  children,
+  requireAdmin = true,
+  requireSubscription = false,
+}: Props) => {
+  const { session, isAdmin, isSuperadmin, loading, signOut } = useAuth();
+  const { isActive, loading: subLoading } = useSubscription();
+  const { tenant, loading: tenantLoading } = useTenant();
 
-  if (loading) {
+  if (loading || (requireSubscription && (subLoading || tenantLoading))) {
     return (
       <div className="flex h-screen items-center justify-center bg-hero">
         <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -40,6 +50,16 @@ export const ProtectedRoute = ({ children, requireAdmin = true }: Props) => {
         </div>
       </div>
     );
+  }
+
+  // Subscription gate (superadmin bypasses — that's you, the SaaS owner)
+  if (requireSubscription && !isSuperadmin) {
+    if (!isActive) {
+      return <Navigate to="/pricing" replace />;
+    }
+    if (!tenant?.onboarding_completed) {
+      return <Navigate to="/onboarding" replace />;
+    }
   }
 
   return <>{children}</>;
