@@ -60,13 +60,26 @@ export const ClsconfigEditor = ({ entry }: Props) => {
     toast.info("Template restaurado para a versão original");
   };
 
-  const handleSave = async () => {
+  /** Abre o diálogo de preview (validação acontece aqui — bloqueia se houver erro). */
+  const handleSave = () => {
+    if (saving) return;
+    const errs = validateTemplateItems(template);
+    if (errs.length > 0) {
+      // Mostra primeiros 3 erros no toast — resto vai pro console.
+      const head = errs.slice(0, 3).map((e) => "• " + e.message).join("\n");
+      const tail = errs.length > 3 ? `\n…e mais ${errs.length - 3} erro(s)` : "";
+      toast.error(`Validação falhou:\n${head}${tail}`, { duration: 8000 });
+      console.warn("[clsconfig] validação de itens →", errs);
+      return;
+    }
+    setPreviewOpen(true);
+  };
+
+  /** Salva de fato (chamado pelo botão "Confirmar e salvar" do preview). */
+  const runSave = async () => {
     if (saving) return;
 
-    // Decide qual payload usar:
-    //  - aba Status + só campos simples mudaram → patch de status
-    //  - aba Inventário + só inventário mudou    → patch de inventário (sem cultivation/decoded/etc)
-    //  - resto → save completo
+    const className = template.summary.class_name ?? `Classe ${template.summary.cls}`;
     const statusDiff = diffSimpleStatus(entry.template, template);
     const useStatusPatch =
       tab === "status" &&
@@ -78,6 +91,7 @@ export const ClsconfigEditor = ({ entry }: Props) => {
       onlyInventoryChanged(entry.template, template);
 
     setSaving(true);
+    let lastResponse: Record<string, unknown> | null = null;
     try {
       let savedRoleid: number;
       const expectedStatus: Partial<Record<SimpleStatusField, number>> = {};
@@ -98,6 +112,9 @@ export const ClsconfigEditor = ({ entry }: Props) => {
         }
         if (data && typeof data === "object" && (data as { success?: boolean }).success === false) {
           throw new Error((data as { error?: string }).error || errLabel);
+        }
+        if (data && typeof data === "object") {
+          lastResponse = data as Record<string, unknown>;
         }
       };
 
@@ -139,7 +156,6 @@ export const ClsconfigEditor = ({ entry }: Props) => {
         );
       }
 
-      // Valida CADA campo enviado. Comparação por igualdade estrita — 0 é válido.
       const divergent: string[] = [];
       for (const field of Object.keys(expectedStatus) as SimpleStatusField[]) {
         const expected = expectedStatus[field];
@@ -161,6 +177,34 @@ export const ClsconfigEditor = ({ entry }: Props) => {
         );
       }
 
+      // Histórico — registra cada campo simples que mudou.
+      for (const [field, newValue] of Object.entries(expectedStatus)) {
+        const oldValue = entry.template.status[field as SimpleStatusField];
+        if (oldValue === newValue) continue;
+        saveHistory.pushDiff({
+          roleid: savedRoleid,
+          className,
+          field: `status.${field}`,
+          oldValue,
+          newValue,
+          status: "ok",
+        });
+      }
+      if (expectedInventory) {
+        const oldCount = entry.template.inventory.items.filter((i) => i.id > 0).length;
+        const newCount = expectedInventory.filter((i) => i.id > 0).length;
+        if (oldCount !== newCount) {
+          saveHistory.pushDiff({
+            roleid: savedRoleid,
+            className,
+            field: "inventory.items (count)",
+            oldValue: oldCount,
+            newValue: newCount,
+            status: "ok",
+          });
+        }
+      }
+
       const summary = useStatusPatch
         ? Object.entries(expectedStatus).map(([k, v]) => `${k}=${v}`).join(", ")
         : "";
@@ -173,10 +217,40 @@ export const ClsconfigEditor = ({ entry }: Props) => {
       );
       entry.template = freshEntry.template;
       setTemplate(freshEntry.template);
+
+      // Checklist pós-save — extrai caminhos de backup/export da response do save.
+      setPreviewOpen(false);
+      setChecklistResult({
+        saved: true,
+        verified: true,
+        backupRoleJson: extractPath(lastResponse, ["backups", "role_json", "file"]) ??
+          extractPath(lastResponse, ["backup_role_json"]),
+        backupClsconfigFile: extractPath(lastResponse, ["backups", "clsconfig_file", "file"]) ??
+          extractPath(lastResponse, ["backup_clsconfig_file"]),
+        exportLogFile: extractPath(lastResponse, ["export", "log_file"]) ??
+          extractPath(lastResponse, ["export_log_file"]),
+      });
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Erro desconhecido ao salvar";
       console.error("[clsconfig] save error →", e);
       toast.error(msg);
+      saveHistory.pushDiff({
+        roleid: entry.template.roleid,
+        className: template.summary.class_name ?? `Classe ${template.summary.cls}`,
+        field: tab,
+        oldValue: "(estado anterior)",
+        newValue: "(tentativa de save)",
+        status: "error",
+        error: msg,
+      });
+      setPreviewOpen(false);
+      setChecklistResult({
+        saved: false,
+        verified: false,
+        error: msg,
+        backupRoleJson: extractPath(lastResponse, ["backups", "role_json", "file"]) ?? undefined,
+        backupClsconfigFile: extractPath(lastResponse, ["backups", "clsconfig_file", "file"]) ?? undefined,
+      });
     } finally {
       setSaving(false);
     }
