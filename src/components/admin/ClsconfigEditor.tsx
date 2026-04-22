@@ -12,6 +12,8 @@ import {
   SIMPLE_STATUS_FIELDS,
   type SimpleStatusField,
 } from "@/lib/clsconfig";
+import { validateTemplateItems } from "@/lib/validateItem";
+import { saveHistory } from "@/lib/saveHistory";
 import { buildClassIconUrl } from "@/lib/pwIcons";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -21,6 +23,8 @@ import { StatusTab } from "./StatusTab";
 import { InventoryTab } from "./InventoryTab";
 import { EquipmentTab } from "./EquipmentTab";
 import { StorehouseTab } from "./StorehouseTab";
+import { SavePreviewDialog } from "./SavePreviewDialog";
+import { SaveChecklistDialog, type SaveChecklistResult } from "./SaveChecklistDialog";
 
 interface Props {
   entry: ClsEntry;
