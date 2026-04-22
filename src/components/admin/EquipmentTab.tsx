@@ -352,9 +352,9 @@ export const EquipmentTab = ({ template, onChange }: Props) => {
                         boxShadow: `inset 0 0 0 2px hsl(${classInfo.color} / 0.5), inset 0 0 24px hsl(0 0% 0% / 0.7), 0 0 18px hsl(${classInfo.color} / 0.25)`,
                       }}
                     >
-                      {classIconUrl ? (
+                      {photo.url ? (
                         <img
-                          src={classIconUrl}
+                          src={photo.url}
                           alt={className}
                           loading="lazy"
                           className="h-full w-full object-cover object-top"
@@ -367,6 +367,41 @@ export const EquipmentTab = ({ template, onChange }: Props) => {
                           {getInitials(charName || className)}
                         </div>
                       )}
+
+                      {/* Overlay de upload (canto sup. direito) */}
+                      <div className="absolute right-1.5 top-1.5 flex flex-col items-end gap-1">
+                        <PhotoUploadButton
+                          iconOnly
+                          label={template.roleid ? "Trocar foto deste personagem" : "Trocar foto da classe"}
+                          onUpload={template.roleid ? handleUploadCharacter : handleUploadClass}
+                          onRemove={
+                            template.roleid && photo.source === "character"
+                              ? handleRemoveCharacter
+                              : undefined
+                          }
+                        />
+                        {photo.source !== "none" && (
+                          <span
+                            className="rounded-sm px-1 py-0.5 text-[8px] font-bold uppercase tracking-wider"
+                            style={{
+                              background: "hsl(0 0% 0% / 0.7)",
+                              color:
+                                photo.source === "character"
+                                  ? "hsl(140 60% 65%)"
+                                  : photo.source === "class"
+                                    ? "hsl(45 80% 65%)"
+                                    : "hsl(0 0% 60%)",
+                            }}
+                          >
+                            {photo.source === "character"
+                              ? "char"
+                              : photo.source === "class"
+                                ? "classe"
+                                : "padrão"}
+                          </span>
+                        )}
+                      </div>
+
                       {/* Faixa inferior com nome + nível */}
                       <div
                         className="absolute inset-x-0 bottom-0 flex items-center justify-between px-2 py-1 text-[10px]"
