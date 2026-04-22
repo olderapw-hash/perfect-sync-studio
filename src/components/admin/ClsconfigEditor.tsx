@@ -13,6 +13,7 @@ import {
   ArrowRightLeft,
   AlertTriangle,
   UserCog,
+  History,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -54,6 +55,7 @@ import { SaveChecklistDialog, type SaveChecklistResult } from "./SaveChecklistDi
 import { PresetsDialog } from "./PresetsDialog";
 import { BulkApplyDialog } from "./BulkApplyDialog";
 import { CompareClsDialog } from "./CompareClsDialog";
+import { RoleidHistoryDialog } from "./RoleidHistoryDialog";
 
 /**
  * Modo de operação:
@@ -117,6 +119,7 @@ export const ClsconfigEditor = ({ entry, allEntries = [], mode = "template", onS
   const [presetsOpen, setPresetsOpen] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
   const [compareOpen, setCompareOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   /** Apenas modo "role": opt-in para disparar exportclsconfig após o save. */
   const [exportClsconfigForRole, setExportClsconfigForRole] = useState(false);
   /** Apenas modo "role": confirmação forte ANTES de chamar runSave. */
@@ -616,6 +619,14 @@ export const ClsconfigEditor = ({ entry, allEntries = [], mode = "template", onS
               </label>
             )}
             <button
+              onClick={() => setHistoryOpen(true)}
+              className="inline-flex items-center gap-2 rounded-md border border-border bg-card/60 px-3 py-2 text-xs transition-smooth hover:border-primary/50"
+              title="Histórico de backups role_json para este roleid"
+            >
+              <History className="h-3.5 w-3.5" />
+              Histórico
+            </button>
+            <button
               onClick={handleReset}
               disabled={!dirty}
               className="inline-flex items-center gap-2 rounded-md border border-border bg-card/60 px-3 py-2 text-sm transition-smooth hover:border-primary/50 disabled:opacity-50"
@@ -772,6 +783,35 @@ export const ClsconfigEditor = ({ entry, allEntries = [], mode = "template", onS
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <RoleidHistoryDialog
+        open={historyOpen}
+        onOpenChange={setHistoryOpen}
+        roleid={entry.template.roleid}
+        className={template.summary.class_name ?? `Classe ${template.summary.cls}`}
+        onRestored={() => {
+          // Após restore (parcial ou total), recarrega o estado do editor.
+          if (isRoleMode) {
+            // Em modo role, refaz getRoleEditable e atualiza o template.
+            void (async () => {
+              try {
+                const reread = await pwApi.getRoleEditable(entry.template.roleid);
+                const rawTpl = (reread?.template ?? (reread as unknown as { role?: unknown })?.role) as unknown;
+                if (rawTpl && typeof rawTpl === "object") {
+                  const fresh = rawTpl as ClsTemplate;
+                  entry.template = fresh;
+                  setTemplate(fresh);
+                  onSaved?.(fresh);
+                }
+              } catch (e) {
+                console.warn("[history] reload getRoleEditable falhou:", e);
+              }
+            })();
+          } else {
+            onSaved?.(entry.template);
+          }
+        }}
+      />
     </div>
   );
 };
