@@ -1,10 +1,17 @@
 import { useMemo, useState } from "react";
-import { Plus, X } from "lucide-react";
+import { Eraser, Plus, X } from "lucide-react";
+import { toast } from "sonner";
 import type { ClsItem } from "@/types/clsconfig";
 import { newEmptyItem } from "@/lib/clsconfig";
 import { ItemSlot } from "./ItemSlot";
 import { ItemEditor } from "./ItemEditor";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  clearItems,
+  summarizeSection,
+  type SectionKey,
+} from "@/lib/clearSection";
+import { ClearSectionDialog } from "./ClearSectionDialog";
 
 interface Props {
   title: string;
@@ -12,11 +19,29 @@ interface Props {
   onChange: (next: ClsItem[]) => void;
   /** Tamanho do grid visual (slots). Default: max(items.length, 32). */
   gridSize?: number;
+  /** Identifica a seção para o "Limpar Seção". Sem isso, o botão não aparece. */
+  sectionKey?: SectionKey;
+  /** Capacidade declarada (mostrada como "preservada" no preview). */
+  capacity?: number;
+  /** Dinheiro associado à seção (apenas para seções com money). */
+  money?: number;
+  /** Callback para zerar money quando o usuário marca "limpar dinheiro". */
+  onClearMoney?: () => void;
 }
 
 /** Grid visual estilo PWOld — slots fixos, ícones do catálogo .tab, edição em modal. */
-export const InventoryGrid = ({ title, items, onChange, gridSize }: Props) => {
+export const InventoryGrid = ({
+  title,
+  items,
+  onChange,
+  gridSize,
+  sectionKey,
+  capacity,
+  money,
+  onClearMoney,
+}: Props) => {
   const [editingPos, setEditingPos] = useState<number | null>(null);
+  const [clearOpen, setClearOpen] = useState(false);
 
   const totalSlots = gridSize ?? Math.max(items.length, 32);
   const filledCount = items.filter((i) => i.id > 0).length;
@@ -57,6 +82,18 @@ export const InventoryGrid = ({ title, items, onChange, gridSize }: Props) => {
     upsertAt(nextPos, newEmptyItem(nextPos));
   };
 
+  const handleClearConfirmed = ({ clearMoney }: { clearMoney: boolean }) => {
+    onChange(clearItems(items));
+    if (clearMoney && onClearMoney) onClearMoney();
+    toast.success(`${title} limpo${clearMoney ? " (incluindo dinheiro)" : ""}`);
+  };
+
+  const preview = summarizeSection(items, {
+    capacity,
+    money,
+    hasMoney: money != null && !!onClearMoney,
+  });
+
   return (
     <section>
       <header className="mb-3 flex items-center justify-between gap-2">
@@ -66,15 +103,39 @@ export const InventoryGrid = ({ title, items, onChange, gridSize }: Props) => {
             {filledCount}/{totalSlots}
           </span>
         </div>
-        <button
-          type="button"
-          onClick={addSlot}
-          className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card/60 px-2.5 py-1.5 text-xs font-semibold text-foreground transition-smooth hover:border-primary/50 hover:text-primary"
-        >
-          <Plus className="h-3.5 w-3.5" />
-          Slot
-        </button>
+        <div className="flex items-center gap-1.5">
+          {sectionKey && (
+            <button
+              type="button"
+              onClick={() => setClearOpen(true)}
+              disabled={filledCount === 0 && (money ?? 0) === 0}
+              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card/60 px-2.5 py-1.5 text-xs font-semibold text-destructive transition-smooth hover:border-destructive/50 disabled:opacity-40 disabled:hover:border-border"
+              title="Esvazia todos os slots desta seção"
+            >
+              <Eraser className="h-3.5 w-3.5" />
+              Limpar seção
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={addSlot}
+            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card/60 px-2.5 py-1.5 text-xs font-semibold text-foreground transition-smooth hover:border-primary/50 hover:text-primary"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Slot
+          </button>
+        </div>
       </header>
+
+      {sectionKey && (
+        <ClearSectionDialog
+          open={clearOpen}
+          onOpenChange={setClearOpen}
+          section={sectionKey}
+          preview={preview}
+          onConfirm={handleClearConfirmed}
+        />
+      )}
 
       <div
         className="grid grid-cols-8 gap-[3px] rounded-sm p-2"

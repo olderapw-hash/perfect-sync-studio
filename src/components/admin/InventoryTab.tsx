@@ -1,10 +1,13 @@
 import { useMemo, useState } from "react";
-import { Coins } from "lucide-react";
+import { Coins, Eraser } from "lucide-react";
+import { toast } from "sonner";
 import type { ClsItem, ClsTemplate } from "@/types/clsconfig";
 import { newEmptyItem } from "@/lib/clsconfig";
 import { ItemSlot } from "./ItemSlot";
 import { ItemEditor } from "./ItemEditor";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { clearItems, summarizeSection } from "@/lib/clearSection";
+import { ClearSectionDialog } from "./ClearSectionDialog";
 
 interface Props {
   template: ClsTemplate;
@@ -21,6 +24,7 @@ interface Props {
 export const InventoryTab = ({ template, onChange }: Props) => {
   const inv = template.inventory;
   const [editingPos, setEditingPos] = useState<number | null>(null);
+  const [clearOpen, setClearOpen] = useState(false);
 
   const totalSlots = Math.max(inv.capacity || 0, inv.items.length, 48);
   const filledCount = inv.items.filter((i) => i.id > 0).length;
@@ -155,13 +159,25 @@ export const InventoryTab = ({ template, onChange }: Props) => {
             <span className="font-mono">
               {filledCount}/{totalSlots} slots preenchidos
             </span>
-            <button
-              type="button"
-              onClick={() => upsertAt(totalSlots, newEmptyItem(totalSlots))}
-              className="rounded border border-amber-700/40 bg-black/40 px-2 py-0.5 font-semibold uppercase tracking-wider text-amber-200/70 transition-smooth hover:border-amber-500 hover:text-amber-200"
-            >
-              + Slot
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setClearOpen(true)}
+                disabled={filledCount === 0 && (inv.money ?? 0) === 0}
+                className="inline-flex items-center gap-1 rounded border border-destructive/40 bg-black/40 px-2 py-0.5 font-semibold uppercase tracking-wider text-destructive transition-smooth hover:border-destructive hover:text-destructive disabled:opacity-40"
+                title="Esvazia todos os slots do inventário"
+              >
+                <Eraser className="h-3 w-3" />
+                Limpar seção
+              </button>
+              <button
+                type="button"
+                onClick={() => upsertAt(totalSlots, newEmptyItem(totalSlots))}
+                className="rounded border border-amber-700/40 bg-black/40 px-2 py-0.5 font-semibold uppercase tracking-wider text-amber-200/70 transition-smooth hover:border-amber-500 hover:text-amber-200"
+              >
+                + Slot
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -257,6 +273,26 @@ export const InventoryTab = ({ template, onChange }: Props) => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Limpar seção (preview + confirmação forte) */}
+      <ClearSectionDialog
+        open={clearOpen}
+        onOpenChange={setClearOpen}
+        section="inventory.items"
+        preview={summarizeSection(inv.items, {
+          capacity: inv.capacity,
+          money: inv.money,
+          hasMoney: true,
+        })}
+        onConfirm={({ clearMoney }) => {
+          const cleared = clearItems(inv.items);
+          onChange({
+            ...template,
+            inventory: { ...inv, items: cleared, money: clearMoney ? 0 : inv.money },
+          });
+          toast.success(`Inventário limpo${clearMoney ? " (incluindo dinheiro)" : ""}`);
+        }}
+      />
     </div>
   );
 };
