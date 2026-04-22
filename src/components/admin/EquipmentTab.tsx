@@ -44,19 +44,57 @@ const NORMAL_BOTTOM: { pos: number; label: string }[] = [
   { pos: 7,  label: "Anel D" },
 ];
 
+// Layout PW BR — slots dispostos em duas colunas duplas ao redor do retrato.
+// Topo: capacete centralizado.
+const NORMAL_TOP: { pos: number; label: string } = { pos: 0, label: "ELMO" };
+
+// Coluna esquerda — duas sub-colunas (externa, interna)
+const NORMAL_LEFT_OUTER: { pos: number; label: string }[] = [
+  { pos: 10, label: "MANTO" },
+  { pos: 6,  label: "ANEL ESQ." },
+  { pos: 3,  label: "CINTO" },
+];
+const NORMAL_LEFT_INNER: { pos: number; label: string }[] = [
+  { pos: 2,  label: "ARMADURA" },
+  { pos: 14, label: "BRAÇADEIRAS" },
+  { pos: 4,  label: "CALÇAS" },
+  { pos: 5,  label: "BOTAS" },
+];
+
+// Coluna direita — duas sub-colunas (interna, externa)
+const NORMAL_RIGHT_INNER: { pos: number; label: string }[] = [
+  { pos: 1,  label: "COLAR" },
+  { pos: 15, label: "RUNA" },
+  { pos: 13, label: "AMULETO" },
+  { pos: 11, label: "HIERO" },
+];
+const NORMAL_RIGHT_OUTER: { pos: number; label: string }[] = [
+  { pos: 8,  label: "ARMA" },
+  { pos: 17, label: "TOMO" },
+  { pos: 18, label: "MUNIÇÃO" },
+  { pos: 12, label: "VOO" },
+];
+
+// Linha inferior (loja · espírito · anel dir)
+const NORMAL_BOTTOM_ROW: { pos: number; label: string }[] = [
+  { pos: 19, label: "LOJA" },
+  { pos: 9,  label: "ESPÍRITO" },
+  { pos: 7,  label: "ANEL DIR." },
+];
+
 // Roupas (fashion) — vêm de template.storehouse.dress.
-// O cliente PW BR mostra um grid 4×3 de cada lado da silhueta (24 slots).
-// Aqui só definimos QUANTOS slots renderizar de cada lado; cada slot mapeia
-// para o índice correspondente do array `dress`.
-const FASHION_LEFT_COUNT = 12;   // 4 linhas × 3 colunas
-const FASHION_RIGHT_COUNT = 12;  // 4 linhas × 3 colunas
+const FASHION_LEFT_COUNT = 12;
+const FASHION_RIGHT_COUNT = 12;
 const FASHION_TOTAL = FASHION_LEFT_COUNT + FASHION_RIGHT_COUNT;
 
-// Mantido para compatibilidade com lógica de "extras" / editingLabel do equipamento real.
+// Lista plana usada para progresso/lookup de label.
 const SLOTS = [
-  ...NORMAL_LEFT,
-  ...NORMAL_RIGHT,
-  ...NORMAL_BOTTOM,
+  NORMAL_TOP,
+  ...NORMAL_LEFT_OUTER,
+  ...NORMAL_LEFT_INNER,
+  ...NORMAL_RIGHT_INNER,
+  ...NORMAL_RIGHT_OUTER,
+  ...NORMAL_BOTTOM_ROW,
 ];
 
 
