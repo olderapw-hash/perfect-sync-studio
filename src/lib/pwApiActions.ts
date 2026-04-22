@@ -23,13 +23,19 @@ export interface ItemCatalogResponse {
 export type BackupKind = "role_json" | "clsconfig_file" | "export_log";
 
 export interface BackupRecord {
-  /** roleid pode não vir em alguns logs de export — opcional. */
-  roleid?: number;
   type: BackupKind;
   file: string;
-  /** epoch seconds */
-  created_at?: number;
-  size?: number;
+  /** basename amigável retornado pelo PHP. */
+  name?: string;
+  /** roleid pode não vir em alguns logs de export — opcional/null. */
+  roleid?: number | null;
+  /** Tamanho em bytes (PHP retorna `bytes`). */
+  bytes?: number;
+  /** epoch seconds (PHP retorna `mtime`). */
+  mtime?: number;
+  /** ISO string (PHP retorna `created_at` como string). */
+  created_at?: string;
+  sha1?: string;
 }
 
 /**
