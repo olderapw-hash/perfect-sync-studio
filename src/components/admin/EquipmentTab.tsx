@@ -159,13 +159,7 @@ export const EquipmentTab = ({ template, onChange }: Props) => {
   const extrasByPos = new Map<number, ClsItem>();
   extras.forEach((it) => extrasByPos.set(it.pos, it));
 
-  // Slots ativos conforme a aba. "Provador" usa as roupas para preview.
-  const activeLeft   = invTab === "normal" ? NORMAL_LEFT   : [];
-  const activeRight  = invTab === "normal" ? NORMAL_RIGHT  : [];
-  const activeBottom = invTab === "normal" ? NORMAL_BOTTOM : [];
-
   // Roupas: lê direto do storehouse.dress (array de fashion do servidor PW).
-  // Garante pelo menos FASHION_TOTAL slots renderizados (vazios viram placeholders).
   const dress = template.storehouse?.dress ?? [];
   const dressSlots: ClsItem[] = Array.from({ length: FASHION_TOTAL }, (_, i) =>
     dress[i] ?? newEmptyItem(i),
@@ -185,34 +179,70 @@ export const EquipmentTab = ({ template, onChange }: Props) => {
     setDressEditingIdx(null);
   };
 
+  // Dados da classe → retrato central
+  const classInfo = getClassInfo(template.summary.race, template.summary.cls);
+  const classIconUrl = buildClassIconUrl(template.summary.class_icon_path);
+  const className = template.summary.class_name ?? classInfo.name;
+  const charName = template.summary.name || template.base?.name || "";
+
+  /** Renderiza um slot equipamento com label PW BR acima. */
+  const LabeledSlot = ({ pos, label, size = 44 }: { pos: number; label: string; size?: number }) => {
+    const it = byPos.get(pos) ?? newEmptyItem(pos);
+    return (
+      <div className="flex flex-col items-center gap-0.5">
+        <span
+          className="text-[9px] font-bold uppercase tracking-wider"
+          style={{ color: "hsl(40 45% 65%)", letterSpacing: "0.08em" }}
+        >
+          {label}
+        </span>
+        <div
+          className="rounded-[3px] p-[2px]"
+          style={{
+            background:
+              "linear-gradient(180deg, hsl(35 25% 18%) 0%, hsl(20 18% 8%) 100%)",
+            boxShadow:
+              "inset 0 0 0 1px hsl(40 45% 30%), 0 1px 2px hsl(0 0% 0% / 0.6)",
+          }}
+        >
+          <ItemSlot
+            item={it}
+            onClick={() => openSlot(pos)}
+            size={size}
+            emptyLabel=""
+          />
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-3">
       {/* Painel principal estilo cliente PW BR */}
-      <div className="mx-auto w-full max-w-[480px]">
-        {/* Cantoneiras + barra de progresso superior */}
+      <div className="mx-auto w-full max-w-[520px]">
         <div
           className="relative rounded-md p-3 pt-7"
           style={{
             background:
-              "linear-gradient(180deg, hsl(195 30% 12%) 0%, hsl(205 35% 7%) 100%)",
+              "linear-gradient(180deg, hsl(35 30% 14%) 0%, hsl(25 35% 8%) 100%)",
             boxShadow:
-              "inset 0 0 0 1px hsl(195 60% 35%), 0 0 0 1px hsl(0 0% 0%), inset 0 0 24px hsl(0 0% 0% / 0.6)",
+              "inset 0 0 0 1px hsl(40 60% 38%), 0 0 0 1px hsl(0 0% 0%), inset 0 0 24px hsl(0 0% 0% / 0.6)",
           }}
         >
-          {/* Cabeçalho com título "Inventário" e abas Normal/Roupas/Provador */}
-          <div className="absolute -top-3 left-0 right-0 flex items-center justify-center">
+          {/* Cabeçalho "TELA DE EQUIPAMENTO / INVENTÁRIO" */}
+          <div className="mb-2 text-center">
+            <div className="text-[9px] font-bold uppercase tracking-[0.25em] text-amber-200/70">
+              Tela de Equipamento
+            </div>
             <div
-              className="rounded-t-md px-6 py-1 text-[12px] font-bold tracking-widest text-amber-100"
-              style={{
-                background:
-                  "linear-gradient(180deg, hsl(40 30% 28%) 0%, hsl(35 35% 18%) 100%)",
-                boxShadow: "inset 0 0 0 1px hsl(40 60% 45%)",
-              }}
+              className="text-[22px] font-bold tracking-[0.2em] text-amber-100"
+              style={{ fontFamily: "'Cinzel', 'Trajan Pro', serif", textShadow: "0 2px 4px hsl(0 0% 0% / 0.6)" }}
             >
               INVENTÁRIO
             </div>
           </div>
 
+          {/* Abas Normal/Roupas/Provador (estilo "EQUIPADOS / ARQUEIRO" da ref) */}
           <div className="mb-3 flex items-center justify-center gap-2">
             {(["normal", "roupas", "provador"] as InvTab[]).map((t) => {
               const active = invTab === t;
@@ -221,162 +251,213 @@ export const EquipmentTab = ({ template, onChange }: Props) => {
                   key={t}
                   type="button"
                   onClick={() => setInvTab(t)}
-                  className="rounded-full px-4 py-1 text-[11px] font-bold uppercase tracking-wider transition-smooth"
+                  className="rounded-full px-5 py-1 text-[11px] font-bold uppercase tracking-wider transition-smooth"
                   style={
                     active
                       ? {
                           background:
-                            "linear-gradient(180deg, hsl(40 35% 75%) 0%, hsl(40 30% 55%) 100%)",
-                          color: "hsl(20 50% 15%)",
+                            "linear-gradient(180deg, hsl(45 80% 60%) 0%, hsl(38 65% 42%) 100%)",
+                          color: "hsl(20 60% 12%)",
                           boxShadow:
-                            "inset 0 0 0 1px hsl(40 60% 35%), 0 1px 3px hsl(0 0% 0% / 0.5)",
+                            "inset 0 0 0 1px hsl(40 80% 70%), 0 1px 3px hsl(0 0% 0% / 0.6)",
                         }
                       : {
-                          background:
-                            "linear-gradient(180deg, hsl(35 18% 22%) 0%, hsl(20 15% 12%) 100%)",
-                          color: "hsl(40 25% 65%)",
-                          boxShadow: "inset 0 0 0 1px hsl(40 30% 25%)",
+                          background: "transparent",
+                          color: "hsl(40 35% 65%)",
+                          boxShadow: "inset 0 0 0 1px hsl(40 30% 30%)",
                         }
                   }
                 >
-                  {t === "normal" ? "Normal" : t === "roupas" ? "Roupas" : "Provador"}
+                  {t === "normal" ? "Equipados" : t === "roupas" ? "Roupas" : "Provador"}
                 </button>
               );
             })}
           </div>
 
-          {/* Mini barra de % à esquerda */}
-          <div className="mb-2 flex items-center gap-2">
-            <div className="h-6 w-6 rounded-sm bg-amber-700/30 ring-1 ring-amber-500/40" />
-            <div className="flex-1">
-              <div className="h-2 overflow-hidden rounded-full bg-black/40 ring-1 ring-amber-700/40">
-                <div
-                  className="h-full"
-                  style={{
-                    width: `${progress}%`,
-                    background:
-                      "linear-gradient(90deg, hsl(40 80% 55%) 0%, hsl(35 90% 65%) 100%)",
-                  }}
-                />
-              </div>
-            </div>
-            <span className="font-mono text-[11px] font-bold text-amber-100">
-              {progress.toFixed(1)}%
-            </span>
-          </div>
-
-          {/* Paper-doll: col esquerda · silhueta · col direita */}
+          {/* Painel interno escuro */}
           <div
             className="relative rounded-sm p-3"
             style={{
               background:
-                "radial-gradient(ellipse at center, hsl(35 18% 22%) 0%, hsl(20 15% 8%) 80%)",
+                "radial-gradient(ellipse at center, hsl(30 20% 14%) 0%, hsl(20 18% 6%) 85%)",
               boxShadow:
-                "inset 0 0 0 1px hsl(40 50% 35%), inset 0 0 32px hsl(0 0% 0% / 0.85)",
+                "inset 0 0 0 1px hsl(40 50% 30%), inset 0 0 32px hsl(0 0% 0% / 0.85)",
             }}
           >
-            <div
-              className="grid items-center gap-2"
-              style={{ gridTemplateColumns: "auto 1fr auto" }}
-            >
-              {/* Col esquerda */}
-              <div
-                className={
-                  invTab === "normal"
-                    ? "flex flex-col gap-2"
-                    : "grid grid-cols-3 gap-1.5"
-                }
-              >
-                {invTab === "normal"
-                  ? activeLeft.map((s) => {
-                      const it = byPos.get(s.pos) ?? newEmptyItem(s.pos);
-                      return (
-                        <ItemSlot
-                          key={s.pos}
-                          item={it}
-                          onClick={() => openSlot(s.pos)}
-                          size={48}
-                          emptyLabel={s.label}
-                        />
-                      );
-                    })
-                  : dressLeft.map((it, i) => (
-                      <ItemSlot
-                        key={`dl-${i}`}
-                        item={it}
-                        onClick={() => setDressEditingIdx(i)}
-                        size={40}
-                        emptyLabel="Roupa"
-                      />
-                    ))}
-              </div>
+            {invTab === "normal" ? (
+              <>
+                {/* Topo: ELMO centralizado */}
+                <div className="mb-2 flex justify-center">
+                  <LabeledSlot pos={NORMAL_TOP.pos} label={NORMAL_TOP.label} size={44} />
+                </div>
 
-              {/* Silhueta central */}
-              <div className="relative flex items-center justify-center self-stretch px-1">
-                <svg
-                  viewBox="0 0 100 200"
-                  className="h-full max-h-[260px] w-auto opacity-40"
-                  fill="none"
-                  stroke="hsl(40 60% 55%)"
-                  strokeWidth="1.5"
+                {/* Linha principal: col esq dupla · retrato · col dir dupla */}
+                <div
+                  className="grid items-start gap-2"
+                  style={{ gridTemplateColumns: "auto auto 1fr auto auto" }}
                 >
-                  <circle cx="50" cy="22" r="14" />
-                  <path d="M30 40 L70 40 L78 100 L66 130 L60 180 L40 180 L34 130 L22 100 Z" />
-                  <path d="M22 100 L8 60 L4 70 L18 110 Z" />
-                  <path d="M78 100 L92 60 L96 70 L82 110 Z" />
-                  <path d="M40 180 L36 195 L46 195 Z" />
-                  <path d="M60 180 L64 195 L54 195 Z" />
-                </svg>
-              </div>
-
-              {/* Col direita */}
-              <div
-                className={
-                  invTab === "normal"
-                    ? "flex flex-col gap-2"
-                    : "grid grid-cols-3 gap-1.5"
-                }
-              >
-                {invTab === "normal"
-                  ? activeRight.map((s) => {
-                      const it = byPos.get(s.pos) ?? newEmptyItem(s.pos);
-                      return (
-                        <ItemSlot
-                          key={s.pos}
-                          item={it}
-                          onClick={() => openSlot(s.pos)}
-                          size={48}
-                          emptyLabel={s.label}
-                        />
-                      );
-                    })
-                  : dressRight.map((it, i) => (
-                      <ItemSlot
-                        key={`dr-${i}`}
-                        item={it}
-                        onClick={() => setDressEditingIdx(FASHION_LEFT_COUNT + i)}
-                        size={40}
-                        emptyLabel="Roupa"
-                      />
+                  {/* Col esq externa */}
+                  <div className="flex flex-col gap-2 pt-4">
+                    {NORMAL_LEFT_OUTER.map((s) => (
+                      <LabeledSlot key={s.pos} pos={s.pos} label={s.label} />
                     ))}
-              </div>
-            </div>
+                  </div>
+                  {/* Col esq interna */}
+                  <div className="flex flex-col gap-2">
+                    {NORMAL_LEFT_INNER.map((s) => (
+                      <LabeledSlot key={s.pos} pos={s.pos} label={s.label} />
+                    ))}
+                  </div>
 
-            {/* Linha inferior centralizada (Arma · Botas · Sub-arma · Anel E · Pet · Anel D) */}
-            <div className="mt-3 flex items-center justify-center gap-2">
-              {activeBottom.map((s) => {
-                const it = byPos.get(s.pos) ?? newEmptyItem(s.pos);
-                return (
-                  <ItemSlot
-                    key={s.pos}
-                    item={it}
-                    onClick={() => openSlot(s.pos)}
-                    size={42}
-                    emptyLabel={s.label}
-                  />
-                );
-              })}
-            </div>
+                  {/* Retrato central da classe */}
+                  <div className="relative flex items-center justify-center px-1">
+                    <div
+                      className="relative w-full overflow-hidden"
+                      style={{
+                        aspectRatio: "3 / 4",
+                        maxWidth: 180,
+                        borderTopLeftRadius: 999,
+                        borderTopRightRadius: 999,
+                        borderBottomLeftRadius: 6,
+                        borderBottomRightRadius: 6,
+                        background:
+                          "radial-gradient(ellipse at top, hsl(30 25% 18%) 0%, hsl(20 18% 6%) 90%)",
+                        boxShadow: `inset 0 0 0 2px hsl(${classInfo.color} / 0.5), inset 0 0 24px hsl(0 0% 0% / 0.7), 0 0 18px hsl(${classInfo.color} / 0.25)`,
+                      }}
+                    >
+                      {classIconUrl ? (
+                        <img
+                          src={classIconUrl}
+                          alt={className}
+                          loading="lazy"
+                          className="h-full w-full object-cover object-top"
+                        />
+                      ) : (
+                        <div
+                          className="flex h-full w-full items-center justify-center text-3xl font-bold"
+                          style={{ color: `hsl(${classInfo.color})` }}
+                        >
+                          {getInitials(charName || className)}
+                        </div>
+                      )}
+                      {/* Faixa inferior com nome + nível */}
+                      <div
+                        className="absolute inset-x-0 bottom-0 flex items-center justify-between px-2 py-1 text-[10px]"
+                        style={{
+                          background:
+                            "linear-gradient(180deg, transparent 0%, hsl(20 25% 6% / 0.95) 60%)",
+                        }}
+                      >
+                        <div className="flex flex-col leading-tight">
+                          <span className="font-bold text-amber-100">
+                            {charName || "—"}
+                          </span>
+                          <span
+                            className="text-[9px] uppercase tracking-wider"
+                            style={{ color: `hsl(${classInfo.color})` }}
+                          >
+                            {className}
+                          </span>
+                        </div>
+                        <span
+                          className="rounded-sm px-1.5 py-0.5 font-mono text-[10px] font-bold"
+                          style={{
+                            background:
+                              "linear-gradient(180deg, hsl(45 80% 55%), hsl(38 65% 38%))",
+                            color: "hsl(20 60% 12%)",
+                          }}
+                        >
+                          LV {template.status?.level ?? 1}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Col dir interna */}
+                  <div className="flex flex-col gap-2">
+                    {NORMAL_RIGHT_INNER.map((s) => (
+                      <LabeledSlot key={s.pos} pos={s.pos} label={s.label} />
+                    ))}
+                  </div>
+                  {/* Col dir externa */}
+                  <div className="flex flex-col gap-2 pt-4">
+                    {NORMAL_RIGHT_OUTER.map((s) => (
+                      <LabeledSlot key={s.pos} pos={s.pos} label={s.label} />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Linha inferior */}
+                <div className="mt-3 flex items-start justify-center gap-6">
+                  {NORMAL_BOTTOM_ROW.map((s) => (
+                    <LabeledSlot key={s.pos} pos={s.pos} label={s.label} />
+                  ))}
+                </div>
+              </>
+            ) : (
+              /* Aba Roupas / Provador — grid 4×3 de cada lado do retrato */
+              <div
+                className="grid items-center gap-2"
+                style={{ gridTemplateColumns: "auto 1fr auto" }}
+              >
+                <div className="grid grid-cols-3 gap-1.5">
+                  {dressLeft.map((it, i) => (
+                    <ItemSlot
+                      key={`dl-${i}`}
+                      item={it}
+                      onClick={() => setDressEditingIdx(i)}
+                      size={40}
+                      emptyLabel="Roupa"
+                    />
+                  ))}
+                </div>
+
+                <div className="relative flex items-center justify-center px-1">
+                  <div
+                    className="relative w-full overflow-hidden"
+                    style={{
+                      aspectRatio: "3 / 4",
+                      maxWidth: 160,
+                      borderTopLeftRadius: 999,
+                      borderTopRightRadius: 999,
+                      borderBottomLeftRadius: 6,
+                      borderBottomRightRadius: 6,
+                      background:
+                        "radial-gradient(ellipse at top, hsl(30 25% 18%) 0%, hsl(20 18% 6%) 90%)",
+                      boxShadow: `inset 0 0 0 2px hsl(${classInfo.color} / 0.5), inset 0 0 24px hsl(0 0% 0% / 0.7)`,
+                    }}
+                  >
+                    {classIconUrl ? (
+                      <img
+                        src={classIconUrl}
+                        alt={className}
+                        loading="lazy"
+                        className="h-full w-full object-cover object-top"
+                      />
+                    ) : (
+                      <div
+                        className="flex h-full w-full items-center justify-center text-2xl font-bold"
+                        style={{ color: `hsl(${classInfo.color})` }}
+                      >
+                        {getInitials(charName || className)}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-1.5">
+                  {dressRight.map((it, i) => (
+                    <ItemSlot
+                      key={`dr-${i}`}
+                      item={it}
+                      onClick={() => setDressEditingIdx(FASHION_LEFT_COUNT + i)}
+                      size={40}
+                      emptyLabel="Roupa"
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Bloco "Líderes" — 6 cards com nv. 0 + linha de necessários e S+ bônus */}
