@@ -9,9 +9,11 @@ import { useTenant, fetchTenantSecret } from "@/hooks/useTenant";
 
 const Onboarding = () => {
   const navigate = useNavigate();
-  const { session, loading: authLoading } = useAuth();
+  const { session, loading: authLoading, isAdmin, isSuperadmin } = useAuth();
   const { isActive, loading: subLoading } = useSubscription();
   const { tenant, loading: tenantLoading, refetch } = useTenant();
+  // Manually-approved admins (and the superadmin) skip the paid-subscription gate.
+  const bypassPayment = isAdmin || isSuperadmin;
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [serverName, setServerName] = useState("");
