@@ -116,11 +116,20 @@ async function callAction<T>(
       try { extra = await ctx.text(); } catch { /* ignore */ }
     }
     if (status === 404) throw new EndpointMissingError(action);
+    // VPS retorna 400 com {"error":"Acao invalida. Use: ..."} quando a action
+    // não existe no PHP. Detectamos isso e convertemos pra EndpointMissingError.
+    if (status === 400 && /acao\s+invalida|a[cç][aã]o\s+inv[aá]lida|unknown\s+action/i.test(extra)) {
+      throw new EndpointMissingError(action);
+    }
     throw new Error(extra ? `${error.message}\n\n${extra}` : error.message);
   }
-  if (data && typeof data === "object" && (data as { success?: boolean }).success === false) {
-    const err = (data as { error?: string }).error ?? "";
-    if (/not\s+found|unknown\s+action|n[ãa]o\s+encontrad/i.test(err)) {
+  // Resposta 2xx mas com {error:"..."} no corpo (sem success:false).
+  if (data && typeof data === "object") {
+    const d = data as { success?: boolean; error?: string };
+    const err = d.error ?? "";
+    const explicitFail = d.success === false;
+    const looksMissing = /not\s+found|unknown\s+action|n[ãa]o\s+encontrad|acao\s+invalida|a[cç][aã]o\s+inv[aá]lida/i.test(err);
+    if ((explicitFail || err) && looksMissing) {
       throw new EndpointMissingError(action);
     }
   }
@@ -135,9 +144,10 @@ export const pwApi = {
     if (params.offset != null) query.offset = params.offset;
     return callAction<ItemCatalogResponse>("getItemCatalog", { method: "GET", query });
   },
-  listBackups(params: { roleid?: number } = {}) {
+  listBackups(params: { roleid?: number; limit?: number } = {}) {
     const query: Record<string, string | number> = {};
     if (params.roleid != null) query.roleid = params.roleid;
+    if (params.limit != null) query.limit = params.limit;
     return callAction<ListBackupsResponse>("listBackups", { method: "GET", query });
   },
   restoreBackup(body: {
