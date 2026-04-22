@@ -42,26 +42,30 @@ const NORMAL_BOTTOM: { pos: number; label: string }[] = [
   { pos: 7,  label: "Anel D" },
 ];
 
+// Roupas: grid 4 linhas × 3 colunas de cada lado da silhueta (estilo cliente PW BR).
+// Pos seguem a convenção fashion do cliente (equipPos + 16) + acessórios extras.
 const FASHION_LEFT: { pos: number; label: string }[] = [
-  { pos: 16, label: "Capacete (R)" },
-  { pos: 18, label: "Armadura (R)" },
-  { pos: 19, label: "Cinto (R)" },
-  { pos: 20, label: "Calça (R)" },
+  // linha 1
+  { pos: 16, label: "Capacete (R)" }, { pos: 32, label: "Slot" }, { pos: 33, label: "Asa (R)" },
+  // linha 2
+  { pos: 34, label: "Brinco" }, { pos: 35, label: "Pulseira" }, { pos: 18, label: "Armadura (R)" },
+  // linha 3
+  { pos: 19, label: "Cinto (R)" }, { pos: 36, label: "Anel (R)" }, { pos: 37, label: "Acess." },
+  // linha 4
+  { pos: 38, label: "Carta E" }, { pos: 39, label: "Carta D" }, { pos: 40, label: "Marca" },
 ];
 const FASHION_RIGHT: { pos: number; label: string }[] = [
-  { pos: 26, label: "Capa (R)" },
-  { pos: 24, label: "Arma (R)" },
-  { pos: 25, label: "Sub-arma (R)" },
-  { pos: 21, label: "Botas (R)" },
+  // linha 1
+  { pos: 26, label: "Capa (R)" }, { pos: 41, label: "Slot" }, { pos: 42, label: "Aura" },
+  // linha 2
+  { pos: 43, label: "Pet (R)" }, { pos: 24, label: "Arma (R)" }, { pos: 44, label: "Acess." },
+  // linha 3
+  { pos: 45, label: "Acess." }, { pos: 20, label: "Calça (R)" }, { pos: 21, label: "Botas (R)" },
+  // linha 4
+  { pos: 46, label: "Carta" }, { pos: 47, label: "Slot" }, { pos: 48, label: "Selo" },
 ];
-const FASHION_BOTTOM: { pos: number; label: string }[] = [
-  { pos: 22, label: "Acess. 1" },
-  { pos: 23, label: "Acess. 2" },
-  { pos: 27, label: "Acess. 3" },
-  { pos: 28, label: "Acess. 4" },
-  { pos: 29, label: "Acess. 5" },
-  { pos: 30, label: "Acess. 6" },
-];
+const FASHION_BOTTOM: { pos: number; label: string }[] = [];
+
 
 // Mantido para compatibilidade com lógica de "extras" / editingLabel.
 const SLOTS = [
@@ -254,7 +258,13 @@ export const EquipmentTab = ({ template, onChange }: Props) => {
               style={{ gridTemplateColumns: "auto 1fr auto" }}
             >
               {/* Col esquerda */}
-              <div className="flex flex-col gap-2">
+              <div
+                className={
+                  invTab === "normal"
+                    ? "flex flex-col gap-2"
+                    : "grid grid-cols-3 gap-1.5"
+                }
+              >
                 {activeLeft.map((s) => {
                   const it = byPos.get(s.pos) ?? newEmptyItem(s.pos);
                   return (
@@ -262,7 +272,7 @@ export const EquipmentTab = ({ template, onChange }: Props) => {
                       key={s.pos}
                       item={it}
                       onClick={() => openSlot(s.pos)}
-                      size={48}
+                      size={invTab === "normal" ? 48 : 40}
                       emptyLabel={s.label}
                     />
                   );
@@ -270,10 +280,10 @@ export const EquipmentTab = ({ template, onChange }: Props) => {
               </div>
 
               {/* Silhueta central */}
-              <div className="relative flex items-center justify-center self-stretch">
+              <div className="relative flex items-center justify-center self-stretch px-1">
                 <svg
                   viewBox="0 0 100 200"
-                  className="h-full max-h-[230px] w-auto opacity-40"
+                  className="h-full max-h-[260px] w-auto opacity-40"
                   fill="none"
                   stroke="hsl(40 60% 55%)"
                   strokeWidth="1.5"
@@ -288,7 +298,13 @@ export const EquipmentTab = ({ template, onChange }: Props) => {
               </div>
 
               {/* Col direita */}
-              <div className="flex flex-col gap-2">
+              <div
+                className={
+                  invTab === "normal"
+                    ? "flex flex-col gap-2"
+                    : "grid grid-cols-3 gap-1.5"
+                }
+              >
                 {activeRight.map((s) => {
                   const it = byPos.get(s.pos) ?? newEmptyItem(s.pos);
                   return (
@@ -296,7 +312,7 @@ export const EquipmentTab = ({ template, onChange }: Props) => {
                       key={s.pos}
                       item={it}
                       onClick={() => openSlot(s.pos)}
-                      size={48}
+                      size={invTab === "normal" ? 48 : 40}
                       emptyLabel={s.label}
                     />
                   );
