@@ -188,6 +188,30 @@ export const EquipmentTab = ({ template, onChange }: Props) => {
   const className = template.summary.class_name ?? classInfo.name;
   const charName = template.summary.name || template.base?.name || "";
 
+  // Foto resolvida (override personagem → foto da classe → fallback API)
+  const photo = useCharacterPhoto({
+    roleid: template.roleid,
+    cls: template.summary.cls,
+    fallbackUrl: classIconUrl,
+  });
+
+  const handleUploadCharacter = async (file: File) => {
+    if (!template.roleid) {
+      throw new Error("Personagem sem roleid — use 'Foto da classe' no menu.");
+    }
+    await uploadCharacterPhoto(template.roleid, file);
+    photo.reload();
+  };
+  const handleUploadClass = async (file: File) => {
+    await uploadClassPhoto(template.summary.cls, file);
+    photo.reload();
+  };
+  const handleRemoveCharacter = async () => {
+    if (!template.roleid) return;
+    await removeCharacterPhoto(template.roleid);
+    photo.reload();
+  };
+
   /** Renderiza um slot equipamento com label PW BR acima. */
   const LabeledSlot = ({ pos, label, size = 44 }: { pos: number; label: string; size?: number }) => {
     const it = byPos.get(pos) ?? newEmptyItem(pos);
