@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useSubscription } from "@/hooks/useSubscription";
-import { useTenant } from "@/hooks/useTenant";
+import { useTenant, fetchTenantSecret } from "@/hooks/useTenant";
 
 const Onboarding = () => {
   const navigate = useNavigate();
@@ -24,10 +24,17 @@ const Onboarding = () => {
     if (tenant) {
       setServerName(tenant.server_name || "");
       setApiUrl(tenant.pw_api_base_url || "");
-      setApiSecret(tenant.pw_api_secret || "");
       setIconBase(tenant.icon_base_url || "");
     }
   }, [tenant]);
+
+  // Fetch the API secret separately and only when needed (not stored in shared state).
+  useEffect(() => {
+    if (!session?.user?.id || !tenant) return;
+    fetchTenantSecret(session.user.id).then((secret) => {
+      if (secret) setApiSecret(secret);
+    });
+  }, [session?.user?.id, tenant]);
 
   // Redirect rules
   useEffect(() => {

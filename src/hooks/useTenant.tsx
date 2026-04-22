@@ -2,12 +2,17 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
+/**
+ * Tenant shape used across the UI. We intentionally exclude `pw_api_secret`
+ * here — it is a sensitive credential and must never live in shared client
+ * state. Fetch it on-demand inside the Settings/Onboarding form using a
+ * dedicated query (see fetchTenantSecret below).
+ */
 export interface Tenant {
   id: string;
   owner_id: string;
   server_name: string;
   pw_api_base_url: string | null;
-  pw_api_secret: string | null;
   icon_base_url: string | null;
   logo_url: string | null;
   primary_color: string | null;
@@ -15,6 +20,9 @@ export interface Tenant {
   created_at: string;
   updated_at: string;
 }
+
+const TENANT_COLUMNS =
+  "id, owner_id, server_name, pw_api_base_url, icon_base_url, logo_url, primary_color, onboarding_completed, created_at, updated_at";
 
 export function useTenant() {
   const { session } = useAuth();
@@ -30,7 +38,7 @@ export function useTenant() {
     setLoading(true);
     const { data } = await supabase
       .from("tenants")
-      .select("*")
+      .select(TENANT_COLUMNS)
       .eq("owner_id", session.user.id)
       .maybeSingle();
     setTenant(data as Tenant | null);
@@ -43,4 +51,18 @@ export function useTenant() {
   }, [session?.user?.id]);
 
   return { tenant, loading, refetch: fetchTenant };
+}
+
+/**
+ * On-demand fetch of the tenant's PW API secret. Only call this from forms
+ * that actually need to display/edit the secret (e.g. Onboarding, Settings).
+ * Returns `null` if no tenant exists or the secret is unset.
+ */
+export async function fetchTenantSecret(userId: string): Promise<string | null> {
+  const { data } = await supabase
+    .from("tenants")
+    .select("pw_api_secret")
+    .eq("owner_id", userId)
+    .maybeSingle();
+  return (data?.pw_api_secret as string | null) ?? null;
 }
