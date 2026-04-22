@@ -267,6 +267,12 @@ export const pwApi = {
   restoreBackup(body: RestoreBackupRequest) {
     return callAction<RestoreBackupResponse>("restoreBackup", { method: "POST", body });
   },
+  getRoleEditable(roleid: number) {
+    return callAction<GetRoleEditableResponse>("getRoleEditable", {
+      method: "GET",
+      query: { roleid },
+    });
+  },
   saveRoleEditable(body: SaveRoleEditablePayload) {
     return callAction<SaveRoleEditableResponse>("saveRoleEditable", { method: "POST", body });
   },
