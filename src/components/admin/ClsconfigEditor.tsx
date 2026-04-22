@@ -10,6 +10,7 @@ import {
   Loader2,
   Bookmark,
   Send,
+  ScrollText,
   ArrowRightLeft,
   AlertTriangle,
   UserCog,
@@ -51,6 +52,7 @@ import { StatusTab } from "./StatusTab";
 import { InventoryTab } from "./InventoryTab";
 import { EquipmentTab } from "./EquipmentTab";
 import { StorehouseTab } from "./StorehouseTab";
+import { TaskTab } from "./TaskTab";
 import { SavePreviewDialog } from "./SavePreviewDialog";
 import { SaveChecklistDialog, type SaveChecklistResult } from "./SaveChecklistDialog";
 import { PresetsDialog } from "./PresetsDialog";
@@ -75,7 +77,7 @@ interface Props {
   onSaved?: (template: ClsTemplate) => void;
 }
 
-type TabKey = "base" | "status" | "inventory" | "equipment" | "storehouse";
+type TabKey = "base" | "status" | "inventory" | "equipment" | "storehouse" | "task";
 
 const TABS: { key: TabKey; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { key: "base", label: "Base", icon: User },
@@ -83,6 +85,7 @@ const TABS: { key: TabKey; label: string; icon: React.ComponentType<{ className?
   { key: "inventory", label: "Inventário", icon: Backpack },
   { key: "equipment", label: "Equipamentos", icon: Sword },
   { key: "storehouse", label: "Baú", icon: Warehouse },
+  { key: "task", label: "Tarefas", icon: ScrollText },
 ];
 
 /** Lê um caminho aninhado em objeto destrutivo. Retorna string ou undefined. */
@@ -708,6 +711,7 @@ export const ClsconfigEditor = ({ entry, allEntries = [], mode = "template", onS
         {tab === "inventory" && <InventoryTab template={template} onChange={setTemplate} />}
         {tab === "equipment" && <EquipmentTab template={template} onChange={setTemplate} />}
         {tab === "storehouse" && <StorehouseTab template={template} onChange={setTemplate} />}
+        {tab === "task" && <TaskTab template={template} onChange={setTemplate} />}
       </div>
 
       <SavePreviewDialog

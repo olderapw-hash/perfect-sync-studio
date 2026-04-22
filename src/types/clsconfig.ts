@@ -138,6 +138,20 @@ export interface ClsStorehouse {
   generalcard: ClsItem[];
 }
 
+/**
+ * Seção `task` — controla quests do personagem/template.
+ *
+ * - task_data, task_complete, task_finishtime: blobs hex opacos. NÃO
+ *   tentamos interpretar; são editados como texto hex e re-enviados na íntegra.
+ * - task_inventory: slots de itens das quests (mesmo formato dos outros itens).
+ */
+export interface ClsTask {
+  task_data: string;
+  task_complete: string;
+  task_finishtime: string;
+  task_inventory: ClsItem[];
+}
+
 export interface ClsTemplate {
   roleid: number;
   summary: ClsSummary;
@@ -146,6 +160,8 @@ export interface ClsTemplate {
   inventory: ClsInventory;
   equipment: ClsEquipment;
   storehouse: ClsStorehouse;
+  /** Opcional — só presente quando a VPS retorna o bloco `task`. */
+  task?: ClsTask;
 }
 
 export interface ClsEntry {

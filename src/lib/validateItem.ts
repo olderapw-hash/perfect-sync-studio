@@ -35,7 +35,7 @@ export type IssueSeverity = "warning" | "error" | "critical";
 export interface ItemIssue {
   section: ItemSection;
   /** Tab UI sugerida pra abrir o slot. */
-  tab: "inventory" | "equipment" | "storehouse" | "status";
+  tab: "inventory" | "equipment" | "storehouse" | "status" | "task";
   /** Index dentro do array da seção (não confundir com `pos`). */
   index: number;
   /** Posição reportada pelo item. Pode ser NaN se inválida. */
@@ -283,7 +283,7 @@ export function validateAllItems(template: ClsTemplate): ItemIssue[] {
     out.push(
       ...validateItems(taskInv, {
         section: "task.task_inventory",
-        tab: "status",
+        tab: "task",
         label: "Task · Inventário",
         capacity: Math.max(taskInv.length, 1),
       }),
