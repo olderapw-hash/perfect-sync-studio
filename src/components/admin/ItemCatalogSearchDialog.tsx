@@ -151,6 +151,14 @@ export const ItemCatalogSearchDialog = ({ open, onOpenChange, onPick }: Props) =
                           {it.id}
                         </span>
                         <span className="flex-1 truncate">{it.name}</span>
+                        {it.source === "fallback_id" && (
+                          <span
+                            title="ID encontrado por fallback; nome/dados avançados não vieram do catálogo."
+                            className="rounded border border-warning/40 bg-warning/10 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-warning"
+                          >
+                            fallback
+                          </span>
+                        )}
                         {it.tier != null && it.tier > 0 && (
                           <span className="text-[11px] text-muted-foreground">tier {it.tier}</span>
                         )}
