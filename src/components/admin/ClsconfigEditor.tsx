@@ -332,12 +332,38 @@ export const ClsconfigEditor = ({ entry, allEntries = [] }: Props) => {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {dirty && (
               <span className="rounded-full bg-primary/15 px-3 py-1 text-[11px] font-medium text-primary">
                 Alterações não salvas
               </span>
             )}
+            <button
+              onClick={() => setPresetsOpen(true)}
+              className="inline-flex items-center gap-2 rounded-md border border-border bg-card/60 px-3 py-2 text-xs transition-smooth hover:border-primary/50"
+              title="Salvar/aplicar presets locais"
+            >
+              <Bookmark className="h-3.5 w-3.5" />
+              Presets
+            </button>
+            <button
+              onClick={() => setCompareOpen(true)}
+              disabled={allEntries.length < 2}
+              className="inline-flex items-center gap-2 rounded-md border border-border bg-card/60 px-3 py-2 text-xs transition-smooth hover:border-primary/50 disabled:opacity-50"
+              title="Comparar com outro CLS"
+            >
+              <ArrowRightLeft className="h-3.5 w-3.5" />
+              Comparar
+            </button>
+            <button
+              onClick={() => setBulkOpen(true)}
+              disabled={!dirty || allEntries.length < 2}
+              className="inline-flex items-center gap-2 rounded-md border border-border bg-card/60 px-3 py-2 text-xs transition-smooth hover:border-primary/50 disabled:opacity-50"
+              title="Aplicar mudanças em outros roleids"
+            >
+              <Send className="h-3.5 w-3.5" />
+              Aplicar em massa
+            </button>
             <button
               onClick={handleReset}
               disabled={!dirty}
