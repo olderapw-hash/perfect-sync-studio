@@ -134,9 +134,11 @@ export const ItemCatalogSearchDialog = ({ open, onOpenChange, onPick }: Props) =
             <div className="max-h-[50vh] overflow-y-auto rounded-md border border-border">
               {items.length === 0 && !loading ? (
                 <p className="p-4 text-center text-xs text-muted-foreground">
-                  {query.trim().length < 2
-                    ? "Digite pelo menos 2 caracteres."
-                    : "Nenhum item encontrado."}
+                  {query.trim().length === 0
+                    ? "Digite um ID ou parte do nome."
+                    : !/^\d+$/.test(query.trim()) && query.trim().length < 2
+                      ? "Digite pelo menos 2 caracteres."
+                      : "Nenhum item encontrado."}
                 </p>
               ) : (
                 <ul className="divide-y divide-border">
