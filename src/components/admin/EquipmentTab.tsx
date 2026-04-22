@@ -82,12 +82,12 @@ type InvTab = "normal" | "roupas" | "provador";
 
 /** Slots dos "Líderes" (cards de facção/contribuição) — estilo PW BR. */
 const LEADER_SLOTS: { pos: number; idx: number }[] = [
-  { pos: 20, idx: 0 },
-  { pos: 21, idx: 1 },
-  { pos: 22, idx: 2 },
-  { pos: 23, idx: 3 },
-  { pos: 24, idx: 4 },
-  { pos: 25, idx: 5 },
+  { pos: 50, idx: 0 },
+  { pos: 51, idx: 1 },
+  { pos: 52, idx: 2 },
+  { pos: 53, idx: 3 },
+  { pos: 54, idx: 4 },
+  { pos: 55, idx: 5 },
 ];
 
 const LEADER_POSITIONS = new Set(LEADER_SLOTS.map((s) => s.pos));
