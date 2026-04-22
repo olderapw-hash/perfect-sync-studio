@@ -146,7 +146,14 @@ export const ItemSlot = ({ item, onClick, size = 44, emptyLabel }: Props) => {
             }}
           >
             {iconUrl && !iconBroken ? (
-              <img src={iconUrl} alt="" className="h-12 w-12 object-contain" />
+              <img
+                src={iconUrl}
+                alt=""
+                width={48}
+                height={48}
+                decoding="async"
+                className="h-12 w-12 object-contain"
+              />
             ) : (
               <div className="flex h-12 w-12 items-center justify-center font-mono text-[11px] text-amber-100/50">
                 {item.id}
