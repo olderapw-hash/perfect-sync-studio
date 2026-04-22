@@ -155,6 +155,16 @@ export const ClsconfigEditor = ({ entry, allEntries = [], mode = "template", onS
   const runSave = async () => {
     if (saving) return;
 
+    // ─────────────── Modo "role" (personagem real) ───────────────
+    // Não usa supabase.functions.invoke("clsconfig-proxy/clsconfig").
+    // Envia o template completo via pwApi.saveRoleEditable. Releitura
+    // de verificação usa pwApi.getRoleEditable (mesmo roleid). Não
+    // dispara exportclsconfig a menos que o usuário tenha marcado.
+    if (isRoleMode) {
+      await runSaveRoleEditable();
+      return;
+    }
+
     const className = template.summary.class_name ?? `Classe ${template.summary.cls}`;
     const statusDiff = diffSimpleStatus(entry.template, template);
     const useStatusPatch =
