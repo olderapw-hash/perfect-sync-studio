@@ -56,6 +56,8 @@ const normTemplate = (raw: unknown): ClsTemplate => {
   const eq = (t.equipment ?? {}) as Record<string, any>;
   const sh = (t.storehouse ?? {}) as Record<string, any>;
   const summary = (t.summary ?? {}) as Record<string, any>;
+  // `task` pode vir no nível do template OU embutido em status (algumas APIs).
+  const taskRaw = (t.task ?? status.task ?? null) as Record<string, any> | null;
 
   return {
     roleid: num(t.roleid),
@@ -157,6 +159,14 @@ const normTemplate = (raw: unknown): ClsTemplate => {
       material: normItems(sh.material),
       generalcard: normItems(sh.generalcard),
     },
+    task: taskRaw
+      ? {
+          task_data: str(taskRaw.task_data),
+          task_complete: str(taskRaw.task_complete),
+          task_finishtime: str(taskRaw.task_finishtime),
+          task_inventory: normItems(taskRaw.task_inventory),
+        }
+      : undefined,
   };
 };
 
