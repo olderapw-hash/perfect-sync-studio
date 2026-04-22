@@ -255,7 +255,7 @@ export const EquipmentTab = ({ template, onChange }: Props) => {
             >
               {/* Col esquerda */}
               <div className="flex flex-col gap-2">
-                {LEFT_SLOTS.map((s) => {
+                {activeLeft.map((s) => {
                   const it = byPos.get(s.pos) ?? newEmptyItem(s.pos);
                   return (
                     <ItemSlot
@@ -289,7 +289,7 @@ export const EquipmentTab = ({ template, onChange }: Props) => {
 
               {/* Col direita */}
               <div className="flex flex-col gap-2">
-                {RIGHT_SLOTS.map((s) => {
+                {activeRight.map((s) => {
                   const it = byPos.get(s.pos) ?? newEmptyItem(s.pos);
                   return (
                     <ItemSlot
@@ -306,7 +306,7 @@ export const EquipmentTab = ({ template, onChange }: Props) => {
 
             {/* Linha inferior centralizada (Arma · Botas · Sub-arma · Anel E · Pet · Anel D) */}
             <div className="mt-3 flex items-center justify-center gap-2">
-              {BOTTOM_SLOTS.map((s) => {
+              {activeBottom.map((s) => {
                 const it = byPos.get(s.pos) ?? newEmptyItem(s.pos);
                 return (
                   <ItemSlot
