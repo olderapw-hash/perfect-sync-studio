@@ -87,6 +87,12 @@ const Admin = () => {
                 label="Personagem Existente"
                 danger
               />
+              <ModeButton
+                active={mode === "photos"}
+                onClick={() => setMode("photos")}
+                icon={<ImageIcon className="h-3.5 w-3.5" />}
+                label="Fotos das Classes"
+              />
             </div>
 
             <div className="ml-auto flex items-center gap-2">
