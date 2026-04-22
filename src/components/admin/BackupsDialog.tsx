@@ -95,6 +95,7 @@ export const BackupsDialog = ({ open, onOpenChange, onRestored }: Props) => {
   const [error, setError] = useState<string | null>(null);
 
   const [restore, setRestore] = useState<RestoreStage>({ phase: "idle" });
+  const [compareTarget, setCompareTarget] = useState<BackupRecord | null>(null);
 
   const loadVps = async () => {
     setLoading(true);
