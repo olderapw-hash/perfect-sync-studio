@@ -70,6 +70,7 @@ const Admin = () => {
         )}
 
         <div className="flex min-w-0 flex-1 flex-col">
+          <PendingInvitesBanner />
           {/* Top bar */}
           <header className="flex flex-wrap items-center gap-3 border-b border-border bg-card/60 px-5 py-3 backdrop-blur-md">
             {mode === "template" && <SidebarTrigger className="-ml-1" />}
