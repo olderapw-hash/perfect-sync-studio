@@ -51,12 +51,28 @@ export const ItemCatalogProvider = ({ children }: { children: ReactNode }) => {
       }
       setCatalog(data as CatalogRow);
 
-      // Baixa o .tab do storage público
-      const tabUrl = `${PUBLIC_BASE}/${data.tab_path.replace(/^\/+/, "")}`;
-      const res = await fetch(tabUrl);
-      if (!res.ok) throw new Error(`Falha ao baixar .tab (${res.status})`);
-      const text = await res.text();
-      setItems(parseItemTab(text));
+      // Cache local do .tab parseado por id+updated — evita reparsing de 10k+ linhas.
+      const cacheKey = `pw-tab-cache:${data.id}:${data.tab_path}`;
+      const cachedRaw = typeof window !== "undefined" ? localStorage.getItem(cacheKey) : null;
+      if (cachedRaw) {
+        try {
+          const arr = JSON.parse(cachedRaw) as Array<[number, ItemMeta]>;
+          setItems(new Map(arr));
+          setLoading(false);
+          // Revalida em background, não bloqueia a UI
+          void revalidate(data as CatalogRow, cacheKey);
+          return;
+        } catch {
+          // cache corrompido — segue fluxo normal
+        }
+      }
+      const parsed = await fetchAndParse(data as CatalogRow);
+      setItems(parsed);
+      try {
+        localStorage.setItem(cacheKey, JSON.stringify(Array.from(parsed.entries())));
+      } catch {
+        // quota cheia — ignora
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
       setItems(new Map());
@@ -64,6 +80,27 @@ export const ItemCatalogProvider = ({ children }: { children: ReactNode }) => {
       setLoading(false);
     }
   }, []);
+
+  const fetchAndParse = async (row: CatalogRow): Promise<ItemCatalogMap> => {
+    const tabUrl = `${PUBLIC_BASE}/${row.tab_path.replace(/^\/+/, "")}`;
+    const res = await fetch(tabUrl, { cache: "force-cache" });
+    if (!res.ok) throw new Error(`Falha ao baixar .tab (${res.status})`);
+    const text = await res.text();
+    return parseItemTab(text);
+  };
+
+  const revalidate = async (row: CatalogRow, cacheKey: string) => {
+    try {
+      const fresh = await fetchAndParse(row);
+      // Só atualiza se mudou de tamanho (heurística leve)
+      setItems((prev) => (prev.size === fresh.size ? prev : fresh));
+      try {
+        localStorage.setItem(cacheKey, JSON.stringify(Array.from(fresh.entries())));
+      } catch { /* noop */ }
+    } catch {
+      // silencioso — UI já tem dados em cache
+    }
+  };
 
   useEffect(() => {
     void load();

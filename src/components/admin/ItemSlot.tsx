@@ -23,10 +23,17 @@ interface Props {
  */
 export const ItemSlot = ({ item, onClick, size = 44, emptyLabel }: Props) => {
   const { iconUrlFor, metaFor, catalog } = useItemCatalog();
-  const [iconBroken, setIconBroken] = useState(false);
+  // Tenta .jpg primeiro; em erro, tenta .png; em segundo erro, mostra id.
+  const [iconStage, setIconStage] = useState<"jpg" | "png" | "broken">("jpg");
   const empty = item.id <= 0;
   const meta = empty ? undefined : metaFor(item.id);
-  const iconUrl = empty || !catalog ? "" : iconUrlFor(item.id);
+  const baseIconUrl = empty || !catalog ? "" : iconUrlFor(item.id);
+  const iconBroken = iconStage === "broken";
+  const iconUrl = iconBroken
+    ? ""
+    : iconStage === "png"
+      ? baseIconUrl.replace(/\.jpg$/i, ".png")
+      : baseIconUrl;
 
   // Cor da qualidade (vinda do catálogo .tab) define a borda quando preenchido.
   const qualityColor = meta?.color ?? undefined;
@@ -67,7 +74,12 @@ export const ItemSlot = ({ item, onClick, size = 44, emptyLabel }: Props) => {
           src={iconUrl}
           alt=""
           loading="lazy"
-          onError={() => setIconBroken(true)}
+          decoding="async"
+          width={Math.round(size * 0.88)}
+          height={Math.round(size * 0.88)}
+          onError={() =>
+            setIconStage((s) => (s === "jpg" ? "png" : "broken"))
+          }
           className="h-[88%] w-[88%] object-contain drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]"
         />
       ) : (
@@ -134,7 +146,14 @@ export const ItemSlot = ({ item, onClick, size = 44, emptyLabel }: Props) => {
             }}
           >
             {iconUrl && !iconBroken ? (
-              <img src={iconUrl} alt="" className="h-12 w-12 object-contain" />
+              <img
+                src={iconUrl}
+                alt=""
+                width={48}
+                height={48}
+                decoding="async"
+                className="h-12 w-12 object-contain"
+              />
             ) : (
               <div className="flex h-12 w-12 items-center justify-center font-mono text-[11px] text-amber-100/50">
                 {item.id}
