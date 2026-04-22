@@ -6,6 +6,7 @@ interface AuthCtx {
   session: Session | null;
   user: User | null;
   isAdmin: boolean;
+  isSuperadmin: boolean;
   loading: boolean;
   signOut: () => Promise<void>;
 }
@@ -14,6 +15,7 @@ const Ctx = createContext<AuthCtx>({
   session: null,
   user: null,
   isAdmin: false,
+  isSuperadmin: false,
   loading: true,
   signOut: async () => {},
 });
@@ -21,6 +23,7 @@ const Ctx = createContext<AuthCtx>({
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isSuperadmin, setIsSuperadmin] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -29,9 +32,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setSession(newSession);
       if (newSession?.user) {
         // Defer chamada Supabase para não travar o callback
-        setTimeout(() => checkAdmin(newSession.user.id), 0);
+        setTimeout(() => checkRoles(newSession.user.id), 0);
       } else {
         setIsAdmin(false);
+        setIsSuperadmin(false);
       }
     });
 
@@ -39,7 +43,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     supabase.auth.getSession().then(({ data: { session: s } }) => {
       setSession(s);
       if (s?.user) {
-        checkAdmin(s.user.id).finally(() => setLoading(false));
+        checkRoles(s.user.id).finally(() => setLoading(false));
       } else {
         setLoading(false);
       }
@@ -48,29 +52,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  const checkAdmin = async (userId: string) => {
+  const checkRoles = async (userId: string) => {
     const { data, error } = await supabase
       .from("user_roles")
       .select("role")
-      .eq("user_id", userId)
-      .eq("role", "admin")
-      .maybeSingle();
+      .eq("user_id", userId);
     if (error) {
-      console.error("[auth] checkAdmin error", error);
+      console.error("[auth] checkRoles error", error);
       setIsAdmin(false);
+      setIsSuperadmin(false);
       return;
     }
-    setIsAdmin(!!data);
+    const roles = (data ?? []).map((r) => r.role);
+    const superadmin = roles.includes("superadmin" as never);
+    setIsSuperadmin(superadmin);
+    // Superadmin implica admin
+    setIsAdmin(superadmin || roles.includes("admin" as never));
   };
 
   const signOut = async () => {
     await supabase.auth.signOut();
     setSession(null);
     setIsAdmin(false);
+    setIsSuperadmin(false);
   };
 
   return (
-    <Ctx.Provider value={{ session, user: session?.user ?? null, isAdmin, loading, signOut }}>
+    <Ctx.Provider
+      value={{ session, user: session?.user ?? null, isAdmin, isSuperadmin, loading, signOut }}
+    >
       {children}
     </Ctx.Provider>
   );

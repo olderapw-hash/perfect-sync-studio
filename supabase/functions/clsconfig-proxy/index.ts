@@ -97,8 +97,25 @@ Deno.serve(async (req: Request) => {
   const segments = url.pathname.split("/").filter(Boolean);
   const route = segments[segments.length - 1] || "";
 
-  const PW_API_BASE_URL = Deno.env.get("PW_API_BASE_URL");
-  const PW_API_SECRET = Deno.env.get("PW_API_SECRET");
+  // Lê config dinâmica de app_settings (override) com fallback pra env vars.
+  let PW_API_BASE_URL = Deno.env.get("PW_API_BASE_URL") ?? "";
+  let PW_API_SECRET = Deno.env.get("PW_API_SECRET") ?? "";
+  try {
+    const SR_URL = Deno.env.get("SUPABASE_URL");
+    const SR_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (SR_URL && SR_KEY) {
+      const admin = createClient(SR_URL, SR_KEY, { auth: { persistSession: false } });
+      const { data: cfg } = await admin
+        .from("app_settings")
+        .select("pw_api_base_url, pw_api_secret")
+        .eq("id", 1)
+        .maybeSingle();
+      if (cfg?.pw_api_base_url) PW_API_BASE_URL = cfg.pw_api_base_url;
+      if (cfg?.pw_api_secret) PW_API_SECRET = cfg.pw_api_secret;
+    }
+  } catch (e) {
+    console.warn("[clsconfig-proxy] settings lookup failed, using env vars", e);
+  }
 
   if (!PW_API_BASE_URL || !PW_API_SECRET) {
     return new Response(
