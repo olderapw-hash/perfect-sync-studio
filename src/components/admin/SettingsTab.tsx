@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Loader2, Save, Server, Shield, AlertTriangle, Eye, EyeOff } from "lucide-react";
+import { Loader2, Save, Server, Shield, AlertTriangle, Eye, EyeOff, Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useAppSettings } from "@/hooks/useAppSettings";
