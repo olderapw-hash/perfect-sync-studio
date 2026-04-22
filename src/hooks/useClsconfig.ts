@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { normalizeClsconfigResponse } from "@/lib/clsconfig";
-import { handleMaybeAuthError } from "@/lib/authErrors";
+import { invokeClsconfigProxy } from "@/lib/clsconfigInvoke";
+import { NoServerSelectedError } from "@/lib/authErrors";
 import type { ClsconfigResponse } from "@/types/clsconfig";
 
 interface State {
@@ -20,21 +20,11 @@ export function useClsconfig() {
     (async () => {
       setState((s) => ({ ...s, loading: true, error: null }));
       try {
-        const { data, error } = await supabase.functions.invoke("clsconfig-proxy/clsconfig", {
+        const { data, error, rawBody } = await invokeClsconfigProxy("clsconfig-proxy/clsconfig", {
           method: "GET",
         });
         if (error) {
-          // Surface upstream JSON body when present (FunctionsHttpError exposes .context)
-          const ctx = (error as unknown as { context?: Response }).context;
-          let extra = "";
-          if (ctx && typeof ctx.text === "function") {
-            try {
-              extra = await ctx.text();
-            } catch {
-              /* ignore */
-            }
-          }
-          throw new Error(extra ? `${error.message}\n\n${extra}` : error.message);
+          throw new Error(rawBody ? `${error.message}\n\n${rawBody}` : error.message);
         }
         if (data && typeof data === "object" && (data as { success?: boolean }).success === false) {
           throw new Error(JSON.stringify(data, null, 2));
@@ -42,8 +32,12 @@ export function useClsconfig() {
         const normalized = normalizeClsconfigResponse(data);
         if (!cancelled) setState({ data: normalized, raw: data, loading: false, error: null });
       } catch (e) {
-        const msg = e instanceof Error ? e.message : "Falha ao carregar clsconfig";
-        handleMaybeAuthError(e);
+        const msg =
+          e instanceof NoServerSelectedError
+            ? e.message
+            : e instanceof Error
+              ? e.message
+              : "Falha ao carregar clsconfig";
         if (!cancelled) setState({ data: null, raw: null, loading: false, error: msg });
       }
     })();
