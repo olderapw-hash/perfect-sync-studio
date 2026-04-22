@@ -252,10 +252,27 @@ function resolveRoleid(entry: ClsEntry, template: ClsTemplate): number {
   return 0;
 }
 
+/**
+ * Campos que a VPS (gamedbd) gerencia/transforma internamente e NÃO devem
+ * ser sobrescritos pelo client no save completo. Ex.: `cultivation` é
+ * armazenado como string nomeada ("Leal") no gamedbd, mas a API expõe como
+ * número no GET — re-enviar o número causa divergência no roundtrip.
+ */
+const VPS_MANAGED_STATUS_FIELDS = ["cultivation", "npc_relation"] as const;
+
 export function buildSavePayload(entry: ClsEntry, template: ClsTemplate): SavePayload {
   const roleid = resolveRoleid(entry, template);
   // Coerção explícita — Number(0) === 0 (válido). Nunca usar `if (value)`.
   const reputation = Number(template.status.reputation);
+
+  // Preserva campos que a VPS gerencia internamente — usa o valor original
+  // do entry (como veio da VPS) em vez do normalizado em memória.
+  const preservedStatus = { ...template.status, reputation } as ClsTemplate["status"];
+  const statusBag = preservedStatus as unknown as Record<string, unknown>;
+  const originalBag = entry.template.status as unknown as Record<string, unknown>;
+  for (const f of VPS_MANAGED_STATUS_FIELDS) {
+    if (originalBag[f] !== undefined) statusBag[f] = originalBag[f];
+  }
 
   // Recompute summary counters from the edited template so they stay in sync.
   const synced: ClsTemplate = {
@@ -280,10 +297,7 @@ export function buildSavePayload(entry: ClsEntry, template: ClsTemplate): SavePa
         template.storehouse.material.filter((i) => i.id > 0).length +
         template.storehouse.generalcard.filter((i) => i.id > 0).length,
     },
-    status: {
-      ...template.status,
-      reputation,
-    },
+    status: preservedStatus,
   };
   return {
     source: entry.source,
