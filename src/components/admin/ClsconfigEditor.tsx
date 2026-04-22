@@ -1,5 +1,17 @@
 import { useEffect, useState } from "react";
-import { RotateCcw, Save, User, Activity, Backpack, Sword, Warehouse, Loader2 } from "lucide-react";
+import {
+  RotateCcw,
+  Save,
+  User,
+  Activity,
+  Backpack,
+  Sword,
+  Warehouse,
+  Loader2,
+  Bookmark,
+  Send,
+  ArrowRightLeft,
+} from "lucide-react";
 import type { ClsEntry, ClsItem, ClsTemplate } from "@/types/clsconfig";
 import {
   buildInventoryPayload,
@@ -25,9 +37,14 @@ import { EquipmentTab } from "./EquipmentTab";
 import { StorehouseTab } from "./StorehouseTab";
 import { SavePreviewDialog } from "./SavePreviewDialog";
 import { SaveChecklistDialog, type SaveChecklistResult } from "./SaveChecklistDialog";
+import { PresetsDialog } from "./PresetsDialog";
+import { BulkApplyDialog } from "./BulkApplyDialog";
+import { CompareClsDialog } from "./CompareClsDialog";
 
 interface Props {
   entry: ClsEntry;
+  /** Todas as entries carregadas — necessário para "Aplicar em massa" e "Comparar". */
+  allEntries?: ClsEntry[];
 }
 
 type TabKey = "base" | "status" | "inventory" | "equipment" | "storehouse";
@@ -53,12 +70,15 @@ const extractPath = (obj: unknown, path: string[]): string | undefined => {
   return typeof cur === "string" ? cur : undefined;
 };
 
-export const ClsconfigEditor = ({ entry }: Props) => {
+export const ClsconfigEditor = ({ entry, allEntries = [] }: Props) => {
   const [template, setTemplate] = useState<ClsTemplate>(entry.template);
   const [tab, setTab] = useState<TabKey>("base");
   const [saving, setSaving] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [checklistResult, setChecklistResult] = useState<SaveChecklistResult | null>(null);
+  const [presetsOpen, setPresetsOpen] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [compareOpen, setCompareOpen] = useState(false);
 
   // Reset when switching entry
   useEffect(() => {
@@ -312,12 +332,38 @@ export const ClsconfigEditor = ({ entry }: Props) => {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {dirty && (
               <span className="rounded-full bg-primary/15 px-3 py-1 text-[11px] font-medium text-primary">
                 Alterações não salvas
               </span>
             )}
+            <button
+              onClick={() => setPresetsOpen(true)}
+              className="inline-flex items-center gap-2 rounded-md border border-border bg-card/60 px-3 py-2 text-xs transition-smooth hover:border-primary/50"
+              title="Salvar/aplicar presets locais"
+            >
+              <Bookmark className="h-3.5 w-3.5" />
+              Presets
+            </button>
+            <button
+              onClick={() => setCompareOpen(true)}
+              disabled={allEntries.length < 2}
+              className="inline-flex items-center gap-2 rounded-md border border-border bg-card/60 px-3 py-2 text-xs transition-smooth hover:border-primary/50 disabled:opacity-50"
+              title="Comparar com outro CLS"
+            >
+              <ArrowRightLeft className="h-3.5 w-3.5" />
+              Comparar
+            </button>
+            <button
+              onClick={() => setBulkOpen(true)}
+              disabled={!dirty || allEntries.length < 2}
+              className="inline-flex items-center gap-2 rounded-md border border-border bg-card/60 px-3 py-2 text-xs transition-smooth hover:border-primary/50 disabled:opacity-50"
+              title="Aplicar mudanças em outros roleids"
+            >
+              <Send className="h-3.5 w-3.5" />
+              Aplicar em massa
+            </button>
             <button
               onClick={handleReset}
               disabled={!dirty}
@@ -391,6 +437,30 @@ export const ClsconfigEditor = ({ entry }: Props) => {
         open={checklistResult != null}
         result={checklistResult}
         onClose={() => setChecklistResult(null)}
+      />
+
+      <PresetsDialog
+        open={presetsOpen}
+        onOpenChange={setPresetsOpen}
+        currentTemplate={template}
+        currentRoleid={entry.template.roleid}
+        currentClassName={template.summary.class_name}
+        onApply={setTemplate}
+      />
+
+      <BulkApplyDialog
+        open={bulkOpen}
+        onOpenChange={setBulkOpen}
+        sourceEntry={entry}
+        currentTemplate={template}
+        allEntries={allEntries}
+      />
+
+      <CompareClsDialog
+        open={compareOpen}
+        onOpenChange={setCompareOpen}
+        entries={allEntries}
+        initialKey={entry.key_hex}
       />
     </div>
   );
