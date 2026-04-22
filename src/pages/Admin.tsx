@@ -157,14 +157,26 @@ const Admin = () => {
                 <UsersIcon className="h-3.5 w-3.5" />
                 Servidores
               </Link>
-              <Link
-                to="/audit"
-                className="inline-flex items-center gap-2 rounded-md border border-border bg-card/60 px-3 py-2 text-xs transition-smooth hover:border-primary/50"
-                title="Logs de auditoria"
-              >
-                <ShieldCheck className="h-3.5 w-3.5" />
-                Auditoria
-              </Link>
+              {can("manage_members") && (
+                <Link
+                  to="/members"
+                  className="inline-flex items-center gap-2 rounded-md border border-border bg-card/60 px-3 py-2 text-xs transition-smooth hover:border-primary/50"
+                  title="Gerenciar membros do servidor"
+                >
+                  <UsersIcon className="h-3.5 w-3.5" />
+                  Membros
+                </Link>
+              )}
+              {can("view_audit") && (
+                <Link
+                  to="/audit"
+                  className="inline-flex items-center gap-2 rounded-md border border-border bg-card/60 px-3 py-2 text-xs transition-smooth hover:border-primary/50"
+                  title="Logs de auditoria"
+                >
+                  <ShieldCheck className="h-3.5 w-3.5" />
+                  Auditoria
+                </Link>
+              )}
               {isSuperadmin && (
                 <Link
                   to="/admin/users"
