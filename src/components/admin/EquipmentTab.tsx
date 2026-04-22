@@ -337,5 +337,3 @@ export const EquipmentTab = ({ template, onChange }: Props) => {
     </div>
   );
 };
-  );
-};
