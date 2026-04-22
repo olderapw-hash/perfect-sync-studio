@@ -62,16 +62,63 @@ export interface ListBackupsResponse {
 }
 
 
-export interface RestoreBackupResponse {
-  success: boolean;
-  roleid?: number;
-  restored?: { role_json?: boolean; clsconfig_file?: boolean };
+/**
+ * Contrato real do PHP (abr/2026):
+ *
+ * Request:
+ *   { type:"role_json", name:"<basename>", confirm:"RESTORE_ROLE_JSON" }
+ *   ou para dry-run:
+ *   { type:"role_json", name:"<basename>", dry_run:true }
+ *
+ * Response (dry_run):
+ *   { success:true, dry_run:true, roleid:31, source:{...}, target:{...} }
+ *
+ * Response (real):
+ *   {
+ *     success:true,
+ *     roleid:31,
+ *     restored:{
+ *       saved:{
+ *         verified:boolean,
+ *         backups:{
+ *           role_json:{ file:string },
+ *           clsconfig_file:{ file:string }
+ *         },
+ *         export?:{ log_file?:string }
+ *       }
+ *     }
+ *   }
+ */
+export interface RestoreSavedBlock {
   verified?: boolean;
-  pre_restore_backups?: {
+  backups?: {
     role_json?: { file: string };
     clsconfig_file?: { file: string };
   };
+  export?: { log_file?: string };
+}
+
+export interface RestoreBackupResponse {
+  success: boolean;
+  dry_run?: boolean;
+  roleid?: number;
+  source?: Record<string, unknown>;
+  target?: Record<string, unknown>;
+  restored?: {
+    saved?: RestoreSavedBlock;
+    // tolerância pra shapes antigos
+    role_json?: boolean;
+    clsconfig_file?: boolean;
+  };
+  verified?: boolean;
   error?: string;
+}
+
+export interface RestoreBackupRequest {
+  type: "role_json";
+  name: string;
+  confirm?: "RESTORE_ROLE_JSON";
+  dry_run?: boolean;
 }
 
 export interface SaveRoleEditablePayload {
