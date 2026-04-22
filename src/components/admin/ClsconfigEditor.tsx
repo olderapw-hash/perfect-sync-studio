@@ -137,6 +137,17 @@ export const ClsconfigEditor = ({ entry, allEntries = [], mode = "template", onS
       console.warn("[clsconfig] validação de itens →", errs);
       return;
     }
+    if (isRoleMode) {
+      // Modo personagem real → confirmação forte ANTES do preview.
+      setRoleConfirmOpen(true);
+      return;
+    }
+    setPreviewOpen(true);
+  };
+
+  /** Disparado pelo modal de confirmação do modo "role" — abre o preview real. */
+  const confirmRoleEdit = () => {
+    setRoleConfirmOpen(false);
     setPreviewOpen(true);
   };
 
