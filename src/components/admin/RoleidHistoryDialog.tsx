@@ -730,8 +730,8 @@ const DetailPanel = ({
           size="sm"
           variant="destructive"
           onClick={onFullRestore}
-          disabled={detail.online}
-          title={detail.online ? "Personagem online — bloqueado" : "Restaurar backup inteiro"}
+          disabled={restoreDisabled}
+          title={restoreTip}
         >
           <RotateCcw className="h-3 w-3" />
           Restaurar tudo
@@ -742,7 +742,8 @@ const DetailPanel = ({
         title="Status"
         highlighted={changed.has("status")}
         onRestore={() => onSectionRestore("status")}
-        disabled={detail.online}
+        disabled={restoreDisabled}
+        disabledTip={!canRestore ? NO_RESTORE_TIP : undefined}
         rows={[
           ["fama", s.status.reputation],
           ["level", s.status.level],
@@ -761,7 +762,8 @@ const DetailPanel = ({
         title="Inventário"
         highlighted={changed.has("inventory")}
         onRestore={() => onSectionRestore("inventory")}
-        disabled={detail.online}
+        disabled={restoreDisabled}
+        disabledTip={!canRestore ? NO_RESTORE_TIP : undefined}
         rows={[
           ["dinheiro", s.inventory.money],
           ["capacidade", s.inventory.capacity],
@@ -772,14 +774,16 @@ const DetailPanel = ({
         title="Equipamentos"
         highlighted={changed.has("equipment")}
         onRestore={() => onSectionRestore("equipment")}
-        disabled={detail.online}
+        disabled={restoreDisabled}
+        disabledTip={!canRestore ? NO_RESTORE_TIP : undefined}
         rows={[["itens", s.equipment.itemCount]]}
       />
       <SectionCard
         title="Baú"
         highlighted={changed.has("storehouse")}
         onRestore={() => onSectionRestore("storehouse")}
-        disabled={detail.online}
+        disabled={restoreDisabled}
+        disabledTip={!canRestore ? NO_RESTORE_TIP : undefined}
         rows={[
           ["dinheiro", s.storehouse.money],
           ["capacidade", s.storehouse.capacity],
