@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { ClsconfigEditor } from "@/components/admin/ClsconfigEditor";
 import { ItemCatalogManager } from "@/components/admin/ItemCatalogManager";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
+import { HistoryDrawer } from "@/components/admin/HistoryDrawer";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 
 const Admin = () => {
