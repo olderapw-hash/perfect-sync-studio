@@ -800,12 +800,14 @@ const SectionCard = ({
   highlighted,
   onRestore,
   disabled,
+  disabledTip,
 }: {
   title: string;
   rows: [string, unknown][];
   highlighted: boolean;
   onRestore: () => void;
   disabled?: boolean;
+  disabledTip?: string;
 }) => (
   <div
     className={cn(
@@ -815,7 +817,13 @@ const SectionCard = ({
   >
     <div className="mb-2 flex items-center justify-between">
       <div className="font-semibold uppercase tracking-wider text-foreground/90">{title}</div>
-      <Button size="sm" variant="outline" onClick={onRestore} disabled={disabled}>
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={onRestore}
+        disabled={disabled}
+        title={disabledTip}
+      >
         <RotateCcw className="h-3 w-3" />
         Restaurar seção
       </Button>
