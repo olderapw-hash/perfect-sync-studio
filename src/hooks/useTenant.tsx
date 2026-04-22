@@ -58,11 +58,10 @@ export function useTenant() {
  * that actually need to display/edit the secret (e.g. Onboarding, Settings).
  * Returns `null` if no tenant exists or the secret is unset.
  */
-export async function fetchTenantSecret(userId: string): Promise<string | null> {
-  const { data } = await supabase
-    .from("tenants")
-    .select("pw_api_secret")
-    .eq("owner_id", userId)
-    .maybeSingle();
-  return (data?.pw_api_secret as string | null) ?? null;
+export async function fetchTenantSecret(_userId?: string): Promise<string | null> {
+  // Reads via SECURITY DEFINER RPC scoped to auth.uid() so the secret
+  // column is never returned through generic SELECTs on the tenants table.
+  const { data, error } = await supabase.rpc("get_my_tenant_secret");
+  if (error) return null;
+  return (data as string | null) ?? null;
 }

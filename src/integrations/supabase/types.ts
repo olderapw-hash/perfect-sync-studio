@@ -265,6 +265,7 @@ export type Database = {
         Args: { target_user_id: string }
         Returns: undefined
       }
+      get_my_tenant_secret: { Args: never; Returns: string }
       get_public_branding: {
         Args: never
         Returns: {
