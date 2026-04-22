@@ -15,6 +15,7 @@ import {
   AlertTriangle,
   UserCog,
   History,
+  Sparkles,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -60,6 +61,7 @@ import { PresetsDialog } from "./PresetsDialog";
 import { BulkApplyDialog } from "./BulkApplyDialog";
 import { CompareClsDialog } from "./CompareClsDialog";
 import { RoleidHistoryDialog } from "./RoleidHistoryDialog";
+import { InitialKitsDialog } from "./InitialKitsDialog";
 
 /**
  * Modo de operação:
@@ -125,6 +127,7 @@ export const ClsconfigEditor = ({ entry, allEntries = [], mode = "template", onS
   const [bulkOpen, setBulkOpen] = useState(false);
   const [compareOpen, setCompareOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [kitsOpen, setKitsOpen] = useState(false);
   /** Apenas modo "role": opt-in para disparar exportclsconfig após o save. */
   const [exportClsconfigForRole, setExportClsconfigForRole] = useState(false);
   /** Apenas modo "role": confirmação forte ANTES de chamar runSave. */
