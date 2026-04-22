@@ -44,6 +44,8 @@ export const ClsconfigEditor = ({ entry }: Props) => {
   const [template, setTemplate] = useState<ClsTemplate>(entry.template);
   const [tab, setTab] = useState<TabKey>("base");
   const [saving, setSaving] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [checklistResult, setChecklistResult] = useState<SaveChecklistResult | null>(null);
 
   // Reset when switching entry
   useEffect(() => {
