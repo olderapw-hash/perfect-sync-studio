@@ -102,6 +102,7 @@ export const EquipmentTab = ({ template, onChange }: Props) => {
   const items = template.equipment.items;
   const [editingPos, setEditingPos] = useState<number | null>(null);
   const [pickerPos, setPickerPos] = useState<number | null>(null);
+  const [clearOpen, setClearOpen] = useState(false);
   // Demanda de "líderes necessários" — local apenas (não persistido na VPS).
   const [leadersNeeded, setLeadersNeeded] = useState<number>(10);
   const [sBonus, setSBonus] = useState<boolean>(false);
