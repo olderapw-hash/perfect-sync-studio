@@ -216,27 +216,17 @@ async function callAction<T>(
     for (const [k, v] of Object.entries(opts.query)) qs.set(k, String(v));
   }
   const path = `clsconfig-proxy/action/${action}${qs.toString() ? "?" + qs.toString() : ""}`;
-  const { data, error } = await supabase.functions.invoke(path, {
+  const { invokeClsconfigProxy } = await import("@/lib/clsconfigInvoke");
+  const { data, error, status, rawBody } = await invokeClsconfigProxy<T>(path, {
     method: opts.method,
     body: opts.method === "POST" ? (opts.body ?? {}) : undefined,
   });
   if (error) {
-    const ctx = (error as unknown as { context?: Response }).context;
-    let extra = "";
-    let status = 0;
-    if (ctx) {
-      status = ctx.status ?? 0;
-      try { extra = await ctx.text(); } catch { /* ignore */ }
-    }
-    if (status === 401) {
-      const { handleMaybeAuthError } = await import("@/lib/authErrors");
-      handleMaybeAuthError(new Error(`401 ${extra}`));
-    }
     if (status === 404) throw new EndpointMissingError(action);
-    if (status === 400 && /acao\s+invalida|a[cç][aã]o\s+inv[aá]lida|unknown\s+action/i.test(extra)) {
+    if (status === 400 && /acao\s+invalida|a[cç][aã]o\s+inv[aá]lida|unknown\s+action/i.test(rawBody)) {
       throw new EndpointMissingError(action);
     }
-    throw new Error(extra ? `${error.message}\n\n${extra}` : error.message);
+    throw new Error(rawBody ? `${error.message}\n\n${rawBody}` : error.message);
   }
   // Resposta 2xx mas com {error:"..."} no corpo (sem success:false).
   if (data && typeof data === "object") {
