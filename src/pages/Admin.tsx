@@ -11,9 +11,11 @@ import {
   Search,
   UserCog,
   FileCog,
+  Settings as SettingsIcon,
 } from "lucide-react";
 import { useClsconfig } from "@/hooks/useClsconfig";
 import { useAuth } from "@/hooks/useAuth";
+import { useAppSettings } from "@/hooks/useAppSettings";
 import { ClsconfigEditor } from "@/components/admin/ClsconfigEditor";
 import { ItemCatalogManager } from "@/components/admin/ItemCatalogManager";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
@@ -22,10 +24,11 @@ import { BackupsDialog } from "@/components/admin/BackupsDialog";
 import { ItemCatalogSearchDialog } from "@/components/admin/ItemCatalogSearchDialog";
 import { RolePersonagemTab } from "@/components/admin/RolePersonagemTab";
 import { ClassPhotosTab } from "@/components/admin/ClassPhotosTab";
+import { SettingsTab } from "@/components/admin/SettingsTab";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 
-type AdminMode = "template" | "role" | "photos";
+type AdminMode = "template" | "role" | "photos" | "settings";
 
 const Admin = () => {
   const { data, raw, loading, error, reload } = useClsconfig();
