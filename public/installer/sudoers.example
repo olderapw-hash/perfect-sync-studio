@@ -1,3 +1,10 @@
-# Permite ao usuário do webserver rodar o exportclsconfig-api.sh sem senha.
-# Substitua "www-data" pelo usuário correto do seu PHP-FPM/Apache se for outro.
-www-data ALL=(ALL) NOPASSWD: /usr/local/bin/exportclsconfig-api.sh
+# /etc/sudoers.d/apicls
+# Permite ao usuário do webserver disparar o export do gamedbd sem senha.
+# Ajuste "apache" para "www-data" / "nginx" / etc se for o usuário do seu PHP-FPM.
+#
+# Instalar:
+#   sudo cp sudoers.example /etc/sudoers.d/apicls
+#   sudo chmod 440 /etc/sudoers.d/apicls
+#   sudo visudo -c        # valida a sintaxe — NÃO pule esta etapa
+
+apache ALL=(root) NOPASSWD: /usr/local/sbin/exportclsconfig-api.sh
