@@ -5,12 +5,15 @@ import { ItemEditor } from "./ItemEditor";
 import { WarAvatarPicker } from "./WarAvatarPicker";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useState } from "react";
-import { X } from "lucide-react";
+import { Eraser, X } from "lucide-react";
+import { toast } from "sonner";
 import { buildClassIconUrl } from "@/lib/pwIcons";
 import { getClassInfo, getInitials } from "@/lib/pwClasses";
 import { useCharacterPhoto } from "@/hooks/useCharacterPhoto";
 import { uploadCharacterPhoto, uploadClassPhoto, removeCharacterPhoto } from "@/lib/photos";
 import { PhotoUploadButton } from "./PhotoUploadButton";
+import { clearItems, summarizeSection } from "@/lib/clearSection";
+import { ClearSectionDialog } from "./ClearSectionDialog";
 
 interface Props {
   template: ClsTemplate;
