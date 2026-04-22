@@ -74,13 +74,21 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      // Validação mínima do payload: a VPS indexa o template por roleid (não por cls).
+      // Validação mínima — a VPS indexa por roleid. Aceitamos 3 formatos:
+      //   1) save completo:   { key_hex, roleid, template }
+      //   2) patch de status: { roleid, status }
+      //   3) patch de inv.:   { roleid, inventory }
       const b = (body ?? {}) as Record<string, unknown>;
-      if (!b.key_hex || !b.template || b.roleid == null) {
+      const hasRoleid = Object.prototype.hasOwnProperty.call(b, "roleid") && b.roleid != null;
+      const hasFull = Object.prototype.hasOwnProperty.call(b, "template") &&
+        Object.prototype.hasOwnProperty.call(b, "key_hex");
+      const hasStatus = Object.prototype.hasOwnProperty.call(b, "status");
+      const hasInventory = Object.prototype.hasOwnProperty.call(b, "inventory");
+      if (!hasRoleid || (!hasFull && !hasStatus && !hasInventory)) {
         return new Response(
           JSON.stringify({
             success: false,
-            error: "Payload incompleto: requer key_hex, roleid e template",
+            error: "Payload incompleto: requer roleid e (template+key_hex) ou status ou inventory",
           }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );

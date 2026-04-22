@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { RotateCcw, Save, User, Activity, Backpack, Sword, Warehouse, Loader2 } from "lucide-react";
-import type { ClsEntry, ClsTemplate } from "@/types/clsconfig";
+import type { ClsEntry, ClsItem, ClsTemplate } from "@/types/clsconfig";
 import {
+  buildInventoryPayload,
   buildSavePayload,
   buildStatusPayload,
   diffSimpleStatus,
   normalizeClsconfigResponse,
+  onlyInventoryChanged,
   onlySimpleStatusChanged,
   SIMPLE_STATUS_FIELDS,
   type SimpleStatusField,
@@ -55,20 +57,43 @@ export const ClsconfigEditor = ({ entry }: Props) => {
   const handleSave = async () => {
     if (saving) return;
 
-    // Quando estamos na aba Status e SÓ campos simples mudaram (level, level2,
-    // exp, sp, pp, hp, mp, reputation), enviamos o payload mínimo:
-    //   { roleid: entry.template.roleid, status: { <fieldsAlterados>: Number(...) } }
-    // 0 é valor válido — usamos hasOwnProperty + checagem explícita, nunca `if (value)`.
+    // Decide qual payload usar:
+    //  - aba Status + só campos simples mudaram → patch de status
+    //  - aba Inventário + só inventário mudou    → patch de inventário (sem cultivation/decoded/etc)
+    //  - resto → save completo
     const statusDiff = diffSimpleStatus(entry.template, template);
     const useStatusPatch =
       tab === "status" &&
       Object.keys(statusDiff).length > 0 &&
       onlySimpleStatusChanged(entry.template, template);
+    const useInventoryPatch =
+      !useStatusPatch &&
+      tab === "inventory" &&
+      onlyInventoryChanged(entry.template, template);
 
     setSaving(true);
     try {
       let savedRoleid: number;
       const expectedStatus: Partial<Record<SimpleStatusField, number>> = {};
+      let expectedInventory: ClsItem[] | null = null;
+
+      const invokePost = async (body: unknown, errLabel: string) => {
+        const { data, error } = await supabase.functions.invoke("clsconfig-proxy/clsconfig", {
+          method: "POST",
+          body,
+        });
+        if (error) {
+          const ctx = (error as unknown as { context?: Response }).context;
+          let extra = "";
+          if (ctx && typeof ctx.text === "function") {
+            try { extra = await ctx.text(); } catch { /* ignore */ }
+          }
+          throw new Error(extra ? `${error.message}\n\n${extra}` : error.message);
+        }
+        if (data && typeof data === "object" && (data as { success?: boolean }).success === false) {
+          throw new Error((data as { error?: string }).error || errLabel);
+        }
+      };
 
       if (useStatusPatch) {
         const patchPayload = buildStatusPayload(entry, statusDiff);
@@ -76,43 +101,19 @@ export const ClsconfigEditor = ({ entry }: Props) => {
         for (const [k, v] of Object.entries(patchPayload.status)) {
           expectedStatus[k as SimpleStatusField] = v as number;
         }
-        const { data, error } = await supabase.functions.invoke("clsconfig-proxy/clsconfig", {
-          method: "POST",
-          body: patchPayload,
-        });
-        if (error) {
-          const ctx = (error as unknown as { context?: Response }).context;
-          let extra = "";
-          if (ctx && typeof ctx.text === "function") {
-            try { extra = await ctx.text(); } catch { /* ignore */ }
-          }
-          throw new Error(extra ? `${error.message}\n\n${extra}` : error.message);
-        }
-        if (data && typeof data === "object" && (data as { success?: boolean }).success === false) {
-          throw new Error((data as { error?: string }).error || "Falha ao salvar status");
-        }
+        await invokePost(patchPayload, "Falha ao salvar status");
+      } else if (useInventoryPatch) {
+        const invPayload = buildInventoryPayload(entry, template.inventory);
+        savedRoleid = invPayload.roleid;
+        expectedInventory = template.inventory.items;
+        await invokePost(invPayload, "Falha ao salvar inventário");
       } else {
         const payload = buildSavePayload(entry, template);
         savedRoleid = payload.roleid;
-        // No save completo, validamos TODOS os campos simples.
         for (const f of SIMPLE_STATUS_FIELDS) {
           expectedStatus[f] = Number(payload.template.status[f]);
         }
-        const { data, error } = await supabase.functions.invoke("clsconfig-proxy/clsconfig", {
-          method: "POST",
-          body: payload,
-        });
-        if (error) {
-          const ctx = (error as unknown as { context?: Response }).context;
-          let extra = "";
-          if (ctx && typeof ctx.text === "function") {
-            try { extra = await ctx.text(); } catch { /* ignore */ }
-          }
-          throw new Error(extra ? `${error.message}\n\n${extra}` : error.message);
-        }
-        if (data && typeof data === "object" && (data as { success?: boolean }).success === false) {
-          throw new Error((data as { error?: string }).error || "Falha ao salvar");
-        }
+        await invokePost(payload, "Falha ao salvar");
       }
 
       // Recarrega o clsconfig completo da VPS para validar persistência real.
@@ -138,7 +139,14 @@ export const ClsconfigEditor = ({ entry }: Props) => {
         const expected = expectedStatus[field];
         const persisted = freshEntry.template.status[field];
         if (expected !== persisted) {
-          divergent.push(`${field}: enviado ${expected}, persistido ${persisted}`);
+          divergent.push(`status.${field}: enviado ${expected}, persistido ${persisted}`);
+        }
+      }
+      if (expectedInventory) {
+        const sent = expectedInventory.filter((i) => i.id > 0).length;
+        const persisted = freshEntry.template.inventory.items.filter((i) => i.id > 0).length;
+        if (sent !== persisted) {
+          divergent.push(`inventory.items: enviados ${sent}, persistidos ${persisted}`);
         }
       }
       if (divergent.length > 0) {
@@ -148,14 +156,14 @@ export const ClsconfigEditor = ({ entry }: Props) => {
       }
 
       const summary = useStatusPatch
-        ? Object.entries(expectedStatus)
-            .map(([k, v]) => `${k}=${v}`)
-            .join(", ")
+        ? Object.entries(expectedStatus).map(([k, v]) => `${k}=${v}`).join(", ")
         : "";
       toast.success(
         useStatusPatch
           ? `Status atualizado (roleid ${savedRoleid}): ${summary}`
-          : "Alterações persistidas na VPS",
+          : useInventoryPatch
+            ? `Inventário atualizado (roleid ${savedRoleid})`
+            : "Alterações persistidas na VPS",
       );
       entry.template = freshEntry.template;
       setTemplate(freshEntry.template);

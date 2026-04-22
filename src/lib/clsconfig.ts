@@ -362,6 +362,77 @@ export function buildStatusPayload(
   return { roleid, status };
 }
 
+/**
+ * Payload mínimo para salvar SOMENTE o inventário. NÃO inclui:
+ *   - status.cultivation (label calculada — não editável)
+ *   - status.decoded
+ *   - base.class_info / base.class_name / base.class_icon / base.class_icon_path
+ *   - summary
+ *   - class_info
+ * Se precisar enviar cultivo, enviar apenas status.level2 como número.
+ */
+export interface InventoryPayload {
+  roleid: number;
+  inventory: {
+    capacity: number;
+    timestamp: number;
+    money: number;
+    reserved6: number;
+    reserved7: number;
+    items: Array<{
+      id: number;
+      pos: number;
+      count: number;
+      max_count: number;
+      data: string;
+      proctype: number;
+      expire_date: number;
+      guid1: number;
+      guid2: number;
+      mask: number;
+    }>;
+  };
+}
+
+export function buildInventoryPayload(
+  entry: ClsEntry,
+  inventory: ClsTemplate["inventory"],
+): InventoryPayload {
+  const roleid = resolveRoleid(entry, entry.template);
+  const inv = inventory as ClsTemplate["inventory"] & { reserved6?: number; reserved7?: number };
+  return {
+    roleid,
+    inventory: {
+      capacity: Number(inv.capacity),
+      timestamp: Number(inv.timestamp ?? 0),
+      money: Number(inv.money ?? 0),
+      reserved6: Number(inv.reserved6 ?? 0),
+      reserved7: Number(inv.reserved7 ?? 0),
+      items: inv.items.map((item) => ({
+        id: Number(item.id),
+        pos: Number(item.pos),
+        count: Number(item.count),
+        max_count: Number(item.max_count),
+        data: String(item.data ?? ""),
+        proctype: Number(item.proctype ?? 0),
+        expire_date: Number(item.expire_date ?? 0),
+        guid1: Number(item.guid1 ?? 0),
+        guid2: Number(item.guid2 ?? 0),
+        mask: Number(item.mask ?? 0),
+      })),
+    },
+  };
+}
+
+/** True se a única diferença entre original e current está em template.inventory. */
+export function onlyInventoryChanged(
+  original: ClsTemplate,
+  current: ClsTemplate,
+): boolean {
+  const strip = (t: ClsTemplate) => ({ ...t, inventory: null });
+  return JSON.stringify(strip(original)) === JSON.stringify(strip(current));
+}
+
 /** Mantido por compatibilidade. Equivalente a buildStatusPayload(entry, { reputation }). */
 export interface ReputationPayload {
   roleid: number;
