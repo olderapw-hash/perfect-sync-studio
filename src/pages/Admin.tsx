@@ -149,6 +149,10 @@ const Admin = () => {
               <div className="h-full overflow-y-auto p-6">
                 <RolePersonagemTab />
               </div>
+            ) : mode === "photos" ? (
+              <div className="h-full overflow-y-auto p-6">
+                <ClassPhotosTab />
+              </div>
             ) : error ? (
               <div className="m-6 overflow-auto rounded-xl border border-destructive/40 bg-destructive/10 p-6 text-sm text-destructive">
                 <div className="flex items-center gap-2 font-semibold">
