@@ -137,12 +137,44 @@ export interface RestoreBackupRequest {
   dry_run?: boolean;
 }
 
+/**
+ * Resposta de `getRoleEditable` — espelha o shape de uma entry do
+ * getClsconfig, mas vinda do registro REAL do personagem no gamedbd.
+ *
+ * `template` segue o mesmo schema usado em ClsTemplate (status/inventory/
+ * equipment/storehouse/base/summary), permitindo reusar o ClsconfigEditor
+ * sem tradução adicional.
+ */
+export interface GetRoleEditableResponse {
+  success: boolean;
+  /** True se o personagem está logado (kick antes de editar). */
+  online?: boolean;
+  /** Snapshot atual do role no gamedbd, no mesmo schema do clsconfig. */
+  template?: unknown;
+  /** Wrapper opcional usado em algumas versões do PHP. */
+  role?: unknown;
+  error?: string;
+}
+
+/**
+ * Payload de `saveRoleEditable`. Aceita tanto o modo "patch parcial"
+ * (status/inventory soltos) quanto o modo "template completo" (mesmo
+ * shape de saveClsconfigTemplate, porém roteado para o gamedbd real).
+ *
+ * `export` é opt-in: por padrão NÃO disparamos exportclsconfig em
+ * personagens reais (só faz sentido quando o usuário marca a opção
+ * avançada na UI).
+ */
 export interface SaveRoleEditablePayload {
   roleid: number;
   status?: Record<string, number | string>;
   inventory?: unknown;
   equipment?: unknown;
   storehouse?: unknown;
+  /** Template completo no shape de ClsTemplate (sem decoded/cultivation/summary/class_info). */
+  template?: unknown;
+  /** Quando true, pede ao PHP para agendar exportclsconfig após o save. Default: false. */
+  export?: boolean;
 }
 
 export interface SaveRoleEditableResponse {
@@ -151,7 +183,19 @@ export interface SaveRoleEditableResponse {
   online?: boolean;
   applied?: string[];
   verified?: boolean;
+  /** Shape antigo / direto. */
   backups?: { role_json?: { file: string } };
+  /** Shape "saved.*" usado pela API atualizada. */
+  saved?: {
+    verified?: boolean;
+    backup?: { file?: string };
+    backups?: {
+      role_json?: { file?: string };
+      clsconfig_file?: { file?: string };
+    };
+    export?: { log_file?: string; scheduled?: boolean };
+    role?: unknown;
+  };
   error?: string;
 }
 
