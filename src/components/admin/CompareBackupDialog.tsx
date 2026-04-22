@@ -177,12 +177,17 @@ export const CompareBackupDialog = ({ open, onOpenChange, backup, onRestored }: 
     setCurrentTpl(null);
     setLastResult(null);
     try {
-      // Backup content: prefer endpoint dedicado; fallback dry_run.
+      // Backup content: endpoint dedicado (POST JSON). Fallback dry_run só se 404/missing.
       let bTpl: Record<string, unknown> | null = null;
       try {
-        const bc = await pwApi.getBackupContent(name);
+        const bc = await pwApi.getBackupContent(name, "role_json");
         if (!bc?.success) throw new Error(bc?.error || "getBackupContent retornou success:false");
-        bTpl = extractTemplate(bc.template ?? bc.role);
+        // Shape novo: bc.backup.template. Legado: bc.template / bc.role.
+        const raw = bc.backup?.template ?? bc.template ?? bc.role;
+        bTpl = extractTemplate(raw);
+        if (!bTpl) {
+          throw new Error("getBackupContent respondeu success mas sem backup.template.");
+        }
       } catch (e) {
         if (e instanceof EndpointMissingError) {
           // Fallback: usa restoreBackup dry_run que retorna `source`.
@@ -191,7 +196,7 @@ export const CompareBackupDialog = ({ open, onOpenChange, backup, onRestored }: 
           bTpl = extractTemplate(dry.source);
           if (!bTpl) {
             throw new Error(
-              "VPS não retornou conteúdo do backup (nem getBackupContent nem dry_run.source). Implemente getBackupContent.",
+              "VPS não retornou conteúdo do backup (nem getBackupContent nem dry_run.source).",
             );
           }
         } else {
