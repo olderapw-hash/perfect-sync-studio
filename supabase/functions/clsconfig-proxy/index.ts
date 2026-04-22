@@ -90,32 +90,55 @@ Deno.serve(async (req: Request) => {
   }
 
   // ⚠️ Auth GLOBAL: nenhuma rota desta função pode rodar sem admin.
-  const denied = await requireAdmin(req);
-  if (denied) return denied;
+  // Agora também devolvemos o user.id pra ler o tenant correto.
+  const authResult = await requireAdmin(req);
+  if (authResult instanceof Response) return authResult;
+  const callerUserId = authResult.userId;
 
   const url = new URL(req.url);
   const segments = url.pathname.split("/").filter(Boolean);
   const route = segments[segments.length - 1] || "";
 
-  // Lê config dinâmica de app_settings (override) com fallback pra env vars.
+  // Resolução de credenciais por tenant (multi-tenant):
+  // 1. Lê o tenant do usuário logado (RLS garante que é o dele).
+  // 2. Se tem tenant com VPS configurada → usa as credenciais do tenant.
+  // 3. Senão (superadmin/owner sem tenant) → cai pro app_settings global.
+  // 4. Último fallback: env vars.
   let PW_API_BASE_URL = Deno.env.get("PW_API_BASE_URL") ?? "";
   let PW_API_SECRET = Deno.env.get("PW_API_SECRET") ?? "";
+  let credSource: "tenant" | "app_settings" | "env" = "env";
   try {
     const SR_URL = Deno.env.get("SUPABASE_URL");
     const SR_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     if (SR_URL && SR_KEY) {
       const admin = createClient(SR_URL, SR_KEY, { auth: { persistSession: false } });
-      const { data: cfg } = await admin
-        .from("app_settings")
+
+      // 1) Tenant do user logado
+      const { data: tenantRow } = await admin
+        .from("tenants")
         .select("pw_api_base_url, pw_api_secret")
-        .eq("id", 1)
+        .eq("owner_id", callerUserId)
         .maybeSingle();
-      if (cfg?.pw_api_base_url) PW_API_BASE_URL = cfg.pw_api_base_url;
-      if (cfg?.pw_api_secret) PW_API_SECRET = cfg.pw_api_secret;
+      if (tenantRow?.pw_api_base_url && tenantRow?.pw_api_secret) {
+        PW_API_BASE_URL = tenantRow.pw_api_base_url;
+        PW_API_SECRET = tenantRow.pw_api_secret;
+        credSource = "tenant";
+      } else {
+        // 2) Fallback global (superadmin sem tenant)
+        const { data: cfg } = await admin
+          .from("app_settings")
+          .select("pw_api_base_url, pw_api_secret")
+          .eq("id", 1)
+          .maybeSingle();
+        if (cfg?.pw_api_base_url) PW_API_BASE_URL = cfg.pw_api_base_url;
+        if (cfg?.pw_api_secret) PW_API_SECRET = cfg.pw_api_secret;
+        if (cfg?.pw_api_base_url || cfg?.pw_api_secret) credSource = "app_settings";
+      }
     }
   } catch (e) {
     console.warn("[clsconfig-proxy] settings lookup failed, using env vars", e);
   }
+  console.log("[clsconfig-proxy] cred source:", credSource, "user:", callerUserId);
 
   if (!PW_API_BASE_URL || !PW_API_SECRET) {
     return new Response(
