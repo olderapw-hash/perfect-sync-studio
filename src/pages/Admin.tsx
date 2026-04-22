@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import {
   AlertCircle,
   Database,
+  Image as ImageIcon,
   Loader2,
   LogOut,
   RefreshCw,
@@ -20,10 +21,11 @@ import { HistoryDrawer } from "@/components/admin/HistoryDrawer";
 import { BackupsDialog } from "@/components/admin/BackupsDialog";
 import { ItemCatalogSearchDialog } from "@/components/admin/ItemCatalogSearchDialog";
 import { RolePersonagemTab } from "@/components/admin/RolePersonagemTab";
+import { ClassPhotosTab } from "@/components/admin/ClassPhotosTab";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 
-type AdminMode = "template" | "role";
+type AdminMode = "template" | "role" | "photos";
 
 const Admin = () => {
   const { data, raw, loading, error, reload } = useClsconfig();
@@ -85,6 +87,12 @@ const Admin = () => {
                 label="Personagem Existente"
                 danger
               />
+              <ModeButton
+                active={mode === "photos"}
+                onClick={() => setMode("photos")}
+                icon={<ImageIcon className="h-3.5 w-3.5" />}
+                label="Fotos das Classes"
+              />
             </div>
 
             <div className="ml-auto flex items-center gap-2">
@@ -140,6 +148,10 @@ const Admin = () => {
             {mode === "role" ? (
               <div className="h-full overflow-y-auto p-6">
                 <RolePersonagemTab />
+              </div>
+            ) : mode === "photos" ? (
+              <div className="h-full overflow-y-auto p-6">
+                <ClassPhotosTab />
               </div>
             ) : error ? (
               <div className="m-6 overflow-auto rounded-xl border border-destructive/40 bg-destructive/10 p-6 text-sm text-destructive">
