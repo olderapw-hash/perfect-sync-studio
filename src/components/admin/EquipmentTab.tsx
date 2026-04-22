@@ -322,7 +322,9 @@ export const EquipmentTab = ({ template, onChange }: Props) => {
             </button>
           </div>
         </DialogContent>
-      </Dialog>
+      </Zdialog_close_marker_unused>
     </div>
+  );
+};
   );
 };
