@@ -1,8 +1,13 @@
 // Edge Function: clsconfig-proxy
 // Proxies requests to the external PW API so the secret is never exposed to the browser.
 // Routes:
-//   GET  /clsconfig  -> calls `${PW_API_BASE_URL}/apicls/api_cls.php?action=getClsconfig`
-//   POST /clsconfig  -> calls `${PW_API_BASE_URL}/apicls/api_cls.php?action=saveClsconfig` with JSON body
+//   GET  /clsconfig                          -> action=getClsconfig
+//   POST /clsconfig                          -> action=saveClsconfigTemplate (com roleid)
+//   GET  /clsconfig-proxy/action/<name>      -> ?action=<name>&<query passthrough>
+//   POST /clsconfig-proxy/action/<name>      -> ?action=<name> com body JSON
+//
+// Whitelist de actions extras (Lote 3): getItemCatalog, listBackups,
+// restoreBackup, saveRoleEditable. Tudo fora da whitelist é rejeitado.
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,13 +16,19 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
 };
 
+const ALLOWED_ACTIONS = new Set([
+  "getItemCatalog",
+  "listBackups",
+  "restoreBackup",
+  "saveRoleEditable",
+]);
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
   const url = new URL(req.url);
-  // Path can be "/clsconfig-proxy/clsconfig" or "/clsconfig"
   const segments = url.pathname.split("/").filter(Boolean);
   const route = segments[segments.length - 1] || "";
 
@@ -45,20 +56,20 @@ Deno.serve(async (req: Request) => {
     );
   }
 
-  // Endpoint base: se PW_API_BASE_URL já terminar em .php, usa direto; senão, anexa /apicls/api_cls.php.
   const endpoint = base.endsWith(".php") ? base : `${base}/apicls/api_cls.php`;
 
-  const isClsRoute = route === "clsconfig" || route === "clsconfig-proxy";
+  // Detecta rota /action/<name>
+  const actionIdx = segments.indexOf("action");
+  const isActionRoute = actionIdx !== -1 && segments[actionIdx + 1];
+  const isClsRoute = !isActionRoute && (route === "clsconfig" || route === "clsconfig-proxy");
 
   try {
+    // ----- Rotas legadas /clsconfig (mantidas para compat) -----
     if (req.method === "GET" && isClsRoute) {
       const target = `${endpoint}?action=getClsconfig`;
       const upstream = await fetch(target, {
         method: "GET",
-        headers: {
-          Accept: "application/json",
-          "x-sync-secret": PW_API_SECRET,
-        },
+        headers: { Accept: "application/json", "x-sync-secret": PW_API_SECRET },
       });
       return await relay(upstream);
     }
@@ -74,10 +85,6 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      // Validação mínima — a VPS indexa por roleid. Aceitamos 3 formatos:
-      //   1) save completo:   { key_hex, roleid, template }
-      //   2) patch de status: { roleid, status }
-      //   3) patch de inv.:   { roleid, inventory }
       const b = (body ?? {}) as Record<string, unknown>;
       const hasRoleid = Object.prototype.hasOwnProperty.call(b, "roleid") && b.roleid != null;
       const hasFull = Object.prototype.hasOwnProperty.call(b, "template") &&
@@ -96,14 +103,7 @@ Deno.serve(async (req: Request) => {
 
       const roleidParam = encodeURIComponent(String(b.roleid));
       const target = `${endpoint}?action=saveClsconfigTemplate&roleid=${roleidParam}`;
-      console.log(
-        "[clsconfig-proxy] POST →",
-        target,
-        "key_hex:",
-        String((body as Record<string, unknown>).key_hex),
-        "roleid:",
-        String(b.roleid),
-      );
+      console.log("[clsconfig-proxy] POST →", target, "roleid:", String(b.roleid));
       const upstream = await fetch(target, {
         method: "POST",
         headers: {
@@ -116,6 +116,44 @@ Deno.serve(async (req: Request) => {
       const cloned = upstream.clone();
       const preview = (await cloned.text()).slice(0, 500);
       console.log("[clsconfig-proxy] upstream status:", upstream.status, "body:", preview);
+      return await relay(upstream);
+    }
+
+    // ----- Nova rota /action/<name> com whitelist -----
+    if (isActionRoute) {
+      const action = segments[actionIdx + 1];
+      if (!ALLOWED_ACTIONS.has(action)) {
+        return new Response(
+          JSON.stringify({ success: false, error: `Action não permitida: ${action}` }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      // Passthrough da querystring (filtramos chaves perigosas).
+      const qs = new URLSearchParams();
+      qs.set("action", action);
+      for (const [k, v] of url.searchParams.entries()) {
+        if (k === "action") continue;
+        qs.append(k, v);
+      }
+      const target = `${endpoint}?${qs.toString()}`;
+
+      const init: RequestInit = {
+        method: req.method,
+        headers: {
+          Accept: "application/json",
+          "x-sync-secret": PW_API_SECRET,
+        },
+      };
+      if (req.method === "POST") {
+        const text = await req.text();
+        init.body = text;
+        (init.headers as Record<string, string>)["Content-Type"] = "application/json";
+      }
+
+      console.log("[clsconfig-proxy] action →", action, "method:", req.method);
+      const upstream = await fetch(target, init);
+      console.log("[clsconfig-proxy] action status:", upstream.status);
       return await relay(upstream);
     }
 
