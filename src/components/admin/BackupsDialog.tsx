@@ -206,7 +206,7 @@ const RestoreButton = ({ onClick }: { onClick: () => void }) => (
     variant="outline"
     disabled
     onClick={onClick}
-    title="Endpoint restoreBackup ainda não implementado"
+    title="Endpoint restoreBackup ainda não habilitado"
     className="cursor-not-allowed"
   >
     <Lock className="h-3 w-3" />
