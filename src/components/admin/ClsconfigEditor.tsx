@@ -151,6 +151,140 @@ export const ClsconfigEditor = ({ entry, allEntries = [], mode = "template", onS
     setPreviewOpen(true);
   };
 
+  /**
+   * Salva no modo "role" (personagem real existente).
+   *
+   * - Endpoint: pwApi.saveRoleEditable (NÃO clsconfig).
+   * - Payload: template completo via buildSavePayload (sem cultivation/decoded/npc_relation).
+   * - Verificação: getRoleEditable do mesmo roleid (NÃO getClsconfig).
+   * - exportclsconfig: opt-in via `exportClsconfigForRole`.
+   * - Restrição clsconfig_template_roleids NÃO se aplica aqui.
+   */
+  const runSaveRoleEditable = async () => {
+    const className =
+      template.summary.class_name ?? `Roleid real ${entry.template.roleid}`;
+    setSaving(true);
+    let lastResponse: Record<string, unknown> | null = null;
+
+    try {
+      const payload = buildSavePayload(entry, template);
+      const savedRoleid = payload.roleid;
+
+      const res = await pwApi.saveRoleEditable({
+        roleid: savedRoleid,
+        template: payload.template,
+        export: exportClsconfigForRole,
+      });
+      lastResponse = res as unknown as Record<string, unknown>;
+
+      if (res?.online) {
+        toast.error(
+          "Personagem está ONLINE — peça kick antes de salvar (mudanças podem ser sobrescritas no logout)",
+          { duration: 9000 },
+        );
+        setPreviewOpen(false);
+        setChecklistResult({
+          saved: false,
+          verified: false,
+          error: "Personagem online — operação recusada pelo servidor",
+        });
+        return;
+      }
+      if (!res?.success) {
+        throw new Error(res?.error || "saveRoleEditable falhou");
+      }
+
+      // Releitura para verificar persistência real (não usa getClsconfig).
+      let freshTemplate: ClsTemplate | null = null;
+      try {
+        const reread = await pwApi.getRoleEditable(savedRoleid);
+        const rawTpl = (reread?.template ?? (reread as unknown as { role?: unknown })?.role) as unknown;
+        if (rawTpl && typeof rawTpl === "object") {
+          freshTemplate = rawTpl as ClsTemplate;
+        }
+      } catch (e) {
+        console.warn("[role] getRoleEditable releitura falhou:", e);
+      }
+
+      // Histórico — registra um snapshot do save bem-sucedido.
+      saveHistory.pushDiff({
+        roleid: savedRoleid,
+        className,
+        field: `roleEditable.${tab}`,
+        oldValue: "(antes)",
+        newValue: "(template completo aplicado)",
+        status: "ok",
+      });
+
+      toast.success(
+        `Personagem real ${savedRoleid} atualizado${
+          res.applied?.length ? ` (${res.applied.length} campo(s))` : ""
+        }`,
+      );
+
+      if (freshTemplate) {
+        entry.template = freshTemplate;
+        setTemplate(freshTemplate);
+        onSaved?.(freshTemplate);
+      } else {
+        // Sem releitura disponível — mantém o template editado como referência.
+        onSaved?.(template);
+      }
+
+      const verifiedFromBody =
+        extractAny(lastResponse, ["saved", "verified"]) === true ||
+        extractAny(lastResponse, ["verified"]) === true ||
+        Boolean(freshTemplate);
+      const backupRoleJson =
+        extractPath(lastResponse, ["saved", "backup", "file"]) ??
+        extractPath(lastResponse, ["saved", "backups", "role_json", "file"]) ??
+        extractPath(lastResponse, ["backups", "role_json", "file"]);
+      const exportLogFile = extractPath(lastResponse, ["saved", "export", "log_file"]);
+      const exportScheduled =
+        extractAny(lastResponse, ["saved", "export", "scheduled"]) === true ||
+        Boolean(exportLogFile);
+
+      if (backupRoleJson) {
+        seenBackups.add(savedRoleid, "role_json", backupRoleJson);
+      }
+
+      setPreviewOpen(false);
+      setChecklistResult({
+        saved: true,
+        verified: verifiedFromBody,
+        backupRoleJson,
+        // Em modo role NÃO geramos clsconfig_file; deixamos undefined
+        // para o checklist mostrar como "não aplicável".
+        backupClsconfigFile: undefined,
+        exportLogFile,
+        // Se o usuário não marcou export, marcamos como "não solicitado".
+        exportScheduled: exportClsconfigForRole ? exportScheduled : true,
+      });
+    } catch (e) {
+      const msg =
+        e instanceof EndpointMissingError
+          ? "Endpoint saveRoleEditable ainda não implementado na VPS"
+          : e instanceof Error
+            ? e.message
+            : "Erro desconhecido ao salvar personagem";
+      console.error("[role] save error →", e);
+      toast.error(msg);
+      saveHistory.pushDiff({
+        roleid: entry.template.roleid,
+        className,
+        field: `roleEditable.${tab}`,
+        oldValue: "(antes)",
+        newValue: "(falha)",
+        status: "error",
+        error: msg,
+      });
+      setPreviewOpen(false);
+      setChecklistResult({ saved: false, verified: false, error: msg });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   /** Salva de fato (chamado pelo botão "Confirmar e salvar" do preview). */
   const runSave = async () => {
     if (saving) return;
