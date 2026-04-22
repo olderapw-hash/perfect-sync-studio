@@ -695,29 +695,83 @@ export const ClsconfigEditor = ({ entry, allEntries = [], mode = "template", onS
         onClose={() => setChecklistResult(null)}
       />
 
-      <PresetsDialog
-        open={presetsOpen}
-        onOpenChange={setPresetsOpen}
-        currentTemplate={template}
-        currentRoleid={entry.template.roleid}
-        currentClassName={template.summary.class_name}
-        onApply={setTemplate}
-      />
+      {!isRoleMode && (
+        <>
+          <PresetsDialog
+            open={presetsOpen}
+            onOpenChange={setPresetsOpen}
+            currentTemplate={template}
+            currentRoleid={entry.template.roleid}
+            currentClassName={template.summary.class_name}
+            onApply={setTemplate}
+          />
 
-      <BulkApplyDialog
-        open={bulkOpen}
-        onOpenChange={setBulkOpen}
-        sourceEntry={entry}
-        currentTemplate={template}
-        allEntries={allEntries}
-      />
+          <BulkApplyDialog
+            open={bulkOpen}
+            onOpenChange={setBulkOpen}
+            sourceEntry={entry}
+            currentTemplate={template}
+            allEntries={allEntries}
+          />
 
-      <CompareClsDialog
-        open={compareOpen}
-        onOpenChange={setCompareOpen}
-        entries={allEntries}
-        initialKey={entry.key_hex}
-      />
+          <CompareClsDialog
+            open={compareOpen}
+            onOpenChange={setCompareOpen}
+            entries={allEntries}
+            initialKey={entry.key_hex}
+          />
+        </>
+      )}
+
+      {/* Confirmação forte ANTES do save em personagem real. */}
+      <AlertDialog
+        open={roleConfirmOpen}
+        onOpenChange={(o) => !saving && setRoleConfirmOpen(o)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Salvar no personagem REAL roleid {entry.template.roleid}
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 text-sm">
+                <p className="font-semibold text-foreground">
+                  Personagem deve estar offline. Se estiver online, o servidor
+                  pode sobrescrever as alterações no logout.
+                </p>
+                <ul className="ml-4 list-disc space-y-1 text-xs text-muted-foreground">
+                  <li>
+                    Endpoint usado: <code className="font-mono">saveRoleEditable</code>{" "}
+                    (NÃO <code className="font-mono">saveClsconfigTemplate</code>).
+                  </li>
+                  <li>
+                    Backup automático do <code className="font-mono">role_json</code> é
+                    gerado pela VPS antes de aplicar.
+                  </li>
+                  <li>
+                    {exportClsconfigForRole
+                      ? "exportclsconfig SERÁ disparado (você marcou a opção avançada)."
+                      : "exportclsconfig NÃO será disparado (padrão para personagem real)."}
+                  </li>
+                </ul>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={saving}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                confirmRoleEdit();
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Sim, abrir preview
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
