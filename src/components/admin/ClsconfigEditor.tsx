@@ -39,6 +39,7 @@ import {
 } from "@/lib/clsconfig";
 import { summarizeIssues, validateAllItems, type ItemIssue } from "@/lib/validateItem";
 import { saveHistory } from "@/lib/saveHistory";
+import { handleMaybeAuthError } from "@/lib/authErrors";
 import { seenBackups } from "@/lib/seenBackups";
 import { buildClassIconUrl } from "@/lib/pwIcons";
 import { supabase } from "@/integrations/supabase/client";
