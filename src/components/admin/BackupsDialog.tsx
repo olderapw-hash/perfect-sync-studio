@@ -283,16 +283,16 @@ export const BackupsDialog = ({ open, onOpenChange, onRestored }: Props) => {
                     <TabsTrigger value="export_logs">exports ({vps.export_logs.length})</TabsTrigger>
                   </TabsList>
                   <TabsContent value="all">
-                    <VpsList items={vps.all} onRestore={beginRestore} onUnsupported={handleRestoreUnsupported} restoringName={restoringName(restore)} />
+                    <VpsList items={vps.all} onRestore={beginRestore} onUnsupported={handleRestoreUnsupported} onCompare={setCompareTarget} restoringName={restoringName(restore)} />
                   </TabsContent>
                   <TabsContent value="role_json">
-                    <VpsList items={vps.role_json} onRestore={beginRestore} onUnsupported={handleRestoreUnsupported} restoringName={restoringName(restore)} />
+                    <VpsList items={vps.role_json} onRestore={beginRestore} onUnsupported={handleRestoreUnsupported} onCompare={setCompareTarget} restoringName={restoringName(restore)} />
                   </TabsContent>
                   <TabsContent value="clsconfig_files">
-                    <VpsList items={vps.clsconfig_files} onRestore={beginRestore} onUnsupported={handleRestoreUnsupported} restoringName={restoringName(restore)} />
+                    <VpsList items={vps.clsconfig_files} onRestore={beginRestore} onUnsupported={handleRestoreUnsupported} onCompare={setCompareTarget} restoringName={restoringName(restore)} />
                   </TabsContent>
                   <TabsContent value="export_logs">
-                    <VpsList items={vps.export_logs} onRestore={beginRestore} onUnsupported={handleRestoreUnsupported} restoringName={restoringName(restore)} hideRestore />
+                    <VpsList items={vps.export_logs} onRestore={beginRestore} onUnsupported={handleRestoreUnsupported} onCompare={setCompareTarget} restoringName={restoringName(restore)} hideRestore />
                   </TabsContent>
                 </Tabs>
               )}
