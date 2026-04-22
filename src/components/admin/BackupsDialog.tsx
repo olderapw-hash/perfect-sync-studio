@@ -496,12 +496,14 @@ const VpsList = ({
   items,
   onRestore,
   onUnsupported,
+  onCompare,
   restoringName,
   hideRestore,
 }: {
   items: BackupRecord[];
   onRestore: (b: BackupRecord) => void;
   onUnsupported: (k: BackupKind) => void;
+  onCompare: (b: BackupRecord) => void;
   restoringName: string | null;
   hideRestore?: boolean;
 }) => {
