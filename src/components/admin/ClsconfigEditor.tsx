@@ -55,6 +55,7 @@ import { SaveChecklistDialog, type SaveChecklistResult } from "./SaveChecklistDi
 import { PresetsDialog } from "./PresetsDialog";
 import { BulkApplyDialog } from "./BulkApplyDialog";
 import { CompareClsDialog } from "./CompareClsDialog";
+import { RoleidHistoryDialog } from "./RoleidHistoryDialog";
 
 /**
  * Modo de operação:
@@ -118,6 +119,7 @@ export const ClsconfigEditor = ({ entry, allEntries = [], mode = "template", onS
   const [presetsOpen, setPresetsOpen] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
   const [compareOpen, setCompareOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   /** Apenas modo "role": opt-in para disparar exportclsconfig após o save. */
   const [exportClsconfigForRole, setExportClsconfigForRole] = useState(false);
   /** Apenas modo "role": confirmação forte ANTES de chamar runSave. */
