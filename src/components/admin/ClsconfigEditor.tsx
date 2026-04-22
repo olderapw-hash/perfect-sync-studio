@@ -130,7 +130,13 @@ export const ClsconfigEditor = ({ entry, allEntries = [], mode = "template", onS
   /** Apenas modo "role": confirmação forte ANTES de chamar runSave. */
   const [roleConfirmOpen, setRoleConfirmOpen] = useState(false);
 
+  const { can } = useServerPermissions();
   const isRoleMode = mode === "role";
+  const requiredSavePerm = isRoleMode ? "save_real_roles" : "save_templates";
+  const canSave = can(requiredSavePerm);
+  const canBulkApply = can("bulk_apply");
+  const canCompare = can("compare_backup");
+  const permDeniedTitle = "Seu acesso não permite esta ação.";
 
   // Reset when switching entry
   useEffect(() => {
