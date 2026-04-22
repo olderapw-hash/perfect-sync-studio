@@ -339,6 +339,79 @@ export function applyKitToTemplate(
   return next;
 }
 
+// ─────────────────────────── bulk apply payload ───────────────────────────
+
+/**
+ * Payload mínimo para aplicar um kit num roleid sem enviar base/status.
+ *
+ * Inclui APENAS as seções afetadas pelo kit. `inventory.money` e
+ * `storehouse.money` só vão se o kit declarar inclusão. `task.task_inventory`
+ * só vai se incluído. Dessa forma a VPS não toca em base/status nem nos
+ * blobs opacos task_data/task_complete/task_finishtime.
+ */
+export interface KitBulkPayload {
+  roleid: number;
+  inventory: {
+    items: ClsItem[];
+    money?: number;
+  };
+  equipment: {
+    items: ClsItem[];
+  };
+  storehouse: {
+    items: ClsItem[];
+    dress: ClsItem[];
+    material: ClsItem[];
+    generalcard: ClsItem[];
+    money?: number;
+  };
+  task?: {
+    task_inventory: ClsItem[];
+  };
+}
+
+/**
+ * Constrói o payload mínimo a ser enviado para `clsconfig-proxy/clsconfig`
+ * a partir de um template já com o kit aplicado.
+ *
+ * Importante: o template recebido aqui DEVE ser o resultado de
+ * `applyKitToTemplate(target, kit, opts)` — assim a função simplesmente
+ * extrai as seções relevantes em formato cru.
+ */
+export function buildKitBulkPayload(
+  roleid: number,
+  appliedTemplate: ClsTemplate,
+  kit: InitialKit,
+): KitBulkPayload {
+  const out: KitBulkPayload = {
+    roleid,
+    inventory: {
+      items: clone(appliedTemplate.inventory.items),
+    },
+    equipment: {
+      items: clone(appliedTemplate.equipment.items),
+    },
+    storehouse: {
+      items: clone(appliedTemplate.storehouse.items),
+      dress: clone(appliedTemplate.storehouse.dress),
+      material: clone(appliedTemplate.storehouse.material),
+      generalcard: clone(appliedTemplate.storehouse.generalcard),
+    },
+  };
+  if (kit.includes.inventory_money) {
+    out.inventory.money = Number(appliedTemplate.inventory.money) || 0;
+  }
+  if (kit.includes.storehouse_money) {
+    out.storehouse.money = Number(appliedTemplate.storehouse.money) || 0;
+  }
+  if (kit.includes.task_inventory && appliedTemplate.task?.task_inventory) {
+    out.task = {
+      task_inventory: clone(appliedTemplate.task.task_inventory),
+    };
+  }
+  return out;
+}
+
 // ─────────────────────────── import / export ───────────────────────────
 
 export interface KitExportFile {
