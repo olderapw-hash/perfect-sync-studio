@@ -96,7 +96,7 @@ const extractAny = (obj: unknown, path: string[]): unknown => {
   return cur;
 };
 
-export const ClsconfigEditor = ({ entry, allEntries = [] }: Props) => {
+export const ClsconfigEditor = ({ entry, allEntries = [], mode = "template", onSaved }: Props) => {
   const [template, setTemplate] = useState<ClsTemplate>(entry.template);
   const [tab, setTab] = useState<TabKey>("base");
   const [saving, setSaving] = useState(false);
@@ -105,6 +105,12 @@ export const ClsconfigEditor = ({ entry, allEntries = [] }: Props) => {
   const [presetsOpen, setPresetsOpen] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
   const [compareOpen, setCompareOpen] = useState(false);
+  /** Apenas modo "role": opt-in para disparar exportclsconfig após o save. */
+  const [exportClsconfigForRole, setExportClsconfigForRole] = useState(false);
+  /** Apenas modo "role": confirmação forte ANTES de chamar runSave. */
+  const [roleConfirmOpen, setRoleConfirmOpen] = useState(false);
+
+  const isRoleMode = mode === "role";
 
   // Reset when switching entry
   useEffect(() => {
