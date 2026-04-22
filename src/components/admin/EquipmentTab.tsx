@@ -268,18 +268,28 @@ export const EquipmentTab = ({ template, onChange }: Props) => {
                     : "grid grid-cols-3 gap-1.5"
                 }
               >
-                {activeLeft.map((s) => {
-                  const it = byPos.get(s.pos) ?? newEmptyItem(s.pos);
-                  return (
-                    <ItemSlot
-                      key={s.pos}
-                      item={it}
-                      onClick={() => openSlot(s.pos)}
-                      size={invTab === "normal" ? 48 : 40}
-                      emptyLabel={s.label}
-                    />
-                  );
-                })}
+                {invTab === "normal"
+                  ? activeLeft.map((s) => {
+                      const it = byPos.get(s.pos) ?? newEmptyItem(s.pos);
+                      return (
+                        <ItemSlot
+                          key={s.pos}
+                          item={it}
+                          onClick={() => openSlot(s.pos)}
+                          size={48}
+                          emptyLabel={s.label}
+                        />
+                      );
+                    })
+                  : dressLeft.map((it, i) => (
+                      <ItemSlot
+                        key={`dl-${i}`}
+                        item={it}
+                        onClick={() => setDressEditingIdx(i)}
+                        size={40}
+                        emptyLabel="Roupa"
+                      />
+                    ))}
               </div>
 
               {/* Silhueta central */}
@@ -308,18 +318,28 @@ export const EquipmentTab = ({ template, onChange }: Props) => {
                     : "grid grid-cols-3 gap-1.5"
                 }
               >
-                {activeRight.map((s) => {
-                  const it = byPos.get(s.pos) ?? newEmptyItem(s.pos);
-                  return (
-                    <ItemSlot
-                      key={s.pos}
-                      item={it}
-                      onClick={() => openSlot(s.pos)}
-                      size={invTab === "normal" ? 48 : 40}
-                      emptyLabel={s.label}
-                    />
-                  );
-                })}
+                {invTab === "normal"
+                  ? activeRight.map((s) => {
+                      const it = byPos.get(s.pos) ?? newEmptyItem(s.pos);
+                      return (
+                        <ItemSlot
+                          key={s.pos}
+                          item={it}
+                          onClick={() => openSlot(s.pos)}
+                          size={48}
+                          emptyLabel={s.label}
+                        />
+                      );
+                    })
+                  : dressRight.map((it, i) => (
+                      <ItemSlot
+                        key={`dr-${i}`}
+                        item={it}
+                        onClick={() => setDressEditingIdx(FASHION_LEFT_COUNT + i)}
+                        size={40}
+                        emptyLabel="Roupa"
+                      />
+                    ))}
               </div>
             </div>
 
