@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      character_photos: {
+        Row: {
+          public_url: string
+          roleid: number
+          storage_path: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          public_url: string
+          roleid: number
+          storage_path: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          public_url?: string
+          roleid?: number
+          storage_path?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      class_photos: {
+        Row: {
+          cls: number
+          public_url: string
+          storage_path: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          cls: number
+          public_url: string
+          storage_path: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          cls?: number
+          public_url?: string
+          storage_path?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       item_catalogs: {
         Row: {
           created_at: string
