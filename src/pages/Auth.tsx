@@ -14,7 +14,7 @@ const Auth = () => {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (!authLoading && session) navigate("/", { replace: true });
+    if (!authLoading && session) navigate("/admin", { replace: true });
   }, [session, authLoading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -26,7 +26,7 @@ const Auth = () => {
         const { error } = await supabase.auth.signUp({
           email,
           password,
-          options: { emailRedirectTo: `${window.location.origin}/` },
+          options: { emailRedirectTo: `${window.location.origin}/admin` },
         });
         if (error) throw error;
         toast.success("Conta criada. Faça login.");
@@ -35,7 +35,7 @@ const Auth = () => {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         toast.success("Bem-vindo!");
-        navigate("/", { replace: true });
+        navigate("/admin", { replace: true });
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Erro de autenticação";
