@@ -194,7 +194,7 @@ export const ItemCatalogManager = () => {
                 failed += 1;
               }
               done += 1;
-              setProgress({ done, total: iconFiles.length });
+              setProgress({ label: "Enviando ícones", done, total: iconFiles.length });
             }
           }),
         );
