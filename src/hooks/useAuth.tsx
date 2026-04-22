@@ -27,14 +27,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isSuperadmin, setIsSuperadmin] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  const hadSessionRef = useRef(false);
+
   useEffect(() => {
     // 1) Listener PRIMEIRO (evita race com getSession)
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, newSession) => {
       setSession(newSession);
       if (newSession?.user) {
+        hadSessionRef.current = true;
         // Defer chamada Supabase para não travar o callback
         setTimeout(() => checkRoles(newSession.user.id), 0);
       } else {
+        // Se o usuário tinha sessão e agora não tem (token expirou / refresh falhou),
+        // avisa explicitamente em vez de redirecionar silenciosamente.
+        if (hadSessionRef.current && (event === "SIGNED_OUT" || event === "TOKEN_REFRESHED")) {
+          warnSessionExpired();
+        }
+        hadSessionRef.current = false;
         setIsAdmin(false);
         setIsSuperadmin(false);
       }
@@ -44,6 +53,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     supabase.auth.getSession().then(({ data: { session: s } }) => {
       setSession(s);
       if (s?.user) {
+        hadSessionRef.current = true;
         checkRoles(s.user.id).finally(() => setLoading(false));
       } else {
         setLoading(false);
