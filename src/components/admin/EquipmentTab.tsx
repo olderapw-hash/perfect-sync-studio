@@ -2,6 +2,7 @@ import type { ClsItem, ClsTemplate } from "@/types/clsconfig";
 import { newEmptyItem } from "@/lib/clsconfig";
 import { ItemSlot } from "./ItemSlot";
 import { ItemEditor } from "./ItemEditor";
+import { WarAvatarPicker } from "./WarAvatarPicker";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useState } from "react";
 import { X } from "lucide-react";
@@ -49,6 +50,7 @@ const LEADER_POSITIONS = new Set(LEADER_SLOTS.map((s) => s.pos));
 export const EquipmentTab = ({ template, onChange }: Props) => {
   const items = template.equipment.items;
   const [editingPos, setEditingPos] = useState<number | null>(null);
+  const [pickerPos, setPickerPos] = useState<number | null>(null);
   // Demanda de "líderes necessários" — local apenas (não persistido na VPS).
   const [leadersNeeded, setLeadersNeeded] = useState<number>(10);
   const [sBonus, setSBonus] = useState<boolean>(false);
@@ -73,6 +75,12 @@ export const EquipmentTab = ({ template, onChange }: Props) => {
   };
 
   const openSlot = (pos: number) => {
+    // Slots de Líder abrem o seletor de War Avatar do .tab.
+    // Demais slots abrem o editor genérico.
+    if (LEADER_POSITIONS.has(pos)) {
+      setPickerPos(pos);
+      return;
+    }
     if (!byPos.has(pos)) upsertAt(pos, newEmptyItem(pos));
     setEditingPos(pos);
   };
