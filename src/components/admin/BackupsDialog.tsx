@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { Archive, Loader2, RefreshCw, AlertCircle, FileJson, FileBox, Lock } from "lucide-react";
+import { Archive, Loader2, RefreshCw, AlertCircle, FileJson, FileBox, FileText, Lock } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSeenBackups, type SeenBackup } from "@/lib/seenBackups";
-import { pwApi, EndpointMissingError, type BackupRecord } from "@/lib/pwApiActions";
+import { pwApi, EndpointMissingError, type BackupRecord, type BackupKind } from "@/lib/pwApiActions";
 import { toast } from "sonner";
 
 interface Props {
@@ -16,9 +16,18 @@ const fmtDate = (ts: number) => new Date(ts).toLocaleString("pt-BR");
 const fmtEpochS = (s?: number) =>
   s != null && Number.isFinite(s) ? new Date(s * 1000).toLocaleString("pt-BR") : "—";
 
+interface VpsBuckets {
+  all: BackupRecord[];
+  role_json: BackupRecord[];
+  clsconfig_files: BackupRecord[];
+  export_logs: BackupRecord[];
+}
+
+const emptyBuckets: VpsBuckets = { all: [], role_json: [], clsconfig_files: [], export_logs: [] };
+
 export const BackupsDialog = ({ open, onOpenChange }: Props) => {
   const seen = useSeenBackups();
-  const [vpsBackups, setVpsBackups] = useState<BackupRecord[]>([]);
+  const [vps, setVps] = useState<VpsBuckets>(emptyBuckets);
   const [loading, setLoading] = useState(false);
   const [endpointMissing, setEndpointMissing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -27,13 +36,25 @@ export const BackupsDialog = ({ open, onOpenChange }: Props) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await pwApi.listBackups();
-      setVpsBackups(Array.isArray(res?.backups) ? res.backups : []);
+      const res = await pwApi.listBackups({ limit: 50 });
+      const b = res?.backups ?? {};
+      // Garante o tipo em cada record (caso PHP omita).
+      const tag = (arr: BackupRecord[] | undefined, kind: BackupKind): BackupRecord[] =>
+        Array.isArray(arr) ? arr.map((r) => ({ ...r, type: r.type ?? kind })) : [];
+      const role_json = tag(b.role_json, "role_json");
+      const clsconfig_files = tag(b.clsconfig_files, "clsconfig_file");
+      const export_logs = tag(b.export_logs, "export_log");
+      const all = Array.isArray(b.all) && b.all.length > 0
+        ? b.all.map((r) => ({ ...r }))
+        : [...role_json, ...clsconfig_files, ...export_logs].sort(
+            (x, y) => (y.created_at ?? 0) - (x.created_at ?? 0),
+          );
+      setVps({ all, role_json, clsconfig_files, export_logs });
       setEndpointMissing(false);
     } catch (e) {
       if (e instanceof EndpointMissingError) {
         setEndpointMissing(true);
-        setVpsBackups([]);
+        setVps(emptyBuckets);
       } else {
         setError(e instanceof Error ? e.message : String(e));
       }
@@ -58,40 +79,33 @@ export const BackupsDialog = ({ open, onOpenChange }: Props) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="max-w-4xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Archive className="h-4 w-4 text-primary" />
             Backups & Restore
           </DialogTitle>
           <DialogDescription>
-            Backups gerados automaticamente a cada save em <code className="font-mono">saveClsconfigTemplate</code>.
-            O botão Restaurar está desabilitado até o endpoint{" "}
-            <code className="font-mono">restoreBackup</code> existir na VPS.
+            Backups gerados automaticamente a cada save. O botão Restaurar está desabilitado até o
+            endpoint <code className="font-mono">restoreBackup</code> ser confirmado.
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs defaultValue="session" className="w-full">
+        <Tabs defaultValue="vps" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="vps">
+              VPS {endpointMissing ? "(indisponível)" : `(${vps.all.length})`}
+            </TabsTrigger>
             <TabsTrigger value="session">
               Esta sessão ({seen.length})
             </TabsTrigger>
-            <TabsTrigger value="vps">
-              VPS {endpointMissing ? "(indisponível)" : `(${vpsBackups.length})`}
-            </TabsTrigger>
           </TabsList>
-
-          <TabsContent value="session">
-            <p className="mb-2 text-xs text-muted-foreground">
-              Coletados a partir das respostas de save desta sessão. Não persiste após fechar a aba.
-            </p>
-            <SessionList items={seen} onRestoreBlocked={handleRestoreBlocked} />
-          </TabsContent>
 
           <TabsContent value="vps">
             <div className="mb-2 flex items-center justify-between">
               <p className="text-xs text-muted-foreground">
-                Listagem completa do diretório <code className="font-mono">backups/clsconfig/</code>.
+                Listagem real do diretório <code className="font-mono">backups/clsconfig/</code> via{" "}
+                <code className="font-mono">action=listBackups</code>.
               </p>
               <Button
                 variant="outline"
@@ -120,8 +134,34 @@ export const BackupsDialog = ({ open, onOpenChange }: Props) => {
                 {error}
               </div>
             ) : (
-              <VpsList items={vpsBackups} onRestoreBlocked={handleRestoreBlocked} />
+              <Tabs defaultValue="all">
+                <TabsList className="mb-2">
+                  <TabsTrigger value="all">Todos ({vps.all.length})</TabsTrigger>
+                  <TabsTrigger value="role_json">role_json ({vps.role_json.length})</TabsTrigger>
+                  <TabsTrigger value="clsconfig_files">clsconfig ({vps.clsconfig_files.length})</TabsTrigger>
+                  <TabsTrigger value="export_logs">exports ({vps.export_logs.length})</TabsTrigger>
+                </TabsList>
+                <TabsContent value="all">
+                  <VpsList items={vps.all} onRestoreBlocked={handleRestoreBlocked} />
+                </TabsContent>
+                <TabsContent value="role_json">
+                  <VpsList items={vps.role_json} onRestoreBlocked={handleRestoreBlocked} />
+                </TabsContent>
+                <TabsContent value="clsconfig_files">
+                  <VpsList items={vps.clsconfig_files} onRestoreBlocked={handleRestoreBlocked} />
+                </TabsContent>
+                <TabsContent value="export_logs">
+                  <VpsList items={vps.export_logs} onRestoreBlocked={handleRestoreBlocked} hideRestore />
+                </TabsContent>
+              </Tabs>
             )}
+          </TabsContent>
+
+          <TabsContent value="session">
+            <p className="mb-2 text-xs text-muted-foreground">
+              Coletados a partir das respostas de save desta sessão. Não persiste após fechar a aba.
+            </p>
+            <SessionList items={seen} onRestoreBlocked={handleRestoreBlocked} />
           </TabsContent>
         </Tabs>
 
@@ -147,12 +187,11 @@ const RestoreButton = ({ onClick }: { onClick: () => void }) => (
   </Button>
 );
 
-const TypeIcon = ({ type }: { type: SeenBackup["type"] | BackupRecord["type"] }) =>
-  type === "role_json" ? (
-    <FileJson className="h-3.5 w-3.5 text-primary" />
-  ) : (
-    <FileBox className="h-3.5 w-3.5 text-secondary-foreground" />
-  );
+const TypeIcon = ({ type }: { type: SeenBackup["type"] | BackupKind }) => {
+  if (type === "role_json") return <FileJson className="h-3.5 w-3.5 text-primary" />;
+  if (type === "export_log") return <FileText className="h-3.5 w-3.5 text-muted-foreground" />;
+  return <FileBox className="h-3.5 w-3.5 text-secondary-foreground" />;
+};
 
 const SessionList = ({
   items,
@@ -208,9 +247,12 @@ const SessionList = ({
 const VpsList = ({
   items,
   onRestoreBlocked,
+  hideRestore,
 }: {
   items: BackupRecord[];
   onRestoreBlocked: () => void;
+  /** Para export_logs não faz sentido restaurar. */
+  hideRestore?: boolean;
 }) => {
   if (items.length === 0) {
     return (
@@ -229,7 +271,7 @@ const VpsList = ({
             <th className="px-3 py-2 font-medium">Criado</th>
             <th className="px-3 py-2 font-medium">Tam.</th>
             <th className="px-3 py-2 font-medium">Arquivo</th>
-            <th className="px-3 py-2"></th>
+            {!hideRestore && <th className="px-3 py-2"></th>}
           </tr>
         </thead>
         <tbody className="divide-y divide-border">
@@ -241,7 +283,7 @@ const VpsList = ({
                   {b.type}
                 </span>
               </td>
-              <td className="px-3 py-2 font-mono">{b.roleid}</td>
+              <td className="px-3 py-2 font-mono">{b.roleid ?? "—"}</td>
               <td className="px-3 py-2 text-muted-foreground">{fmtEpochS(b.created_at)}</td>
               <td className="px-3 py-2 text-muted-foreground">
                 {b.size != null ? `${(b.size / 1024).toFixed(1)} KB` : "—"}
@@ -249,9 +291,11 @@ const VpsList = ({
               <td className="px-3 py-2 font-mono text-[10px] text-muted-foreground" title={b.file}>
                 …{b.file.slice(-50)}
               </td>
-              <td className="px-3 py-2 text-right">
-                <RestoreButton onClick={onRestoreBlocked} />
-              </td>
+              {!hideRestore && (
+                <td className="px-3 py-2 text-right">
+                  <RestoreButton onClick={onRestoreBlocked} />
+                </td>
+              )}
             </tr>
           ))}
         </tbody>
