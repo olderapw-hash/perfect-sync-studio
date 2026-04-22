@@ -14,6 +14,7 @@ import { saveHistory } from "@/lib/saveHistory";
 import { supabase } from "@/integrations/supabase/client";
 import type { ClsEntry, ClsTemplate } from "@/types/clsconfig";
 import { toast } from "sonner";
+import { handleMaybeAuthError } from "@/lib/authErrors";
 
 type SectionKey = "status" | "position";
 
@@ -167,6 +168,7 @@ export const BulkApplyDialog = ({
       } catch (e) {
         errCount++;
         const msg = e instanceof Error ? e.message : "erro";
+        handleMaybeAuthError(e);
         setResults((prev) => ({
           ...prev,
           [rid]: { ...prev[rid], status: "error", message: msg },

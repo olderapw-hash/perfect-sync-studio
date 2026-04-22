@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Loader2, MapPin, Save } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { handleMaybeAuthError } from "@/lib/authErrors";
 import {
   buildPositionPayload,
   normalizeClsconfigResponse,
@@ -121,7 +122,7 @@ export const StatusTab = ({ template, entry, onChange, onEntryRefreshed }: Props
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Erro desconhecido ao salvar posição";
       console.error("[clsconfig] save position →", e);
-      toast.error(msg);
+      if (!handleMaybeAuthError(e)) toast.error(msg);
     } finally {
       setSavingPosition(false);
     }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { normalizeClsconfigResponse } from "@/lib/clsconfig";
+import { handleMaybeAuthError } from "@/lib/authErrors";
 import type { ClsconfigResponse } from "@/types/clsconfig";
 
 interface State {
@@ -42,6 +43,7 @@ export function useClsconfig() {
         if (!cancelled) setState({ data: normalized, raw: data, loading: false, error: null });
       } catch (e) {
         const msg = e instanceof Error ? e.message : "Falha ao carregar clsconfig";
+        handleMaybeAuthError(e);
         if (!cancelled) setState({ data: null, raw: null, loading: false, error: msg });
       }
     })();

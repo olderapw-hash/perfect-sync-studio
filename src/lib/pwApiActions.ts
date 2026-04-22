@@ -228,9 +228,11 @@ async function callAction<T>(
       status = ctx.status ?? 0;
       try { extra = await ctx.text(); } catch { /* ignore */ }
     }
+    if (status === 401) {
+      const { handleMaybeAuthError } = await import("@/lib/authErrors");
+      handleMaybeAuthError(new Error(`401 ${extra}`));
+    }
     if (status === 404) throw new EndpointMissingError(action);
-    // VPS retorna 400 com {"error":"Acao invalida. Use: ..."} quando a action
-    // não existe no PHP. Detectamos isso e convertemos pra EndpointMissingError.
     if (status === 400 && /acao\s+invalida|a[cç][aã]o\s+inv[aá]lida|unknown\s+action/i.test(extra)) {
       throw new EndpointMissingError(action);
     }

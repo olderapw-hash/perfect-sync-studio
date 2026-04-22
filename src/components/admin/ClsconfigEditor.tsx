@@ -39,6 +39,7 @@ import {
 } from "@/lib/clsconfig";
 import { summarizeIssues, validateAllItems, type ItemIssue } from "@/lib/validateItem";
 import { saveHistory } from "@/lib/saveHistory";
+import { handleMaybeAuthError } from "@/lib/authErrors";
 import { seenBackups } from "@/lib/seenBackups";
 import { buildClassIconUrl } from "@/lib/pwIcons";
 import { supabase } from "@/integrations/supabase/client";
@@ -300,7 +301,7 @@ export const ClsconfigEditor = ({ entry, allEntries = [], mode = "template", onS
             ? e.message
             : "Erro desconhecido ao salvar personagem";
       console.error("[role] save error →", e);
-      toast.error(msg);
+      if (!handleMaybeAuthError(e)) toast.error(msg);
       saveHistory.pushDiff({
         roleid: entry.template.roleid,
         className,
@@ -503,7 +504,7 @@ export const ClsconfigEditor = ({ entry, allEntries = [], mode = "template", onS
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Erro desconhecido ao salvar";
       console.error("[clsconfig] save error →", e);
-      toast.error(msg);
+      if (!handleMaybeAuthError(e)) toast.error(msg);
       saveHistory.pushDiff({
         roleid: entry.template.roleid,
         className: template.summary.class_name ?? `Classe ${template.summary.cls}`,
