@@ -52,6 +52,7 @@ const Admin = () => {
                 Edge proxy ativo
               </span>
               <ItemCatalogManager />
+              <HistoryDrawer />
               <button
                 onClick={reload}
                 disabled={loading}
