@@ -91,7 +91,9 @@ const Onboarding = () => {
     }
     await refetch();
     toast.success("Tudo certo! Bem-vindo ao seu painel.");
-    navigate("/admin", { replace: true });
+    // Hard reload so every hook instance (ProtectedRoute's useTenant included)
+    // re-reads the now-completed tenant row instead of using stale state.
+    window.location.assign("/admin");
   };
 
   if (authLoading || subLoading || tenantLoading) {
