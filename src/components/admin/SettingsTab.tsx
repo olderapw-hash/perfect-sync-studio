@@ -143,7 +143,52 @@ export const SettingsTab = () => {
     await reloadSettings();
   };
 
-  if (loading) {
+  const downloadApiCls = async () => {
+    if (!form.pw_api_secret.trim()) {
+      toast({
+        title: "Defina o secret primeiro",
+        description: "Gere ou cole um secret e salve antes de baixar o arquivo.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (form.pw_api_secret.trim() !== originalSecret) {
+      toast({
+        title: "Salve as alterações primeiro",
+        description: "O download usa o secret salvo no banco. Clique em Salvar antes.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setDownloading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("download-api-cls", {
+        method: "GET",
+      });
+      if (error) throw error;
+      // Edge function returns raw PHP text. supabase-js parses it as Blob/text.
+      const phpText =
+        typeof data === "string" ? data : data instanceof Blob ? await data.text() : String(data);
+      const blob = new Blob([phpText], { type: "application/x-httpd-php" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "api_cls.php";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast({
+        title: "Download iniciado",
+        description: "Suba o arquivo pra sua VPS — o secret já vem embutido.",
+      });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Falha ao gerar arquivo";
+      toast({ title: "Erro no download", description: msg, variant: "destructive" });
+    } finally {
+      setDownloading(false);
+    }
+  };
     return (
       <div className="flex items-center justify-center p-12">
         <Loader2 className="h-6 w-6 animate-spin text-primary" />
