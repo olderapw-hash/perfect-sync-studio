@@ -40,6 +40,19 @@ const TABS: { key: TabKey; label: string; icon: React.ComponentType<{ className?
   { key: "storehouse", label: "Baú", icon: Warehouse },
 ];
 
+/** Lê um caminho aninhado em objeto destrutivo. Retorna string ou undefined. */
+const extractPath = (obj: unknown, path: string[]): string | undefined => {
+  let cur: unknown = obj;
+  for (const key of path) {
+    if (cur && typeof cur === "object" && key in (cur as Record<string, unknown>)) {
+      cur = (cur as Record<string, unknown>)[key];
+    } else {
+      return undefined;
+    }
+  }
+  return typeof cur === "string" ? cur : undefined;
+};
+
 export const ClsconfigEditor = ({ entry }: Props) => {
   const [template, setTemplate] = useState<ClsTemplate>(entry.template);
   const [tab, setTab] = useState<TabKey>("base");
