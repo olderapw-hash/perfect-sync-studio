@@ -1,10 +1,13 @@
 import { useMemo, useState } from "react";
-import { Coins } from "lucide-react";
+import { Coins, Eraser } from "lucide-react";
+import { toast } from "sonner";
 import type { ClsItem, ClsTemplate } from "@/types/clsconfig";
 import { newEmptyItem } from "@/lib/clsconfig";
 import { ItemSlot } from "./ItemSlot";
 import { ItemEditor } from "./ItemEditor";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { clearItems, summarizeSection } from "@/lib/clearSection";
+import { ClearSectionDialog } from "./ClearSectionDialog";
 
 interface Props {
   template: ClsTemplate;
