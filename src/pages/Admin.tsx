@@ -11,9 +11,11 @@ import {
   Search,
   UserCog,
   FileCog,
+  Settings as SettingsIcon,
 } from "lucide-react";
 import { useClsconfig } from "@/hooks/useClsconfig";
 import { useAuth } from "@/hooks/useAuth";
+import { useAppSettings } from "@/hooks/useAppSettings";
 import { ClsconfigEditor } from "@/components/admin/ClsconfigEditor";
 import { ItemCatalogManager } from "@/components/admin/ItemCatalogManager";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
@@ -22,14 +24,16 @@ import { BackupsDialog } from "@/components/admin/BackupsDialog";
 import { ItemCatalogSearchDialog } from "@/components/admin/ItemCatalogSearchDialog";
 import { RolePersonagemTab } from "@/components/admin/RolePersonagemTab";
 import { ClassPhotosTab } from "@/components/admin/ClassPhotosTab";
+import { SettingsTab } from "@/components/admin/SettingsTab";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 
-type AdminMode = "template" | "role" | "photos";
+type AdminMode = "template" | "role" | "photos" | "settings";
 
 const Admin = () => {
   const { data, raw, loading, error, reload } = useClsconfig();
-  const { user, signOut } = useAuth();
+  const { user, signOut, isSuperadmin } = useAuth();
+  const { settings } = useAppSettings();
   const [selected, setSelected] = useState<string | null>(null);
   const [mode, setMode] = useState<AdminMode>("template");
   const [backupsOpen, setBackupsOpen] = useState(false);
@@ -62,10 +66,14 @@ const Admin = () => {
           {/* Top bar */}
           <header className="flex flex-wrap items-center gap-3 border-b border-border bg-card/60 px-5 py-3 backdrop-blur-md">
             {mode === "template" && <SidebarTrigger className="-ml-1" />}
-            <Shield className="h-5 w-5 text-primary" />
+            {settings.logo_url ? (
+              <img src={settings.logo_url} alt="" className="h-6 w-6 rounded object-cover" />
+            ) : (
+              <Shield className="h-5 w-5 text-primary" />
+            )}
             <div>
               <h1 className="text-sm font-extrabold uppercase tracking-wider text-foreground">
-                Admin · clsconfig
+                {settings.server_name} · admin
               </h1>
               <p className="text-[11px] text-muted-foreground">
                 Editor de templates iniciais — Perfect World
@@ -92,6 +100,12 @@ const Admin = () => {
                 onClick={() => setMode("photos")}
                 icon={<ImageIcon className="h-3.5 w-3.5" />}
                 label="Fotos das Classes"
+              />
+              <ModeButton
+                active={mode === "settings"}
+                onClick={() => setMode("settings")}
+                icon={<SettingsIcon className="h-3.5 w-3.5" />}
+                label={isSuperadmin ? "Configurações" : "Config (RO)"}
               />
             </div>
 
@@ -152,6 +166,10 @@ const Admin = () => {
             ) : mode === "photos" ? (
               <div className="h-full overflow-y-auto p-6">
                 <ClassPhotosTab />
+              </div>
+            ) : mode === "settings" ? (
+              <div className="h-full overflow-y-auto p-6">
+                <SettingsTab />
               </div>
             ) : error ? (
               <div className="m-6 overflow-auto rounded-xl border border-destructive/40 bg-destructive/10 p-6 text-sm text-destructive">

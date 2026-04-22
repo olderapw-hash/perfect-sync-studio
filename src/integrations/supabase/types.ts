@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_settings: {
+        Row: {
+          icon_base_url: string
+          id: number
+          logo_url: string | null
+          primary_color: string | null
+          pw_api_base_url: string | null
+          pw_api_secret: string | null
+          server_name: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          icon_base_url?: string
+          id?: number
+          logo_url?: string | null
+          primary_color?: string | null
+          pw_api_base_url?: string | null
+          pw_api_secret?: string | null
+          server_name?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          icon_base_url?: string
+          id?: number
+          logo_url?: string | null
+          primary_color?: string | null
+          pw_api_base_url?: string | null
+          pw_api_secret?: string | null
+          server_name?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       character_photos: {
         Row: {
           public_url: string
@@ -118,6 +154,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_public_branding: {
+        Args: never
+        Returns: {
+          logo_url: string
+          primary_color: string
+          server_name: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -127,7 +171,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "user"
+      app_role: "admin" | "user" | "superadmin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -255,7 +299,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "user"],
+      app_role: ["admin", "user", "superadmin"],
     },
   },
 } as const
