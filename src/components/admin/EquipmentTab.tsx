@@ -322,7 +322,18 @@ export const EquipmentTab = ({ template, onChange }: Props) => {
             </button>
           </div>
         </DialogContent>
-      </Zdialog_close_marker_unused>
+      </Dialog>
+
+      <WarAvatarPicker
+        open={pickerPos != null}
+        onClose={() => setPickerPos(null)}
+        contextLabel={pickerPos != null ? `Líder · pos ${pickerPos}` : undefined}
+        onPick={(meta) => {
+          if (pickerPos == null) return;
+          const existing = byPos.get(pickerPos) ?? newEmptyItem(pickerPos);
+          upsertAt(pickerPos, { ...existing, id: meta.id, count: Math.max(1, existing.count) });
+        }}
+      />
     </div>
   );
 };
