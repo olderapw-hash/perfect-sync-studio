@@ -13,8 +13,33 @@ interface Props {
 }
 
 const fmtDate = (ts: number) => new Date(ts).toLocaleString("pt-BR");
-const fmtEpochS = (s?: number) =>
-  s != null && Number.isFinite(s) ? new Date(s * 1000).toLocaleString("pt-BR") : "—";
+
+/** Resolve a melhor data possível de um BackupRecord (created_at ISO ou mtime epoch s). */
+const resolveCreatedMs = (b: BackupRecord): number | null => {
+  if (b.created_at) {
+    const t = Date.parse(b.created_at);
+    if (!Number.isNaN(t)) return t;
+  }
+  if (b.mtime != null && Number.isFinite(b.mtime)) return b.mtime * 1000;
+  return null;
+};
+const fmtCreated = (b: BackupRecord) => {
+  const ms = resolveCreatedMs(b);
+  return ms != null ? new Date(ms).toLocaleString("pt-BR") : "—";
+};
+
+const fmtBytes = (n?: number) => {
+  if (n == null || !Number.isFinite(n)) return "—";
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(2)} MB`;
+};
+
+const basename = (p: string) => {
+  const i = Math.max(p.lastIndexOf("/"), p.lastIndexOf("\\"));
+  return i >= 0 ? p.slice(i + 1) : p;
+};
+const fileLabel = (b: BackupRecord) => b.name || basename(b.file);
 
 interface VpsBuckets {
   all: BackupRecord[];
