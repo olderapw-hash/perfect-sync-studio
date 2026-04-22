@@ -30,7 +30,10 @@ import {
 } from "@/lib/pwApiActions";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useServerPermissions } from "@/hooks/useServerPermissions";
 import { CompareBackupDialog } from "./CompareBackupDialog";
+
+const NO_RESTORE_TIP = "Seu acesso não permite restaurar backups.";
 
 interface Props {
   open: boolean;
@@ -196,6 +199,8 @@ export const RoleidHistoryDialog = ({
   className,
   onRestored,
 }: Props) => {
+  const { can } = useServerPermissions();
+  const canRestore = can("restore_backup");
   const [loading, setLoading] = useState(false);
   const [listError, setListError] = useState<string | null>(null);
   const [endpointMissing, setEndpointMissing] = useState(false);
@@ -326,6 +331,11 @@ export const RoleidHistoryDialog = ({
 
   const performFullRestore = async () => {
     if (!confirmFullRestore) return;
+    if (!canRestore) {
+      toast.error("Acesso negado", { description: NO_RESTORE_TIP });
+      setConfirmFullRestore(null);
+      return;
+    }
     const name = confirmFullRestore.name || basename(confirmFullRestore.file);
     setRunningFullRestore(true);
     try {
@@ -363,6 +373,11 @@ export const RoleidHistoryDialog = ({
 
   const performSectionRestore = async () => {
     if (!confirmSection || !detail.backupTpl) return;
+    if (!canRestore) {
+      toast.error("Acesso negado", { description: NO_RESTORE_TIP });
+      setConfirmSection(null);
+      return;
+    }
     const { section, backup } = confirmSection;
     const sectionPayload = detail.backupTpl[section];
     if (sectionPayload == null) {
