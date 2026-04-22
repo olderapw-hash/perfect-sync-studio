@@ -378,14 +378,16 @@ export const CompareBackupDialog = ({ open, onOpenChange, backup, onRestored }: 
                       <Button
                         size="sm"
                         variant={s.diffCount > 0 ? "destructive" : "outline"}
-                        disabled={!s.hasBackup || online || restoring !== null}
+                        disabled={!s.hasBackup || online || restoring !== null || !canRestore}
                         onClick={() => setConfirmSection(s.key)}
                         title={
-                          !s.hasBackup
-                            ? "Backup não contém esta seção"
-                            : online
-                              ? "Personagem online — bloqueado"
-                              : `Restaurar somente ${s.label} do backup`
+                          !canRestore
+                            ? NO_RESTORE_TIP
+                            : !s.hasBackup
+                              ? "Backup não contém esta seção"
+                              : online
+                                ? "Personagem online — bloqueado"
+                                : `Restaurar somente ${s.label} do backup`
                         }
                       >
                         {restoring === s.key ? (
