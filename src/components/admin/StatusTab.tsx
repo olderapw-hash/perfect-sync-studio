@@ -122,7 +122,7 @@ export const StatusTab = ({ template, entry, onChange, onEntryRefreshed }: Props
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Erro desconhecido ao salvar posição";
       console.error("[clsconfig] save position →", e);
-      toast.error(msg);
+      if (!handleMaybeAuthError(e)) toast.error(msg);
     } finally {
       setSavingPosition(false);
     }
