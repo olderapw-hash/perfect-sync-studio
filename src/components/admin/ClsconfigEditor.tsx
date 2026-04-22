@@ -11,7 +11,19 @@ import {
   Bookmark,
   Send,
   ArrowRightLeft,
+  AlertTriangle,
+  UserCog,
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import type { ClsEntry, ClsItem, ClsTemplate } from "@/types/clsconfig";
 import {
   buildInventoryPayload,
