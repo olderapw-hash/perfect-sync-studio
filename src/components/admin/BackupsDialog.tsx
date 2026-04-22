@@ -378,6 +378,18 @@ export const BackupsDialog = ({ open, onOpenChange, onRestored }: Props) => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <CompareBackupDialog
+        open={compareTarget !== null}
+        onOpenChange={(o) => {
+          if (!o) setCompareTarget(null);
+        }}
+        backup={compareTarget}
+        onRestored={() => {
+          void loadVps();
+          onRestored?.();
+        }}
+      />
     </>
   );
 };
