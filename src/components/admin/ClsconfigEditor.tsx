@@ -783,6 +783,35 @@ export const ClsconfigEditor = ({ entry, allEntries = [], mode = "template", onS
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <RoleidHistoryDialog
+        open={historyOpen}
+        onOpenChange={setHistoryOpen}
+        roleid={entry.template.roleid}
+        className={template.summary.class_name ?? `Classe ${template.summary.cls}`}
+        onRestored={() => {
+          // Após restore (parcial ou total), recarrega o estado do editor.
+          if (isRoleMode) {
+            // Em modo role, refaz getRoleEditable e atualiza o template.
+            void (async () => {
+              try {
+                const reread = await pwApi.getRoleEditable(entry.template.roleid);
+                const rawTpl = (reread?.template ?? (reread as unknown as { role?: unknown })?.role) as unknown;
+                if (rawTpl && typeof rawTpl === "object") {
+                  const fresh = rawTpl as ClsTemplate;
+                  entry.template = fresh;
+                  setTemplate(fresh);
+                  onSaved?.(fresh);
+                }
+              } catch (e) {
+                console.warn("[history] reload getRoleEditable falhou:", e);
+              }
+            })();
+          } else {
+            onSaved?.(entry.template);
+          }
+        }}
+      />
     </div>
   );
 };
