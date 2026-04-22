@@ -10,6 +10,7 @@ import {
   Lock,
   RotateCcw,
   ShieldAlert,
+  GitCompareArrows,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -33,6 +34,7 @@ import {
   type RestoreBackupResponse,
 } from "@/lib/pwApiActions";
 import { toast } from "sonner";
+import { CompareBackupDialog } from "./CompareBackupDialog";
 
 interface Props {
   open: boolean;
@@ -93,6 +95,7 @@ export const BackupsDialog = ({ open, onOpenChange, onRestored }: Props) => {
   const [error, setError] = useState<string | null>(null);
 
   const [restore, setRestore] = useState<RestoreStage>({ phase: "idle" });
+  const [compareTarget, setCompareTarget] = useState<BackupRecord | null>(null);
 
   const loadVps = async () => {
     setLoading(true);
@@ -280,16 +283,16 @@ export const BackupsDialog = ({ open, onOpenChange, onRestored }: Props) => {
                     <TabsTrigger value="export_logs">exports ({vps.export_logs.length})</TabsTrigger>
                   </TabsList>
                   <TabsContent value="all">
-                    <VpsList items={vps.all} onRestore={beginRestore} onUnsupported={handleRestoreUnsupported} restoringName={restoringName(restore)} />
+                    <VpsList items={vps.all} onRestore={beginRestore} onUnsupported={handleRestoreUnsupported} onCompare={setCompareTarget} restoringName={restoringName(restore)} />
                   </TabsContent>
                   <TabsContent value="role_json">
-                    <VpsList items={vps.role_json} onRestore={beginRestore} onUnsupported={handleRestoreUnsupported} restoringName={restoringName(restore)} />
+                    <VpsList items={vps.role_json} onRestore={beginRestore} onUnsupported={handleRestoreUnsupported} onCompare={setCompareTarget} restoringName={restoringName(restore)} />
                   </TabsContent>
                   <TabsContent value="clsconfig_files">
-                    <VpsList items={vps.clsconfig_files} onRestore={beginRestore} onUnsupported={handleRestoreUnsupported} restoringName={restoringName(restore)} />
+                    <VpsList items={vps.clsconfig_files} onRestore={beginRestore} onUnsupported={handleRestoreUnsupported} onCompare={setCompareTarget} restoringName={restoringName(restore)} />
                   </TabsContent>
                   <TabsContent value="export_logs">
-                    <VpsList items={vps.export_logs} onRestore={beginRestore} onUnsupported={handleRestoreUnsupported} restoringName={restoringName(restore)} hideRestore />
+                    <VpsList items={vps.export_logs} onRestore={beginRestore} onUnsupported={handleRestoreUnsupported} onCompare={setCompareTarget} restoringName={restoringName(restore)} hideRestore />
                   </TabsContent>
                 </Tabs>
               )}
@@ -375,6 +378,18 @@ export const BackupsDialog = ({ open, onOpenChange, onRestored }: Props) => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <CompareBackupDialog
+        open={compareTarget !== null}
+        onOpenChange={(o) => {
+          if (!o) setCompareTarget(null);
+        }}
+        backup={compareTarget}
+        onRestored={() => {
+          void loadVps();
+          onRestored?.();
+        }}
+      />
     </>
   );
 };
@@ -493,12 +508,14 @@ const VpsList = ({
   items,
   onRestore,
   onUnsupported,
+  onCompare,
   restoringName,
   hideRestore,
 }: {
   items: BackupRecord[];
   onRestore: (b: BackupRecord) => void;
   onUnsupported: (k: BackupKind) => void;
+  onCompare: (b: BackupRecord) => void;
   restoringName: string | null;
   hideRestore?: boolean;
 }) => {
@@ -551,14 +568,27 @@ const VpsList = ({
                 </td>
                 {!hideRestore && (
                   <td className="px-3 py-2 text-right">
-                    <RestoreButton
-                      onClick={() =>
-                        isRoleJson ? onRestore(b) : onUnsupported(b.type)
-                      }
-                      disabled={!isRoleJson}
-                      loading={isLoading}
-                      title={tip}
-                    />
+                    <div className="flex items-center justify-end gap-1.5">
+                      {isRoleJson && b.roleid != null && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => onCompare(b)}
+                          title="Comparar com estado atual e restaurar por seção"
+                        >
+                          <GitCompareArrows className="h-3 w-3" />
+                          Comparar
+                        </Button>
+                      )}
+                      <RestoreButton
+                        onClick={() =>
+                          isRoleJson ? onRestore(b) : onUnsupported(b.type)
+                        }
+                        disabled={!isRoleJson}
+                        loading={isLoading}
+                        title={tip}
+                      />
+                    </div>
                   </td>
                 )}
               </tr>

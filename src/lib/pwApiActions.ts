@@ -276,4 +276,31 @@ export const pwApi = {
   saveRoleEditable(body: SaveRoleEditablePayload) {
     return callAction<SaveRoleEditableResponse>("saveRoleEditable", { method: "POST", body });
   },
+  /**
+   * Lê o conteúdo bruto de um backup role_json.
+   * Endpoint dedicado (preferencial). Se a VPS ainda não implementou,
+   * lança EndpointMissingError — o caller deve tentar dry_run como fallback.
+   */
+  getBackupContent(name: string) {
+    return callAction<GetBackupContentResponse>("getBackupContent", {
+      method: "GET",
+      query: { type: "role_json", name },
+    });
+  },
 };
+
+/**
+ * Resposta de `getBackupContent` — devolve o template completo do role
+ * que foi salvo no backup, no mesmo shape de ClsTemplate (porém vinda
+ * do snapshot do gamedbd no momento do save, não do clsconfig).
+ */
+export interface GetBackupContentResponse {
+  success: boolean;
+  roleid?: number;
+  name?: string;
+  /** Template completo serializado (mesmo shape de ClsTemplate). */
+  template?: unknown;
+  /** Wrapper opcional usado em algumas versões do PHP. */
+  role?: unknown;
+  error?: string;
+}
