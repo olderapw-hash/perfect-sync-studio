@@ -51,6 +51,8 @@ export const ItemList = ({ title, items, onChange }: Props) => {
               item={it}
               onChange={(next) => updateAt(i, next)}
               onRemove={() => removeAt(i)}
+              peerItems={items}
+              onSlotsChange={onChange}
             />
           ))}
         </div>
