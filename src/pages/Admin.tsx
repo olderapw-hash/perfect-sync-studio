@@ -1,17 +1,37 @@
 import { useEffect, useState } from "react";
-import { AlertCircle, Database, Loader2, LogOut, RefreshCw, Shield } from "lucide-react";
+import {
+  AlertCircle,
+  Database,
+  Loader2,
+  LogOut,
+  RefreshCw,
+  Shield,
+  Archive,
+  Search,
+  UserCog,
+  FileCog,
+} from "lucide-react";
 import { useClsconfig } from "@/hooks/useClsconfig";
 import { useAuth } from "@/hooks/useAuth";
 import { ClsconfigEditor } from "@/components/admin/ClsconfigEditor";
 import { ItemCatalogManager } from "@/components/admin/ItemCatalogManager";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { HistoryDrawer } from "@/components/admin/HistoryDrawer";
+import { BackupsDialog } from "@/components/admin/BackupsDialog";
+import { ItemCatalogSearchDialog } from "@/components/admin/ItemCatalogSearchDialog";
+import { RolePersonagemTab } from "@/components/admin/RolePersonagemTab";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { cn } from "@/lib/utils";
+
+type AdminMode = "template" | "role";
 
 const Admin = () => {
   const { data, raw, loading, error, reload } = useClsconfig();
   const { user, signOut } = useAuth();
   const [selected, setSelected] = useState<string | null>(null);
+  const [mode, setMode] = useState<AdminMode>("template");
+  const [backupsOpen, setBackupsOpen] = useState(false);
+  const [searchItemOpen, setSearchItemOpen] = useState(false);
 
   useEffect(() => {
     if (data?.entries.length && !selected) {
@@ -25,19 +45,21 @@ const Admin = () => {
   return (
     <SidebarProvider defaultOpen>
       <div className="flex h-screen w-full bg-hero">
-        <AdminSidebar
-          entries={data?.entries ?? []}
-          classes={data?.classes ?? []}
-          usedClasses={data?.used_classes ?? []}
-          selectedKey={selected}
-          onSelect={setSelected}
-          loading={loading}
-        />
+        {mode === "template" && (
+          <AdminSidebar
+            entries={data?.entries ?? []}
+            classes={data?.classes ?? []}
+            usedClasses={data?.used_classes ?? []}
+            selectedKey={selected}
+            onSelect={setSelected}
+            loading={loading}
+          />
+        )}
 
         <div className="flex min-w-0 flex-1 flex-col">
           {/* Top bar */}
-          <header className="flex items-center gap-3 border-b border-border bg-card/60 px-5 py-3 backdrop-blur-md">
-            <SidebarTrigger className="-ml-1" />
+          <header className="flex flex-wrap items-center gap-3 border-b border-border bg-card/60 px-5 py-3 backdrop-blur-md">
+            {mode === "template" && <SidebarTrigger className="-ml-1" />}
             <Shield className="h-5 w-5 text-primary" />
             <div>
               <h1 className="text-sm font-extrabold uppercase tracking-wider text-foreground">
@@ -47,20 +69,56 @@ const Admin = () => {
                 Editor de templates iniciais — Perfect World
               </p>
             </div>
+
+            {/* Mode tabs (Template CLS vs Personagem Existente) */}
+            <div className="ml-4 flex items-center gap-1 rounded-md border border-border bg-card/40 p-1">
+              <ModeButton
+                active={mode === "template"}
+                onClick={() => setMode("template")}
+                icon={<FileCog className="h-3.5 w-3.5" />}
+                label="Template CLS"
+              />
+              <ModeButton
+                active={mode === "role"}
+                onClick={() => setMode("role")}
+                icon={<UserCog className="h-3.5 w-3.5" />}
+                label="Personagem Existente"
+                danger
+              />
+            </div>
+
             <div className="ml-auto flex items-center gap-2">
               <span className="rounded-full bg-success/15 px-3 py-1 text-[11px] font-medium text-success">
                 Edge proxy ativo
               </span>
+              <button
+                onClick={() => setSearchItemOpen(true)}
+                className="inline-flex items-center gap-2 rounded-md border border-border bg-card/60 px-3 py-2 text-xs transition-smooth hover:border-primary/50"
+                title="Buscar item no catálogo"
+              >
+                <Search className="h-3.5 w-3.5" />
+                Item
+              </button>
+              <button
+                onClick={() => setBackupsOpen(true)}
+                className="inline-flex items-center gap-2 rounded-md border border-border bg-card/60 px-3 py-2 text-xs transition-smooth hover:border-primary/50"
+                title="Listar backups (restore desabilitado)"
+              >
+                <Archive className="h-3.5 w-3.5" />
+                Backups
+              </button>
               <ItemCatalogManager />
               <HistoryDrawer />
-              <button
-                onClick={reload}
-                disabled={loading}
-                className="inline-flex items-center gap-2 rounded-md border border-border bg-card/60 px-3 py-2 text-xs transition-smooth hover:border-primary/50 disabled:opacity-50"
-              >
-                {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-                Recarregar
-              </button>
+              {mode === "template" && (
+                <button
+                  onClick={reload}
+                  disabled={loading}
+                  className="inline-flex items-center gap-2 rounded-md border border-border bg-card/60 px-3 py-2 text-xs transition-smooth hover:border-primary/50 disabled:opacity-50"
+                >
+                  {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                  Recarregar
+                </button>
+              )}
               {user && (
                 <span className="hidden text-[11px] text-muted-foreground sm:inline" title={user.email ?? ""}>
                   {user.email}
@@ -77,9 +135,13 @@ const Admin = () => {
             </div>
           </header>
 
-          {/* Editor */}
+          {/* Main content */}
           <section className="flex-1 overflow-hidden">
-            {error ? (
+            {mode === "role" ? (
+              <div className="h-full overflow-y-auto p-6">
+                <RolePersonagemTab />
+              </div>
+            ) : error ? (
               <div className="m-6 overflow-auto rounded-xl border border-destructive/40 bg-destructive/10 p-6 text-sm text-destructive">
                 <div className="flex items-center gap-2 font-semibold">
                   <AlertCircle className="h-4 w-4" />
@@ -129,8 +191,40 @@ const Admin = () => {
           </section>
         </div>
       </div>
+
+      <BackupsDialog open={backupsOpen} onOpenChange={setBackupsOpen} />
+      <ItemCatalogSearchDialog open={searchItemOpen} onOpenChange={setSearchItemOpen} />
     </SidebarProvider>
   );
 };
+
+const ModeButton = ({
+  active,
+  onClick,
+  icon,
+  label,
+  danger,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  label: string;
+  danger?: boolean;
+}) => (
+  <button
+    onClick={onClick}
+    className={cn(
+      "inline-flex items-center gap-1.5 rounded px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider transition-smooth",
+      active
+        ? danger
+          ? "bg-destructive text-destructive-foreground shadow-sm"
+          : "bg-primary text-primary-foreground shadow-sm"
+        : "text-muted-foreground hover:text-foreground",
+    )}
+  >
+    {icon}
+    {label}
+  </button>
+);
 
 export default Admin;
