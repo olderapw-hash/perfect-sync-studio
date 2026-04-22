@@ -112,7 +112,7 @@ export const SettingsTab = () => {
           </div>
         </div>
         {!isSuperadmin && (
-          <div className="mt-4 flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-200">
+          <div className="mt-4 flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
             <p>
               Você está em modo somente-leitura. Apenas usuários com role <strong>superadmin</strong> podem alterar essas configurações.
