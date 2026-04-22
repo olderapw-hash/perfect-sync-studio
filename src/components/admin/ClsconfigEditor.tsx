@@ -355,17 +355,12 @@ export const ClsconfigEditor = ({ entry, allEntries = [], mode = "template", onS
       let expectedInventory: ClsItem[] | null = null;
 
       const invokePost = async (body: unknown, errLabel: string) => {
-        const { data, error } = await supabase.functions.invoke("clsconfig-proxy/clsconfig", {
+        const { data, error, rawBody } = await invokeClsconfigProxy("clsconfig-proxy/clsconfig", {
           method: "POST",
           body,
         });
         if (error) {
-          const ctx = (error as unknown as { context?: Response }).context;
-          let extra = "";
-          if (ctx && typeof ctx.text === "function") {
-            try { extra = await ctx.text(); } catch { /* ignore */ }
-          }
-          throw new Error(extra ? `${error.message}\n\n${extra}` : error.message);
+          throw new Error(rawBody ? `${error.message}\n\n${rawBody}` : error.message);
         }
         if (data && typeof data === "object" && (data as { success?: boolean }).success === false) {
           throw new Error((data as { error?: string }).error || errLabel);
