@@ -301,7 +301,7 @@ export const ClsconfigEditor = ({ entry, allEntries = [], mode = "template", onS
             ? e.message
             : "Erro desconhecido ao salvar personagem";
       console.error("[role] save error →", e);
-      toast.error(msg);
+      if (!handleMaybeAuthError(e)) toast.error(msg);
       saveHistory.pushDiff({
         roleid: entry.template.roleid,
         className,
