@@ -45,10 +45,10 @@ function jsonError(message: string, status: number): Response {
 async function requireAdmin(req: Request): Promise<Response | { userId: string }> {
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) {
-    return jsonError("Unauthorized", 401);
+    return jsonError("Unauthorized: missing bearer token (sessão expirou? faça login novamente)", 401);
   }
   const token = authHeader.slice("Bearer ".length).trim();
-  if (!token) return jsonError("Unauthorized", 401);
+  if (!token) return jsonError("Unauthorized: empty token", 401);
 
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
   const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
@@ -63,20 +63,23 @@ async function requireAdmin(req: Request): Promise<Response | { userId: string }
 
   const { data: userRes, error: userErr } = await supabase.auth.getUser(token);
   if (userErr || !userRes?.user) {
-    return jsonError("Unauthorized", 401);
+    console.warn("[clsconfig-proxy] getUser failed:", userErr?.message);
+    return jsonError("Unauthorized: token inválido ou expirado", 401);
   }
 
-  const { data: roleRow, error: roleErr } = await supabase
+  // Aceita admin OU superadmin — superadmin é estritamente mais permissivo.
+  const { data: roleRows, error: roleErr } = await supabase
     .from("user_roles")
     .select("role")
     .eq("user_id", userRes.user.id)
-    .eq("role", "admin")
-    .maybeSingle();
+    .in("role", ["admin", "superadmin"]);
   if (roleErr) {
     console.error("[clsconfig-proxy] role lookup error", roleErr.message);
     return jsonError("Forbidden", 403);
   }
-  if (!roleRow) return jsonError("Forbidden: admin role required", 403);
+  if (!roleRows || roleRows.length === 0) {
+    return jsonError("Forbidden: admin role required", 403);
+  }
 
   return { userId: userRes.user.id };
 }
