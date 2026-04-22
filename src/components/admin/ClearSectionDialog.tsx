@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Eraser, Loader2 } from "lucide-react";
+import { AlertTriangle, Eraser, Loader2, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -12,12 +12,15 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useServerPermissions } from "@/hooks/useServerPermissions";
 import {
   SECTION_LABELS,
   SECTIONS_WITH_MONEY,
   type SectionKey,
   type SectionPreview,
 } from "@/lib/clearSection";
+
+const NO_CLEAR_TIP = "Seu acesso não permite limpar seções.";
 
 interface Props {
   open: boolean;
@@ -35,6 +38,8 @@ export const ClearSectionDialog = ({
   preview,
   onConfirm,
 }: Props) => {
+  const { can } = useServerPermissions();
+  const canClear = can("clear_sections");
   const label = SECTION_LABELS[section];
   const supportsMoney = preview.hasMoney && SECTIONS_WITH_MONEY.includes(section);
   const expectedPhrase = useMemo(() => `LIMPAR ${label.toUpperCase()}`, [label]);
@@ -54,6 +59,7 @@ export const ClearSectionDialog = ({
   const matches = confirmText.trim().toUpperCase() === expectedPhrase;
 
   const handleConfirm = () => {
+    if (!canClear) return;
     if (!matches || submitting) return;
     setSubmitting(true);
     try {
