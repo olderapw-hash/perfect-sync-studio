@@ -69,6 +69,7 @@ export const EquipmentTab = ({ template, onChange }: Props) => {
   // Demanda de "líderes necessários" — local apenas (não persistido na VPS).
   const [leadersNeeded, setLeadersNeeded] = useState<number>(10);
   const [sBonus, setSBonus] = useState<boolean>(false);
+  const [invTab, setInvTab] = useState<InvTab>("normal");
 
   const byPos = new Map<number, ClsItem>();
   items.forEach((it) => byPos.set(it.pos, it));
