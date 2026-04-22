@@ -81,6 +81,7 @@ export const EquipmentTab = ({ template, onChange }: Props) => {
   const [leadersNeeded, setLeadersNeeded] = useState<number>(10);
   const [sBonus, setSBonus] = useState<boolean>(false);
   const [invTab, setInvTab] = useState<InvTab>("normal");
+  const [dressEditingIdx, setDressEditingIdx] = useState<number | null>(null);
 
   const byPos = new Map<number, ClsItem>();
   items.forEach((it) => byPos.set(it.pos, it));
