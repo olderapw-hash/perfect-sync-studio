@@ -74,7 +74,12 @@ export const ItemSlot = ({ item, onClick, size = 44, emptyLabel }: Props) => {
           src={iconUrl}
           alt=""
           loading="lazy"
-          onError={() => setIconBroken(true)}
+          decoding="async"
+          width={Math.round(size * 0.88)}
+          height={Math.round(size * 0.88)}
+          onError={() =>
+            setIconStage((s) => (s === "jpg" ? "png" : "broken"))
+          }
           className="h-[88%] w-[88%] object-contain drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]"
         />
       ) : (
