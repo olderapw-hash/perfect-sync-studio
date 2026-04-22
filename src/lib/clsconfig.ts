@@ -267,11 +267,11 @@ export function buildSavePayload(entry: ClsEntry, template: ClsTemplate): SavePa
 
   // Preserva campos que a VPS gerencia internamente — usa o valor original
   // do entry (como veio da VPS) em vez do normalizado em memória.
-  const preservedStatus: Record<string, unknown> = { ...template.status, reputation };
+  const preservedStatus = { ...template.status, reputation } as ClsTemplate["status"];
+  const statusBag = preservedStatus as unknown as Record<string, unknown>;
+  const originalBag = entry.template.status as unknown as Record<string, unknown>;
   for (const f of VPS_MANAGED_STATUS_FIELDS) {
-    if (Object.prototype.hasOwnProperty.call(entry.template.status, f)) {
-      preservedStatus[f] = (entry.template.status as Record<string, unknown>)[f];
-    }
+    if (originalBag[f] !== undefined) statusBag[f] = originalBag[f];
   }
 
   // Recompute summary counters from the edited template so they stay in sync.
@@ -297,7 +297,7 @@ export function buildSavePayload(entry: ClsEntry, template: ClsTemplate): SavePa
         template.storehouse.material.filter((i) => i.id > 0).length +
         template.storehouse.generalcard.filter((i) => i.id > 0).length,
     },
-    status: preservedStatus as ClsTemplate["status"],
+    status: preservedStatus,
   };
   return {
     source: entry.source,
