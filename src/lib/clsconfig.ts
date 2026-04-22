@@ -448,6 +448,49 @@ export function buildReputationPayload(
 }
 
 /**
+ * Converte string/number em number, aceitando vírgula decimal (pt-BR).
+ * 0 é valor válido. NaN/undefined/null/"" → 0.
+ */
+export const toNumber = (v: unknown): number => {
+  if (typeof v === "number") return Number.isFinite(v) ? v : 0;
+  const s = String(v ?? "0").replace(",", ".");
+  const n = Number(s);
+  return Number.isFinite(n) ? n : 0;
+};
+
+/**
+ * Payload mínimo para salvar SOMENTE posição + worldtag.
+ * NÃO inclui status.cultivation, status.decoded, summary, class_info,
+ * base.class_info etc. Usa o roleid canônico do entry/template.
+ */
+export interface PositionPayload {
+  roleid: number;
+  status: {
+    worldtag: number;
+    posx: number;
+    posy: number;
+    posz: number;
+  };
+}
+
+export function buildPositionPayload(
+  entry: ClsEntry,
+  form: { status: { worldtag: unknown; posx: unknown; posy: unknown; posz: unknown } },
+): PositionPayload {
+  const roleid = resolveRoleid(entry, entry.template);
+  const s = form.status;
+  return {
+    roleid,
+    status: {
+      worldtag: toNumber(s.worldtag),
+      posx: toNumber(s.posx),
+      posy: toNumber(s.posy),
+      posz: toNumber(s.posz),
+    },
+  };
+}
+
+/**
  * Retorna apenas os campos simples (SIMPLE_STATUS_FIELDS) que diferem.
  * Comparação estrita — 0 vs 0 não conta como mudança; 0 vs 1 conta.
  */

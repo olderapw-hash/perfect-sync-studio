@@ -271,7 +271,16 @@ export const ClsconfigEditor = ({ entry }: Props) => {
 
       <div className="flex-1 overflow-y-auto p-6">
         {tab === "base" && <BaseTab template={template} onChange={setTemplate} />}
-        {tab === "status" && <StatusTab template={template} onChange={setTemplate} />}
+        {tab === "status" && (
+          <StatusTab
+            template={template}
+            entry={entry}
+            onChange={setTemplate}
+            onEntryRefreshed={(next) => {
+              entry.template = next;
+            }}
+          />
+        )}
         {tab === "inventory" && <InventoryTab template={template} onChange={setTemplate} />}
         {tab === "equipment" && <EquipmentTab template={template} onChange={setTemplate} />}
         {tab === "storehouse" && <StorehouseTab template={template} onChange={setTemplate} />}
