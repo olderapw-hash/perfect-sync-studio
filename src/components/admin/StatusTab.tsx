@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Loader2, MapPin, Save } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { handleMaybeAuthError } from "@/lib/authErrors";
 import {
   buildPositionPayload,
   normalizeClsconfigResponse,
