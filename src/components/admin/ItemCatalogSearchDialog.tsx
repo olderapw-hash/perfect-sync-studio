@@ -79,7 +79,7 @@ export const ItemCatalogSearchDialog = ({ open, onOpenChange, onPick }: Props) =
   };
 
   const placeholder = useMemo(
-    () => (endpointMissing ? "Catálogo desabilitado" : "Digite ID exato ou parte do nome (mín. 2 chars)"),
+    () => (endpointMissing ? "Catálogo desabilitado" : "Digite ID exato (números) ou nome (mín. 2 chars)"),
     [endpointMissing],
   );
 
