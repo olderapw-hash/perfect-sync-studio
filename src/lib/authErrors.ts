@@ -53,3 +53,55 @@ export function handleMaybeAuthError(err: unknown): boolean {
   warnSessionExpired();
   return true;
 }
+
+const FORBIDDEN_HINTS = [
+  "permissão negada",
+  "permissao negada",
+  "permission denied",
+  "forbidden",
+  "edge function returned 403",
+  "403",
+];
+
+/** Detecta se o erro é 403/permissão negada. */
+export function isForbiddenError(err: unknown): boolean {
+  if (!err) return false;
+  const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
+  return FORBIDDEN_HINTS.some((h) => msg.includes(h));
+}
+
+let lastForbiddenAt = 0;
+/** Toast amigável para 403 (com debounce de 4s para evitar spam). */
+export function warnForbidden(detail?: string) {
+  const now = Date.now();
+  if (now - lastForbiddenAt < 4000) return;
+  lastForbiddenAt = now;
+  toast.error("Acesso negado", {
+    description:
+      detail ??
+      "Seu usuário não tem permissão para esta ação. Peça ao dono do servidor para ajustar suas permissões.",
+    duration: 8000,
+  });
+}
+
+/** Se o erro for 403/permissão, dispara o aviso e devolve true. */
+export function handleMaybeForbiddenError(err: unknown, detail?: string): boolean {
+  if (!isForbiddenError(err)) return false;
+  warnForbidden(detail);
+  return true;
+}
+
+/** Atalho: trata auth (401) ou permissão (403). Retorna true se já tratou. */
+export function handleMaybeAuthOrForbidden(err: unknown, forbiddenDetail?: string): boolean {
+  if (handleMaybeAuthError(err)) return true;
+  if (handleMaybeForbiddenError(err, forbiddenDetail)) return true;
+  return false;
+}
+
+/** Erro lançado quando nenhum servidor está ativo/selecionado. */
+export class NoServerSelectedError extends Error {
+  constructor() {
+    super("Nenhum servidor selecionado. Cadastre/ative um servidor antes.");
+    this.name = "NoServerSelectedError";
+  }
+}

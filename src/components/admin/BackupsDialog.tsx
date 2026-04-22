@@ -34,6 +34,7 @@ import {
   type RestoreBackupResponse,
 } from "@/lib/pwApiActions";
 import { toast } from "sonner";
+import { useServerPermissions } from "@/hooks/useServerPermissions";
 import { CompareBackupDialog } from "./CompareBackupDialog";
 
 interface Props {

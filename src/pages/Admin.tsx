@@ -40,6 +40,7 @@ const Admin = () => {
   const { data, raw, loading, error, reload } = useClsconfig();
   const { user, signOut, isSuperadmin } = useAuth();
   const { settings } = useAppSettings();
+  const { can } = useServerPermissions();
   const [selected, setSelected] = useState<string | null>(null);
   const [mode, setMode] = useState<AdminMode>("template");
   const [backupsOpen, setBackupsOpen] = useState(false);
@@ -69,6 +70,7 @@ const Admin = () => {
         )}
 
         <div className="flex min-w-0 flex-1 flex-col">
+          <PendingInvitesBanner />
           {/* Top bar */}
           <header className="flex flex-wrap items-center gap-3 border-b border-border bg-card/60 px-5 py-3 backdrop-blur-md">
             {mode === "template" && <SidebarTrigger className="-ml-1" />}
@@ -155,14 +157,26 @@ const Admin = () => {
                 <UsersIcon className="h-3.5 w-3.5" />
                 Servidores
               </Link>
-              <Link
-                to="/audit"
-                className="inline-flex items-center gap-2 rounded-md border border-border bg-card/60 px-3 py-2 text-xs transition-smooth hover:border-primary/50"
-                title="Logs de auditoria"
-              >
-                <ShieldCheck className="h-3.5 w-3.5" />
-                Auditoria
-              </Link>
+              {can("manage_members") && (
+                <Link
+                  to="/members"
+                  className="inline-flex items-center gap-2 rounded-md border border-border bg-card/60 px-3 py-2 text-xs transition-smooth hover:border-primary/50"
+                  title="Gerenciar membros do servidor"
+                >
+                  <UsersIcon className="h-3.5 w-3.5" />
+                  Membros
+                </Link>
+              )}
+              {can("view_audit") && (
+                <Link
+                  to="/audit"
+                  className="inline-flex items-center gap-2 rounded-md border border-border bg-card/60 px-3 py-2 text-xs transition-smooth hover:border-primary/50"
+                  title="Logs de auditoria"
+                >
+                  <ShieldCheck className="h-3.5 w-3.5" />
+                  Auditoria
+                </Link>
+              )}
               {isSuperadmin && (
                 <Link
                   to="/admin/users"

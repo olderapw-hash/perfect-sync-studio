@@ -40,10 +40,11 @@ import {
 } from "@/lib/clsconfig";
 import { summarizeIssues, validateAllItems, type ItemIssue } from "@/lib/validateItem";
 import { saveHistory } from "@/lib/saveHistory";
-import { handleMaybeAuthError } from "@/lib/authErrors";
+import { handleMaybeAuthError, handleMaybeForbiddenError } from "@/lib/authErrors";
 import { seenBackups } from "@/lib/seenBackups";
 import { buildClassIconUrl } from "@/lib/pwIcons";
-import { supabase } from "@/integrations/supabase/client";
+import { invokeClsconfigProxy } from "@/lib/clsconfigInvoke";
+import { useServerPermissions } from "@/hooks/useServerPermissions";
 import { pwApi, EndpointMissingError } from "@/lib/pwApiActions";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -129,7 +130,13 @@ export const ClsconfigEditor = ({ entry, allEntries = [], mode = "template", onS
   /** Apenas modo "role": confirmação forte ANTES de chamar runSave. */
   const [roleConfirmOpen, setRoleConfirmOpen] = useState(false);
 
+  const { can } = useServerPermissions();
   const isRoleMode = mode === "role";
+  const requiredSavePerm = isRoleMode ? "save_real_roles" : "save_templates";
+  const canSave = can(requiredSavePerm);
+  const canBulkApply = can("bulk_apply");
+  const canCompare = can("compare_backup");
+  const permDeniedTitle = "Seu acesso não permite esta ação.";
 
   // Reset when switching entry
   useEffect(() => {
@@ -304,7 +311,7 @@ export const ClsconfigEditor = ({ entry, allEntries = [], mode = "template", onS
             ? e.message
             : "Erro desconhecido ao salvar personagem";
       console.error("[role] save error →", e);
-      if (!handleMaybeAuthError(e)) toast.error(msg);
+      if (!handleMaybeAuthError(e) && !handleMaybeForbiddenError(e)) toast.error(msg);
       saveHistory.pushDiff({
         roleid: entry.template.roleid,
         className,
@@ -354,17 +361,12 @@ export const ClsconfigEditor = ({ entry, allEntries = [], mode = "template", onS
       let expectedInventory: ClsItem[] | null = null;
 
       const invokePost = async (body: unknown, errLabel: string) => {
-        const { data, error } = await supabase.functions.invoke("clsconfig-proxy/clsconfig", {
+        const { data, error, rawBody } = await invokeClsconfigProxy("clsconfig-proxy/clsconfig", {
           method: "POST",
           body,
         });
         if (error) {
-          const ctx = (error as unknown as { context?: Response }).context;
-          let extra = "";
-          if (ctx && typeof ctx.text === "function") {
-            try { extra = await ctx.text(); } catch { /* ignore */ }
-          }
-          throw new Error(extra ? `${error.message}\n\n${extra}` : error.message);
+          throw new Error(rawBody ? `${error.message}\n\n${rawBody}` : error.message);
         }
         if (data && typeof data === "object" && (data as { success?: boolean }).success === false) {
           throw new Error((data as { error?: string }).error || errLabel);
@@ -396,7 +398,7 @@ export const ClsconfigEditor = ({ entry, allEntries = [], mode = "template", onS
       }
 
       // Recarrega o clsconfig completo da VPS para validar persistência real.
-      const reread = await supabase.functions.invoke("clsconfig-proxy/clsconfig", { method: "GET" });
+      const reread = await invokeClsconfigProxy("clsconfig-proxy/clsconfig", { method: "GET" });
       if (reread.error) {
         throw new Error("A VPS respondeu ao save, mas falhou na confirmação de leitura");
       }
@@ -507,7 +509,7 @@ export const ClsconfigEditor = ({ entry, allEntries = [], mode = "template", onS
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Erro desconhecido ao salvar";
       console.error("[clsconfig] save error →", e);
-      if (!handleMaybeAuthError(e)) toast.error(msg);
+      if (!handleMaybeAuthError(e) && !handleMaybeForbiddenError(e)) toast.error(msg);
       saveHistory.pushDiff({
         roleid: entry.template.roleid,
         className: template.summary.class_name ?? `Classe ${template.summary.cls}`,
@@ -607,18 +609,18 @@ export const ClsconfigEditor = ({ entry, allEntries = [], mode = "template", onS
                 </button>
                 <button
                   onClick={() => setCompareOpen(true)}
-                  disabled={allEntries.length < 2}
+                  disabled={allEntries.length < 2 || !canCompare}
                   className="inline-flex items-center gap-2 rounded-md border border-border bg-card/60 px-3 py-2 text-xs transition-smooth hover:border-primary/50 disabled:opacity-50"
-                  title="Comparar com outro CLS"
+                  title={canCompare ? "Comparar com outro CLS" : permDeniedTitle}
                 >
                   <ArrowRightLeft className="h-3.5 w-3.5" />
                   Comparar
                 </button>
                 <button
                   onClick={() => setBulkOpen(true)}
-                  disabled={!dirty || allEntries.length < 2}
+                  disabled={!dirty || allEntries.length < 2 || !canBulkApply}
                   className="inline-flex items-center gap-2 rounded-md border border-border bg-card/60 px-3 py-2 text-xs transition-smooth hover:border-primary/50 disabled:opacity-50"
-                  title="Aplicar mudanças em outros roleids"
+                  title={canBulkApply ? "Aplicar mudanças em outros roleids" : permDeniedTitle}
                 >
                   <Send className="h-3.5 w-3.5" />
                   Aplicar em massa
@@ -657,7 +659,8 @@ export const ClsconfigEditor = ({ entry, allEntries = [], mode = "template", onS
             </button>
             <button
               onClick={handleSave}
-              disabled={saving || !dirty}
+              disabled={saving || !dirty || !canSave}
+              title={canSave ? undefined : permDeniedTitle}
               className={cn(
                 "inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-semibold shadow-glow transition-smooth hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50",
                 isRoleMode
