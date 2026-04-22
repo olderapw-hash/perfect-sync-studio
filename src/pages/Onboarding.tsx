@@ -45,10 +45,10 @@ const Onboarding = () => {
       navigate("/auth", { replace: true });
       return;
     }
-    if (!isActive) {
+    if (!isActive && !bypassPayment) {
       navigate("/pricing", { replace: true });
     }
-  }, [authLoading, subLoading, session, isActive, navigate]);
+  }, [authLoading, subLoading, session, isActive, bypassPayment, navigate]);
 
   const generateSecret = () => {
     const arr = new Uint8Array(24);
