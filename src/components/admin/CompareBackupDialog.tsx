@@ -27,6 +27,9 @@ import {
   type SaveRoleEditableResponse,
 } from "@/lib/pwApiActions";
 import { toast } from "sonner";
+import { useServerPermissions } from "@/hooks/useServerPermissions";
+
+const NO_RESTORE_TIP = "Seu acesso não permite restaurar backups.";
 
 type SectionKey = "status" | "inventory" | "equipment" | "storehouse" | "task";
 
@@ -156,6 +159,8 @@ const SECTIONS: { key: SectionKey; label: string }[] = [
 ];
 
 export const CompareBackupDialog = ({ open, onOpenChange, backup, onRestored }: Props) => {
+  const { can } = useServerPermissions();
+  const canRestore = can("restore_backup");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [backupTpl, setBackupTpl] = useState<Record<string, unknown> | null>(null);
@@ -255,8 +260,18 @@ export const CompareBackupDialog = ({ open, onOpenChange, backup, onRestored }: 
 
   const performRestore = async () => {
     if (!confirmSection || !backup || roleid == null || !backupTpl) return;
+    if (!canRestore) {
+      toast.error("Acesso negado", { description: NO_RESTORE_TIP });
+      setConfirmSection(null);
+      return;
+    }
     const section = confirmSection;
     const sectionPayload = backupTpl[section];
+    if (sectionPayload == null) {
+      toast.error(`Backup não contém a seção '${section}'.`);
+      setConfirmSection(null);
+      return;
+    }
     if (sectionPayload == null) {
       toast.error(`Backup não contém a seção '${section}'.`);
       setConfirmSection(null);
@@ -363,14 +378,16 @@ export const CompareBackupDialog = ({ open, onOpenChange, backup, onRestored }: 
                       <Button
                         size="sm"
                         variant={s.diffCount > 0 ? "destructive" : "outline"}
-                        disabled={!s.hasBackup || online || restoring !== null}
+                        disabled={!s.hasBackup || online || restoring !== null || !canRestore}
                         onClick={() => setConfirmSection(s.key)}
                         title={
-                          !s.hasBackup
-                            ? "Backup não contém esta seção"
-                            : online
-                              ? "Personagem online — bloqueado"
-                              : `Restaurar somente ${s.label} do backup`
+                          !canRestore
+                            ? NO_RESTORE_TIP
+                            : !s.hasBackup
+                              ? "Backup não contém esta seção"
+                              : online
+                                ? "Personagem online — bloqueado"
+                                : `Restaurar somente ${s.label} do backup`
                         }
                       >
                         {restoring === s.key ? (

@@ -30,7 +30,10 @@ import {
 } from "@/lib/pwApiActions";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useServerPermissions } from "@/hooks/useServerPermissions";
 import { CompareBackupDialog } from "./CompareBackupDialog";
+
+const NO_RESTORE_TIP = "Seu acesso não permite restaurar backups.";
 
 interface Props {
   open: boolean;
@@ -196,6 +199,8 @@ export const RoleidHistoryDialog = ({
   className,
   onRestored,
 }: Props) => {
+  const { can } = useServerPermissions();
+  const canRestore = can("restore_backup");
   const [loading, setLoading] = useState(false);
   const [listError, setListError] = useState<string | null>(null);
   const [endpointMissing, setEndpointMissing] = useState(false);
@@ -326,6 +331,11 @@ export const RoleidHistoryDialog = ({
 
   const performFullRestore = async () => {
     if (!confirmFullRestore) return;
+    if (!canRestore) {
+      toast.error("Acesso negado", { description: NO_RESTORE_TIP });
+      setConfirmFullRestore(null);
+      return;
+    }
     const name = confirmFullRestore.name || basename(confirmFullRestore.file);
     setRunningFullRestore(true);
     try {
@@ -363,6 +373,11 @@ export const RoleidHistoryDialog = ({
 
   const performSectionRestore = async () => {
     if (!confirmSection || !detail.backupTpl) return;
+    if (!canRestore) {
+      toast.error("Acesso negado", { description: NO_RESTORE_TIP });
+      setConfirmSection(null);
+      return;
+    }
     const { section, backup } = confirmSection;
     const sectionPayload = detail.backupTpl[section];
     if (sectionPayload == null) {
@@ -508,6 +523,7 @@ export const RoleidHistoryDialog = ({
                   <DetailPanel
                     backup={selectedBackup}
                     detail={detail}
+                    canRestore={canRestore}
                     onCompare={() => setCompareTarget(selectedBackup)}
                     onFullRestore={() => setConfirmFullRestore(selectedBackup)}
                     onSectionRestore={(section) =>
@@ -651,12 +667,14 @@ export const RoleidHistoryDialog = ({
 const DetailPanel = ({
   backup,
   detail,
+  canRestore,
   onCompare,
   onFullRestore,
   onSectionRestore,
 }: {
   backup: BackupRecord;
   detail: DetailState;
+  canRestore: boolean;
   onCompare: () => void;
   onFullRestore: () => void;
   onSectionRestore: (section: "status" | "inventory" | "equipment" | "storehouse") => void;
@@ -664,6 +682,12 @@ const DetailPanel = ({
   const s = detail.summary;
   if (!s) return null;
   const changed = new Set(s.changedSections);
+  const restoreDisabled = detail.online || !canRestore;
+  const restoreTip = !canRestore
+    ? NO_RESTORE_TIP
+    : detail.online
+      ? "Personagem online — bloqueado"
+      : "Restaurar backup inteiro";
   return (
     <div className="space-y-3">
       <div className="rounded-md border border-border bg-card/40 p-3 text-xs">
@@ -706,8 +730,8 @@ const DetailPanel = ({
           size="sm"
           variant="destructive"
           onClick={onFullRestore}
-          disabled={detail.online}
-          title={detail.online ? "Personagem online — bloqueado" : "Restaurar backup inteiro"}
+          disabled={restoreDisabled}
+          title={restoreTip}
         >
           <RotateCcw className="h-3 w-3" />
           Restaurar tudo
@@ -718,7 +742,8 @@ const DetailPanel = ({
         title="Status"
         highlighted={changed.has("status")}
         onRestore={() => onSectionRestore("status")}
-        disabled={detail.online}
+        disabled={restoreDisabled}
+        disabledTip={!canRestore ? NO_RESTORE_TIP : undefined}
         rows={[
           ["fama", s.status.reputation],
           ["level", s.status.level],
@@ -737,7 +762,8 @@ const DetailPanel = ({
         title="Inventário"
         highlighted={changed.has("inventory")}
         onRestore={() => onSectionRestore("inventory")}
-        disabled={detail.online}
+        disabled={restoreDisabled}
+        disabledTip={!canRestore ? NO_RESTORE_TIP : undefined}
         rows={[
           ["dinheiro", s.inventory.money],
           ["capacidade", s.inventory.capacity],
@@ -748,14 +774,16 @@ const DetailPanel = ({
         title="Equipamentos"
         highlighted={changed.has("equipment")}
         onRestore={() => onSectionRestore("equipment")}
-        disabled={detail.online}
+        disabled={restoreDisabled}
+        disabledTip={!canRestore ? NO_RESTORE_TIP : undefined}
         rows={[["itens", s.equipment.itemCount]]}
       />
       <SectionCard
         title="Baú"
         highlighted={changed.has("storehouse")}
         onRestore={() => onSectionRestore("storehouse")}
-        disabled={detail.online}
+        disabled={restoreDisabled}
+        disabledTip={!canRestore ? NO_RESTORE_TIP : undefined}
         rows={[
           ["dinheiro", s.storehouse.money],
           ["capacidade", s.storehouse.capacity],
@@ -772,12 +800,14 @@ const SectionCard = ({
   highlighted,
   onRestore,
   disabled,
+  disabledTip,
 }: {
   title: string;
   rows: [string, unknown][];
   highlighted: boolean;
   onRestore: () => void;
   disabled?: boolean;
+  disabledTip?: string;
 }) => (
   <div
     className={cn(
@@ -787,7 +817,13 @@ const SectionCard = ({
   >
     <div className="mb-2 flex items-center justify-between">
       <div className="font-semibold uppercase tracking-wider text-foreground/90">{title}</div>
-      <Button size="sm" variant="outline" onClick={onRestore} disabled={disabled}>
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={onRestore}
+        disabled={disabled}
+        title={disabledTip}
+      >
         <RotateCcw className="h-3 w-3" />
         Restaurar seção
       </Button>

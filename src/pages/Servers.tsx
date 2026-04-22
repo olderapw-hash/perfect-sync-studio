@@ -16,6 +16,7 @@ import {
   Power,
   Server,
   Settings,
+  ShieldAlert,
   Trash2,
   Wifi,
   WifiOff,
@@ -24,6 +25,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useServers, type Server as ServerRow } from "@/hooks/useServers";
+import { useServerPermissions } from "@/hooks/useServerPermissions";
 import { testServerConnection } from "@/lib/serverConnection";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -52,6 +54,7 @@ const Servers = () => {
   const navigate = useNavigate();
   const { session, loading: authLoading } = useAuth();
   const { servers, loading, refetch, setActive } = useServers();
+  const { can, loading: permsLoading } = useServerPermissions();
   const [editing, setEditing] = useState<ServerRow | null>(null);
   const [creating, setCreating] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -106,10 +109,35 @@ const Servers = () => {
     setDeleteId(null);
   };
 
-  if (authLoading || loading) {
+  if (authLoading || loading || permsLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // 403 amigável: usuário sem permissão pra administrar servidores.
+  // Owner sempre tem manage_servers. Membros sem essa permissão
+  // só veem o servidor onde já estão (não podem cadastrar novos / remover).
+  if (!can("manage_servers")) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background p-6">
+        <div className="max-w-md rounded-2xl border border-destructive/40 bg-card/60 p-8 text-center">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-destructive/15">
+            <ShieldAlert className="h-6 w-6 text-destructive" />
+          </div>
+          <h1 className="mb-2 text-lg font-extrabold tracking-tight text-foreground">
+            Acesso negado
+          </h1>
+          <p className="mb-6 text-sm text-muted-foreground">
+            Seu acesso não permite gerenciar servidores. Peça ao owner pra
+            ajustar suas permissões.
+          </p>
+          <Button onClick={() => navigate("/admin")} variant="outline">
+            <ArrowLeft className="mr-2 h-4 w-4" /> Voltar ao painel
+          </Button>
+        </div>
       </div>
     );
   }

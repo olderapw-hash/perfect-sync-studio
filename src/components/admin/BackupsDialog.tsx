@@ -37,6 +37,8 @@ import { toast } from "sonner";
 import { useServerPermissions } from "@/hooks/useServerPermissions";
 import { CompareBackupDialog } from "./CompareBackupDialog";
 
+const NO_RESTORE_TIP = "Seu acesso não permite restaurar backups.";
+
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
@@ -90,6 +92,8 @@ type RestoreStage =
 
 export const BackupsDialog = ({ open, onOpenChange, onRestored }: Props) => {
   const seen = useSeenBackups();
+  const { can } = useServerPermissions();
+  const canRestore = can("restore_backup");
   const [vps, setVps] = useState<VpsBuckets>(emptyBuckets);
   const [loading, setLoading] = useState(false);
   const [endpointMissing, setEndpointMissing] = useState(false);
@@ -155,6 +159,10 @@ export const BackupsDialog = ({ open, onOpenChange, onRestored }: Props) => {
 
   // ----- Restore real (apenas role_json) -----
   const beginRestore = async (backup: BackupRecord) => {
+    if (!canRestore) {
+      toast.error("Acesso negado", { description: NO_RESTORE_TIP });
+      return;
+    }
     if (backup.type !== "role_json") {
       handleRestoreUnsupported(backup.type);
       return;
@@ -284,16 +292,16 @@ export const BackupsDialog = ({ open, onOpenChange, onRestored }: Props) => {
                     <TabsTrigger value="export_logs">exports ({vps.export_logs.length})</TabsTrigger>
                   </TabsList>
                   <TabsContent value="all">
-                    <VpsList items={vps.all} onRestore={beginRestore} onUnsupported={handleRestoreUnsupported} onCompare={setCompareTarget} restoringName={restoringName(restore)} />
+                    <VpsList items={vps.all} onRestore={beginRestore} onUnsupported={handleRestoreUnsupported} onCompare={setCompareTarget} restoringName={restoringName(restore)} canRestore={canRestore} />
                   </TabsContent>
                   <TabsContent value="role_json">
-                    <VpsList items={vps.role_json} onRestore={beginRestore} onUnsupported={handleRestoreUnsupported} onCompare={setCompareTarget} restoringName={restoringName(restore)} />
+                    <VpsList items={vps.role_json} onRestore={beginRestore} onUnsupported={handleRestoreUnsupported} onCompare={setCompareTarget} restoringName={restoringName(restore)} canRestore={canRestore} />
                   </TabsContent>
                   <TabsContent value="clsconfig_files">
-                    <VpsList items={vps.clsconfig_files} onRestore={beginRestore} onUnsupported={handleRestoreUnsupported} onCompare={setCompareTarget} restoringName={restoringName(restore)} />
+                    <VpsList items={vps.clsconfig_files} onRestore={beginRestore} onUnsupported={handleRestoreUnsupported} onCompare={setCompareTarget} restoringName={restoringName(restore)} canRestore={canRestore} />
                   </TabsContent>
                   <TabsContent value="export_logs">
-                    <VpsList items={vps.export_logs} onRestore={beginRestore} onUnsupported={handleRestoreUnsupported} onCompare={setCompareTarget} restoringName={restoringName(restore)} hideRestore />
+                    <VpsList items={vps.export_logs} onRestore={beginRestore} onUnsupported={handleRestoreUnsupported} onCompare={setCompareTarget} restoringName={restoringName(restore)} canRestore={canRestore} hideRestore />
                   </TabsContent>
                 </Tabs>
               )}
@@ -512,6 +520,7 @@ const VpsList = ({
   onCompare,
   restoringName,
   hideRestore,
+  canRestore,
 }: {
   items: BackupRecord[];
   onRestore: (b: BackupRecord) => void;
@@ -519,6 +528,7 @@ const VpsList = ({
   onCompare: (b: BackupRecord) => void;
   restoringName: string | null;
   hideRestore?: boolean;
+  canRestore: boolean;
 }) => {
   if (items.length === 0) {
     return (
@@ -545,11 +555,14 @@ const VpsList = ({
             const isRoleJson = b.type === "role_json";
             const name = b.name || basename(b.file);
             const isLoading = restoringName !== null && restoringName === name;
-            const tip = isRoleJson
-              ? "Restaurar este snapshot de role_json"
-              : b.type === "export_log"
-                ? "Logs de export não são restauráveis"
-                : "Restore de clsconfig_file ainda não habilitado";
+            const restoreDisabled = !isRoleJson || !canRestore;
+            const tip = !canRestore
+              ? NO_RESTORE_TIP
+              : isRoleJson
+                ? "Restaurar este snapshot de role_json"
+                : b.type === "export_log"
+                  ? "Logs de export não são restauráveis"
+                  : "Restore de clsconfig_file ainda não habilitado";
             return (
               <tr key={`${b.file}-${i}`} className="hover:bg-muted/30">
                 <td className="px-3 py-2">
@@ -585,7 +598,7 @@ const VpsList = ({
                         onClick={() =>
                           isRoleJson ? onRestore(b) : onUnsupported(b.type)
                         }
-                        disabled={!isRoleJson}
+                        disabled={restoreDisabled}
                         loading={isLoading}
                         title={tip}
                       />
