@@ -645,6 +645,14 @@ export const ClsconfigEditor = ({ entry, allEntries = [], mode = "template", onS
               </label>
             )}
             <button
+              onClick={() => setKitsOpen(true)}
+              className="inline-flex items-center gap-2 rounded-md border border-border bg-card/60 px-3 py-2 text-xs transition-smooth hover:border-primary/50"
+              title="Kits iniciais por classe (localStorage)"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              Kits
+            </button>
+            <button
               onClick={() => setHistoryOpen(true)}
               className="inline-flex items-center gap-2 rounded-md border border-border bg-card/60 px-3 py-2 text-xs transition-smooth hover:border-primary/50"
               title="Histórico de backups role_json para este roleid"
