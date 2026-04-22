@@ -143,6 +143,14 @@ const Admin = () => {
                   Recarregar
                 </button>
               )}
+              <Link
+                to="/servers"
+                className="inline-flex items-center gap-2 rounded-md border border-border bg-card/60 px-3 py-2 text-xs transition-smooth hover:border-primary/50"
+                title="Meus servidores VPS"
+              >
+                <UsersIcon className="h-3.5 w-3.5" />
+                Servidores
+              </Link>
               {isSuperadmin && (
                 <Link
                   to="/admin/users"

@@ -19,7 +19,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+    "authorization, x-client-info, apikey, content-type, x-server-id, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
 };
 
@@ -99,51 +99,97 @@ Deno.serve(async (req: Request) => {
   const segments = url.pathname.split("/").filter(Boolean);
   const route = segments[segments.length - 1] || "";
 
-  // Resolução de credenciais por tenant (multi-tenant):
-  // 1. Lê o tenant do usuário logado (RLS garante que é o dele).
-  // 2. Se tem tenant com VPS configurada → usa as credenciais do tenant.
-  // 3. Senão (superadmin/owner sem tenant) → cai pro app_settings global.
+  // Header opcional: usuário pode escolher um tenant específico (mesmo que não seja o ativo).
+  // Validamos ownership antes de usar.
+  const requestedServerId = req.headers.get("x-server-id");
+
+  // Resolução de credenciais por tenant (multi-servidor):
+  // 1. Se x-server-id veio E pertence ao user → usa esse tenant.
+  // 2. Senão lê o tenant ATIVO do user (is_active=true).
+  // 3. Senão (superadmin sem tenant) → cai pro app_settings global.
   // 4. Último fallback: env vars.
   let PW_API_BASE_URL = Deno.env.get("PW_API_BASE_URL") ?? "";
   let PW_API_SECRET = Deno.env.get("PW_API_SECRET") ?? "";
-  let credSource: "tenant" | "app_settings" | "env" = "env";
-  try {
-    const SR_URL = Deno.env.get("SUPABASE_URL");
-    const SR_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    if (SR_URL && SR_KEY) {
-      const admin = createClient(SR_URL, SR_KEY, { auth: { persistSession: false } });
+  let credSource: "tenant_explicit" | "tenant_active" | "app_settings" | "env" = "env";
+  let resolvedTenantId: string | null = null;
+  const SR_URL = Deno.env.get("SUPABASE_URL");
+  const SR_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const admin =
+    SR_URL && SR_KEY
+      ? createClient(SR_URL, SR_KEY, { auth: { persistSession: false } })
+      : null;
 
-      // 1) Tenant do user logado
-      const { data: tenantRow } = await admin
-        .from("tenants")
-        .select("pw_api_base_url, pw_api_secret")
-        .eq("owner_id", callerUserId)
-        .maybeSingle();
-      if (tenantRow?.pw_api_base_url && tenantRow?.pw_api_secret) {
-        PW_API_BASE_URL = tenantRow.pw_api_base_url;
-        PW_API_SECRET = tenantRow.pw_api_secret;
-        credSource = "tenant";
-      } else {
-        // 2) Fallback global (superadmin sem tenant)
-        const { data: cfg } = await admin
-          .from("app_settings")
-          .select("pw_api_base_url, pw_api_secret")
-          .eq("id", 1)
+  try {
+    if (admin) {
+      // 1) Tenant explícito via header (validar ownership)
+      if (requestedServerId) {
+        const { data: tRow } = await admin
+          .from("tenants")
+          .select("id, owner_id, pw_api_base_url, pw_api_secret")
+          .eq("id", requestedServerId)
           .maybeSingle();
-        if (cfg?.pw_api_base_url) PW_API_BASE_URL = cfg.pw_api_base_url;
-        if (cfg?.pw_api_secret) PW_API_SECRET = cfg.pw_api_secret;
-        if (cfg?.pw_api_base_url || cfg?.pw_api_secret) credSource = "app_settings";
+        if (tRow && tRow.owner_id === callerUserId) {
+          PW_API_BASE_URL = tRow.pw_api_base_url ?? "";
+          PW_API_SECRET = tRow.pw_api_secret ?? "";
+          resolvedTenantId = tRow.id;
+          credSource = "tenant_explicit";
+        }
+      }
+
+      // 2) Tenant ativo do user
+      if (credSource === "env") {
+        const { data: tenantRow } = await admin
+          .from("tenants")
+          .select("id, pw_api_base_url, pw_api_secret")
+          .eq("owner_id", callerUserId)
+          .eq("is_active", true)
+          .maybeSingle();
+        if (tenantRow?.pw_api_base_url && tenantRow?.pw_api_secret) {
+          PW_API_BASE_URL = tenantRow.pw_api_base_url;
+          PW_API_SECRET = tenantRow.pw_api_secret;
+          resolvedTenantId = tenantRow.id;
+          credSource = "tenant_active";
+        } else {
+          // 3) Fallback global (superadmin sem tenant)
+          const { data: cfg } = await admin
+            .from("app_settings")
+            .select("pw_api_base_url, pw_api_secret")
+            .eq("id", 1)
+            .maybeSingle();
+          if (cfg?.pw_api_base_url) PW_API_BASE_URL = cfg.pw_api_base_url;
+          if (cfg?.pw_api_secret) PW_API_SECRET = cfg.pw_api_secret;
+          if (cfg?.pw_api_base_url || cfg?.pw_api_secret) credSource = "app_settings";
+        }
       }
     }
   } catch (e) {
     console.warn("[clsconfig-proxy] settings lookup failed, using env vars", e);
   }
-  console.log("[clsconfig-proxy] cred source:", credSource, "user:", callerUserId);
+  console.log("[clsconfig-proxy] cred source:", credSource, "user:", callerUserId, "tenant:", resolvedTenantId);
+
+  // Helper para gravar audit log de cada ação proxied (não-bloqueante).
+  const logAction = async (action: string, target: string, ok: boolean, httpStatus: number, error?: string) => {
+    if (!admin) return;
+    try {
+      await admin.from("audit_logs").insert({
+        user_id: callerUserId,
+        tenant_id: resolvedTenantId,
+        action,
+        target,
+        status: ok ? "ok" : "error",
+        http_status: httpStatus || null,
+        error: error ?? null,
+        metadata: { cred_source: credSource },
+      });
+    } catch (e) {
+      console.warn("[clsconfig-proxy] audit log failed:", e);
+    }
+  };
 
   if (!PW_API_BASE_URL || !PW_API_SECRET) {
     return new Response(
-      JSON.stringify({ success: false, error: "Missing PW_API_BASE_URL or PW_API_SECRET" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      JSON.stringify({ success: false, error: "Nenhum servidor configurado. Cadastre um servidor em 'Meus Servidores'." }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
 
@@ -176,7 +222,9 @@ Deno.serve(async (req: Request) => {
         method: "GET",
         headers: { Accept: "application/json", "x-sync-secret": PW_API_SECRET },
       });
-      return await relay(upstream);
+      const out = await relay(upstream);
+      void logAction("getClsconfig", target, out.status === 200, upstream.status);
+      return out;
     }
 
     if (req.method === "POST" && isClsRoute) {
@@ -221,7 +269,14 @@ Deno.serve(async (req: Request) => {
       const cloned = upstream.clone();
       const preview = (await cloned.text()).slice(0, 500);
       console.log("[clsconfig-proxy] upstream status:", upstream.status, "body:", preview);
-      return await relay(upstream);
+      const out = await relay(upstream);
+      void logAction(
+        hasFull ? "saveClsconfigTemplate" : hasStatus ? "saveStatus" : "saveInventory",
+        `${target} roleid=${String(b.roleid)}`,
+        out.status === 200,
+        upstream.status,
+      );
+      return out;
     }
 
     // ----- Nova rota /action/<name> com whitelist -----
@@ -259,7 +314,9 @@ Deno.serve(async (req: Request) => {
       console.log("[clsconfig-proxy] action →", action, "method:", req.method);
       const upstream = await fetch(target, init);
       console.log("[clsconfig-proxy] action status:", upstream.status);
-      return await relay(upstream);
+      const out = await relay(upstream);
+      void logAction(action, target, out.status === 200, upstream.status);
+      return out;
     }
 
     return new Response(
@@ -268,6 +325,7 @@ Deno.serve(async (req: Request) => {
     );
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
+    void logAction("error", url.pathname, false, 0, message);
     return new Response(JSON.stringify({ success: false, error: message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
