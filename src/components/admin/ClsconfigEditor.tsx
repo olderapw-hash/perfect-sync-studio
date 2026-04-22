@@ -37,7 +37,7 @@ import {
   SIMPLE_STATUS_FIELDS,
   type SimpleStatusField,
 } from "@/lib/clsconfig";
-import { validateTemplateItems } from "@/lib/validateItem";
+import { summarizeIssues, validateAllItems, type ItemIssue } from "@/lib/validateItem";
 import { saveHistory } from "@/lib/saveHistory";
 import { seenBackups } from "@/lib/seenBackups";
 import { buildClassIconUrl } from "@/lib/pwIcons";
@@ -140,16 +140,27 @@ export const ClsconfigEditor = ({ entry, allEntries = [], mode = "template", onS
     toast.info("Template restaurado para a versão original");
   };
 
-  /** Abre o diálogo de preview (validação acontece aqui — bloqueia se houver erro). */
+  /**
+   * Abre o diálogo de preview. A validação completa (inclusive avisos) é
+   * mostrada dentro do `SavePreviewDialog`. Aqui só bloqueamos a abertura
+   * quando há erros críticos/erros — avisos NÃO impedem abrir o preview,
+   * mas exigem confirmação extra antes do save.
+   */
   const handleSave = () => {
     if (saving) return;
-    const errs = validateTemplateItems(template);
-    if (errs.length > 0) {
-      // Mostra primeiros 3 erros no toast — resto vai pro console.
-      const head = errs.slice(0, 3).map((e) => "• " + e.message).join("\n");
-      const tail = errs.length > 3 ? `\n…e mais ${errs.length - 3} erro(s)` : "";
-      toast.error(`Validação falhou:\n${head}${tail}`, { duration: 8000 });
-      console.warn("[clsconfig] validação de itens →", errs);
+    const summary = summarizeIssues(validateAllItems(template));
+    if (summary.hasBlocking) {
+      const blocking = [...summary.criticals, ...summary.errors];
+      const head = blocking.slice(0, 3).map((e) => "• " + e.message).join("\n");
+      const tail = blocking.length > 3 ? `\n…e mais ${blocking.length - 3} erro(s)` : "";
+      toast.error(
+        `${blocking.length} erro(s) impedem salvar:\n${head}${tail}`,
+        { duration: 8000 },
+      );
+      console.warn("[clsconfig] validação de itens →", summary.issues);
+      // Tenta abrir a tab do primeiro problema pra ajudar a localizar.
+      const first = blocking[0];
+      if (first?.tab) setTab(first.tab as TabKey);
       return;
     }
     if (isRoleMode) {
@@ -158,6 +169,12 @@ export const ClsconfigEditor = ({ entry, allEntries = [], mode = "template", onS
       return;
     }
     setPreviewOpen(true);
+  };
+
+  /** Abre a tab correspondente ao issue clicado no painel de validação. */
+  const handleIssueClick = (issue: ItemIssue) => {
+    if (issue.tab) setTab(issue.tab as TabKey);
+    setPreviewOpen(false);
   };
 
   /** Disparado pelo modal de confirmação do modo "role" — abre o preview real. */
@@ -698,6 +715,7 @@ export const ClsconfigEditor = ({ entry, allEntries = [], mode = "template", onS
         saving={saving}
         onCancel={() => setPreviewOpen(false)}
         onConfirm={runSave}
+        onIssueClick={handleIssueClick}
       />
 
       <SaveChecklistDialog

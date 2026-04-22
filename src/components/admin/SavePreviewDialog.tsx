@@ -1,6 +1,9 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import type { ClsTemplate } from "@/types/clsconfig";
 import { Loader2, Save } from "lucide-react";
+import { useMemo, useState } from "react";
+import { summarizeIssues, validateAllItems, type ItemIssue } from "@/lib/validateItem";
+import { ValidationPanel } from "./ValidationPanel";
 
 interface Props {
   open: boolean;
@@ -8,15 +11,32 @@ interface Props {
   onCancel: () => void;
   onConfirm: () => void;
   saving?: boolean;
+  /** Callback opcional pro caller abrir o slot/tab correspondente. */
+  onIssueClick?: (issue: ItemIssue) => void;
 }
 
-export const SavePreviewDialog = ({ open, template, onCancel, onConfirm, saving }: Props) => {
+export const SavePreviewDialog = ({
+  open,
+  template,
+  onCancel,
+  onConfirm,
+  saving,
+  onIssueClick,
+}: Props) => {
   const filled = (arr: { id: number }[]) => arr.filter((i) => i.id > 0).length;
   const className = template.summary.class_name ?? `Classe ${template.summary.cls}`;
   const s = template.status;
   const inv = template.inventory;
   const eq = template.equipment;
   const sh = template.storehouse;
+
+  const summary = useMemo(() => summarizeIssues(validateAllItems(template)), [template]);
+  // Avisos requerem confirmação extra antes do save.
+  const [warningsAck, setWarningsAck] = useState(false);
+
+  const blocked = summary.hasBlocking;
+  const needsAck = !blocked && summary.warnings.length > 0;
+  const canConfirm = !saving && !blocked && (!needsAck || warningsAck);
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && !saving && onCancel()}>
@@ -25,7 +45,9 @@ export const SavePreviewDialog = ({ open, template, onCancel, onConfirm, saving 
           <DialogTitle>Revisar antes de salvar</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 text-sm">
+        <div className="max-h-[60vh] space-y-4 overflow-y-auto pr-1 text-sm">
+          <ValidationPanel summary={summary} onIssueClick={onIssueClick} />
+
           <Section title="Identidade">
             <Row label="Classe" value={`${className} (cls ${template.summary.cls})`} />
             <Row label="Roleid" value={template.roleid || "—"} mono />
@@ -57,6 +79,21 @@ export const SavePreviewDialog = ({ open, template, onCancel, onConfirm, saving 
               mono
             />
           </Section>
+
+          {needsAck && (
+            <label className="flex items-start gap-2 rounded-md border border-yellow-500/40 bg-yellow-500/5 p-2 text-xs">
+              <input
+                type="checkbox"
+                checked={warningsAck}
+                onChange={(e) => setWarningsAck(e.target.checked)}
+                className="mt-0.5 accent-yellow-500"
+              />
+              <span>
+                Estou ciente dos {summary.warnings.length} aviso(s) acima e quero salvar
+                mesmo assim.
+              </span>
+            </label>
+          )}
         </div>
 
         <DialogFooter className="gap-2 border-t border-border pt-3">
@@ -71,7 +108,14 @@ export const SavePreviewDialog = ({ open, template, onCancel, onConfirm, saving 
           <button
             type="button"
             onClick={onConfirm}
-            disabled={saving}
+            disabled={!canConfirm}
+            title={
+              blocked
+                ? `${summary.errors.length + summary.criticals.length} erro(s) impedem salvar`
+                : needsAck && !warningsAck
+                ? "Confirme os avisos para prosseguir"
+                : undefined
+            }
             className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-glow transition-smooth hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
@@ -96,3 +140,4 @@ const Row = ({ label, value, mono }: { label: string; value: React.ReactNode; mo
     <span className={mono ? "font-mono text-sm" : "text-sm"}>{value}</span>
   </div>
 );
+
