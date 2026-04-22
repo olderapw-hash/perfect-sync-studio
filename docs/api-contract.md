@@ -54,7 +54,48 @@ Campos obrigatórios: `id`, `name`. Os demais são best-effort.
 
 ---
 
+## 1.b `GET ?action=listBackups` — feature 5 (Listagem de backups)
+
+Lista todos os backups existentes em `backups/clsconfig/...` (gerados
+automaticamente por `saveClsconfigTemplate`).
+
+**Query params opcionais:**
+
+| Param   | Tipo | Default | Descrição                              |
+|---------|------|---------|----------------------------------------|
+| `roleid`| int  | —       | Filtra apenas backups deste roleid.    |
+
+**Response 200:**
+
+```json
+{
+  "success": true,
+  "backups": [
+    {
+      "roleid": 31,
+      "type": "role_json",
+      "file": "/var/www/html/apicls/backups/clsconfig/roleid-31-20260422-002129-2d3bea53.json",
+      "created_at": 1761091289,
+      "size": 41523
+    },
+    {
+      "roleid": 31,
+      "type": "clsconfig_file",
+      "file": "/var/www/html/apicls/backups/clsconfig/files/clsconfig-roleid-31-20260422-002129-34ced325",
+      "created_at": 1761091289,
+      "size": 2048
+    }
+  ]
+}
+```
+
+`type` deve ser `"role_json"` ou `"clsconfig_file"`. `created_at` é epoch
+em segundos. `size` em bytes (best-effort).
+
+---
+
 ## 2. `POST ?action=restoreBackup` — feature 5 (Restaurar)
+
 
 Restaura um backup criado por `saveClsconfigTemplate`. O endpoint atual já
 gera os arquivos em `backups/clsconfig/...` — esta rota faz o caminho inverso.

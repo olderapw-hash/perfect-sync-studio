@@ -26,6 +26,7 @@ import {
 } from "@/lib/clsconfig";
 import { validateTemplateItems } from "@/lib/validateItem";
 import { saveHistory } from "@/lib/saveHistory";
+import { seenBackups } from "@/lib/seenBackups";
 import { buildClassIconUrl } from "@/lib/pwIcons";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -280,6 +281,10 @@ export const ClsconfigEditor = ({ entry, allEntries = [] }: Props) => {
       const exportScheduled =
         extractAny(lastResponse, ["saved", "export", "scheduled"]) === true ||
         Boolean(exportLogFile);
+
+      // Registra os backups gerados nesta sessão (alimenta a aba "Backups").
+      seenBackups.add(savedRoleid, "role_json", backupRoleJson);
+      seenBackups.add(savedRoleid, "clsconfig_file", backupClsconfigFile);
 
       setPreviewOpen(false);
       setChecklistResult({
