@@ -19,20 +19,42 @@ export interface ItemCatalogResponse {
   error?: string;
 }
 
+/** Tipo de backup retornado pela VPS. `export_log` é o log do exportClsconfig. */
+export type BackupKind = "role_json" | "clsconfig_file" | "export_log";
+
 export interface BackupRecord {
-  roleid: number;
-  type: "role_json" | "clsconfig_file";
+  /** roleid pode não vir em alguns logs de export — opcional. */
+  roleid?: number;
+  type: BackupKind;
   file: string;
   /** epoch seconds */
   created_at?: number;
   size?: number;
 }
 
+/**
+ * Resposta REAL do endpoint na VPS:
+ * {
+ *   success: true,
+ *   backups: {
+ *     role_json: BackupRecord[],
+ *     clsconfig_files: BackupRecord[],
+ *     export_logs: BackupRecord[],
+ *     all: BackupRecord[]   // união ordenada por created_at desc
+ *   }
+ * }
+ */
 export interface ListBackupsResponse {
   success: boolean;
-  backups: BackupRecord[];
+  backups: {
+    role_json?: BackupRecord[];
+    clsconfig_files?: BackupRecord[];
+    export_logs?: BackupRecord[];
+    all?: BackupRecord[];
+  };
   error?: string;
 }
+
 
 export interface RestoreBackupResponse {
   success: boolean;
@@ -94,11 +116,20 @@ async function callAction<T>(
       try { extra = await ctx.text(); } catch { /* ignore */ }
     }
     if (status === 404) throw new EndpointMissingError(action);
+    // VPS retorna 400 com {"error":"Acao invalida. Use: ..."} quando a action
+    // não existe no PHP. Detectamos isso e convertemos pra EndpointMissingError.
+    if (status === 400 && /acao\s+invalida|a[cç][aã]o\s+inv[aá]lida|unknown\s+action/i.test(extra)) {
+      throw new EndpointMissingError(action);
+    }
     throw new Error(extra ? `${error.message}\n\n${extra}` : error.message);
   }
-  if (data && typeof data === "object" && (data as { success?: boolean }).success === false) {
-    const err = (data as { error?: string }).error ?? "";
-    if (/not\s+found|unknown\s+action|n[ãa]o\s+encontrad/i.test(err)) {
+  // Resposta 2xx mas com {error:"..."} no corpo (sem success:false).
+  if (data && typeof data === "object") {
+    const d = data as { success?: boolean; error?: string };
+    const err = d.error ?? "";
+    const explicitFail = d.success === false;
+    const looksMissing = /not\s+found|unknown\s+action|n[ãa]o\s+encontrad|acao\s+invalida|a[cç][aã]o\s+inv[aá]lida/i.test(err);
+    if ((explicitFail || err) && looksMissing) {
       throw new EndpointMissingError(action);
     }
   }
@@ -113,9 +144,10 @@ export const pwApi = {
     if (params.offset != null) query.offset = params.offset;
     return callAction<ItemCatalogResponse>("getItemCatalog", { method: "GET", query });
   },
-  listBackups(params: { roleid?: number } = {}) {
+  listBackups(params: { roleid?: number; limit?: number } = {}) {
     const query: Record<string, string | number> = {};
     if (params.roleid != null) query.roleid = params.roleid;
+    if (params.limit != null) query.limit = params.limit;
     return callAction<ListBackupsResponse>("listBackups", { method: "GET", query });
   },
   restoreBackup(body: {
