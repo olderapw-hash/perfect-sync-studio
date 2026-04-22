@@ -493,6 +493,51 @@ export const EquipmentTab = ({ template, onChange }: Props) => {
         </DialogContent>
       </Dialog>
 
+      {/* Editor para slot de Roupa (storehouse.dress) */}
+      <Dialog
+        open={dressEditingIdx != null}
+        onOpenChange={(o) => !o && setDressEditingIdx(null)}
+      >
+        <DialogContent className="max-w-xl border-border bg-card">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between gap-2">
+              <span>
+                Editar roupa — slot {dressEditingIdx}
+                <span className="ml-2 text-xs font-normal text-muted-foreground">
+                  (storehouse.dress)
+                </span>
+              </span>
+              {dressEditingIdx != null && (dressSlots[dressEditingIdx]?.id ?? 0) > 0 && (
+                <button
+                  type="button"
+                  onClick={() => removeDressAt(dressEditingIdx)}
+                  className="inline-flex items-center gap-1 rounded-md border border-border bg-card/60 px-2 py-1 text-xs text-destructive transition-smooth hover:border-destructive/50"
+                >
+                  <X className="h-3 w-3" />
+                  Esvaziar
+                </button>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          {dressEditingIdx != null && (
+            <ItemEditor
+              item={dressSlots[dressEditingIdx]}
+              onChange={(next) => updateDressAt(dressEditingIdx, next)}
+              onRemove={() => removeDressAt(dressEditingIdx)}
+            />
+          )}
+          <div className="flex justify-end gap-2 border-t border-border pt-3">
+            <button
+              type="button"
+              onClick={() => setDressEditingIdx(null)}
+              className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-glow transition-smooth hover:brightness-110"
+            >
+              Fechar
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <WarAvatarPicker
         open={pickerPos != null}
         onClose={() => setPickerPos(null)}
