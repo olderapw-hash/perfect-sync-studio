@@ -176,7 +176,7 @@ export const ItemCatalogManager = () => {
       let failed = 0;
       if (iconFiles.length > 0) {
         const prefix = iconsPrefix.replace(/\/+$/, "") + "/";
-        setProgress({ done: 0, total: iconFiles.length });
+        setProgress({ label: "Enviando ícones", done: 0, total: iconFiles.length });
         const concurrency = 6;
         let done = 0;
         const queue = [...iconFiles];
