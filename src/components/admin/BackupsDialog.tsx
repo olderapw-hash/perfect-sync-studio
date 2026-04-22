@@ -329,10 +329,11 @@ export const BackupsDialog = ({ open, onOpenChange, onRestored }: Props) => {
                 {restore.phase === "confirm" && (
                   <>
                     <p>
-                      Isso vai restaurar o template do{" "}
-                      <strong>roleid {restore.dry.roleid ?? restore.backup.roleid ?? "?"}</strong>{" "}
-                      no <code className="font-mono">gamedbd</code> e agendar{" "}
-                      <code className="font-mono">exportclsconfig</code>. Continuar?
+                      Restaurar backup do{" "}
+                      <strong>roleid {restore.dry.roleid ?? restore.backup.roleid ?? "?"}</strong>?
+                      Isso vai aplicar o JSON no{" "}
+                      <code className="font-mono">gamedbd</code>, criar novo backup de segurança e
+                      agendar <code className="font-mono">exportclsconfig</code>.
                     </p>
                     <div className="rounded-md border border-border bg-muted/40 p-3 text-xs">
                       <div className="font-semibold text-foreground">Backup escolhido:</div>
