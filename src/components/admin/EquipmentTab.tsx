@@ -131,10 +131,10 @@ export const EquipmentTab = ({ template, onChange }: Props) => {
   return (
     <div className="space-y-3">
       {/* Painel principal estilo cliente PW BR */}
-      <div className="mx-auto w-full max-w-[420px]">
+      <div className="mx-auto w-full max-w-[480px]">
         {/* Cantoneiras + barra de progresso superior */}
         <div
-          className="relative rounded-md p-3 pt-5"
+          className="relative rounded-md p-3 pt-7"
           style={{
             background:
               "linear-gradient(180deg, hsl(195 30% 12%) 0%, hsl(205 35% 7%) 100%)",
@@ -142,69 +142,152 @@ export const EquipmentTab = ({ template, onChange }: Props) => {
               "inset 0 0 0 1px hsl(195 60% 35%), 0 0 0 1px hsl(0 0% 0%), inset 0 0 24px hsl(0 0% 0% / 0.6)",
           }}
         >
-          {/* Barra de progresso topo */}
-          <div className="absolute -top-2 left-1/2 -translate-x-1/2">
+          {/* Cabeçalho com título "Inventário" e abas Normal/Roupas/Provador */}
+          <div className="absolute -top-3 left-0 right-0 flex items-center justify-center">
             <div
-              className="flex h-5 w-44 items-center justify-center rounded-full px-3"
+              className="rounded-t-md px-6 py-1 text-[12px] font-bold tracking-widest text-amber-100"
               style={{
                 background:
-                  "linear-gradient(180deg, hsl(40 35% 92%) 0%, hsl(40 25% 70%) 100%)",
-                boxShadow:
-                  "inset 0 0 0 1px hsl(40 60% 30%), 0 1px 3px hsl(0 0% 0% / 0.6)",
+                  "linear-gradient(180deg, hsl(40 30% 28%) 0%, hsl(35 35% 18%) 100%)",
+                boxShadow: "inset 0 0 0 1px hsl(40 60% 45%)",
               }}
             >
-              <span className="font-mono text-[11px] font-bold text-amber-950">
-                {progress.toFixed(1)}%
-              </span>
+              INVENTÁRIO
             </div>
           </div>
 
-          {/* Paper-doll */}
+          <div className="mb-3 flex items-center justify-center gap-2">
+            {(["normal", "roupas", "provador"] as InvTab[]).map((t) => {
+              const active = invTab === t;
+              return (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setInvTab(t)}
+                  className="rounded-full px-4 py-1 text-[11px] font-bold uppercase tracking-wider transition-smooth"
+                  style={
+                    active
+                      ? {
+                          background:
+                            "linear-gradient(180deg, hsl(40 35% 75%) 0%, hsl(40 30% 55%) 100%)",
+                          color: "hsl(20 50% 15%)",
+                          boxShadow:
+                            "inset 0 0 0 1px hsl(40 60% 35%), 0 1px 3px hsl(0 0% 0% / 0.5)",
+                        }
+                      : {
+                          background:
+                            "linear-gradient(180deg, hsl(35 18% 22%) 0%, hsl(20 15% 12%) 100%)",
+                          color: "hsl(40 25% 65%)",
+                          boxShadow: "inset 0 0 0 1px hsl(40 30% 25%)",
+                        }
+                  }
+                >
+                  {t === "normal" ? "Normal" : t === "roupas" ? "Roupas" : "Provador"}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Mini barra de % à esquerda */}
+          <div className="mb-2 flex items-center gap-2">
+            <div className="h-6 w-6 rounded-sm bg-amber-700/30 ring-1 ring-amber-500/40" />
+            <div className="flex-1">
+              <div className="h-2 overflow-hidden rounded-full bg-black/40 ring-1 ring-amber-700/40">
+                <div
+                  className="h-full"
+                  style={{
+                    width: `${progress}%`,
+                    background:
+                      "linear-gradient(90deg, hsl(40 80% 55%) 0%, hsl(35 90% 65%) 100%)",
+                  }}
+                />
+              </div>
+            </div>
+            <span className="font-mono text-[11px] font-bold text-amber-100">
+              {progress.toFixed(1)}%
+            </span>
+          </div>
+
+          {/* Paper-doll: col esquerda · silhueta · col direita */}
           <div
-            className="relative mt-2 grid w-full gap-2 rounded-sm p-3"
+            className="relative rounded-sm p-3"
             style={{
-              gridTemplateColumns: "repeat(5, 1fr)",
-              gridTemplateRows: "repeat(6, auto)",
               background:
                 "radial-gradient(ellipse at center, hsl(35 18% 22%) 0%, hsl(20 15% 8%) 80%)",
               boxShadow:
                 "inset 0 0 0 1px hsl(40 50% 35%), inset 0 0 32px hsl(0 0% 0% / 0.85)",
             }}
           >
-            {/* Silhueta de fundo */}
             <div
-              aria-hidden
-              className="pointer-events-none absolute inset-0 flex items-center justify-center"
+              className="grid items-center gap-2"
+              style={{ gridTemplateColumns: "auto 1fr auto" }}
             >
-              <svg
-                viewBox="0 0 100 200"
-                className="h-[88%] w-auto opacity-[0.18]"
-                fill="hsl(40 40% 50%)"
-              >
-                <circle cx="50" cy="22" r="14" />
-                <path d="M30 40 L70 40 L78 100 L66 130 L60 180 L40 180 L34 130 L22 100 Z" />
-                <path d="M22 100 L8 60 L4 70 L18 110 Z" />
-                <path d="M78 100 L92 60 L96 70 L82 110 Z" />
-              </svg>
+              {/* Col esquerda */}
+              <div className="flex flex-col gap-2">
+                {LEFT_SLOTS.map((s) => {
+                  const it = byPos.get(s.pos) ?? newEmptyItem(s.pos);
+                  return (
+                    <ItemSlot
+                      key={s.pos}
+                      item={it}
+                      onClick={() => openSlot(s.pos)}
+                      size={48}
+                      emptyLabel={s.label}
+                    />
+                  );
+                })}
+              </div>
+
+              {/* Silhueta central */}
+              <div className="relative flex items-center justify-center self-stretch">
+                <svg
+                  viewBox="0 0 100 200"
+                  className="h-full max-h-[230px] w-auto opacity-40"
+                  fill="none"
+                  stroke="hsl(40 60% 55%)"
+                  strokeWidth="1.5"
+                >
+                  <circle cx="50" cy="22" r="14" />
+                  <path d="M30 40 L70 40 L78 100 L66 130 L60 180 L40 180 L34 130 L22 100 Z" />
+                  <path d="M22 100 L8 60 L4 70 L18 110 Z" />
+                  <path d="M78 100 L92 60 L96 70 L82 110 Z" />
+                  <path d="M40 180 L36 195 L46 195 Z" />
+                  <path d="M60 180 L64 195 L54 195 Z" />
+                </svg>
+              </div>
+
+              {/* Col direita */}
+              <div className="flex flex-col gap-2">
+                {RIGHT_SLOTS.map((s) => {
+                  const it = byPos.get(s.pos) ?? newEmptyItem(s.pos);
+                  return (
+                    <ItemSlot
+                      key={s.pos}
+                      item={it}
+                      onClick={() => openSlot(s.pos)}
+                      size={48}
+                      emptyLabel={s.label}
+                    />
+                  );
+                })}
+              </div>
             </div>
 
-            {SLOTS.map((s) => {
-              const it = byPos.get(s.pos) ?? newEmptyItem(s.pos);
-              return (
-                <div
-                  key={s.pos}
-                  style={{ gridColumn: s.col, gridRow: s.row }}
-                  className="relative z-10 flex items-center justify-center"
-                >
+            {/* Linha inferior centralizada (Arma · Botas · Sub-arma · Anel E · Pet · Anel D) */}
+            <div className="mt-3 flex items-center justify-center gap-2">
+              {BOTTOM_SLOTS.map((s) => {
+                const it = byPos.get(s.pos) ?? newEmptyItem(s.pos);
+                return (
                   <ItemSlot
+                    key={s.pos}
                     item={it}
                     onClick={() => openSlot(s.pos)}
-                    size={48}
+                    size={42}
                     emptyLabel={s.label}
                   />
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
 
           {/* Bloco "Líderes" — 6 cards com nv. 0 + linha de necessários e S+ bônus */}
