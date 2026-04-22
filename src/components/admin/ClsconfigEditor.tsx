@@ -503,7 +503,7 @@ export const ClsconfigEditor = ({ entry, allEntries = [], mode = "template", onS
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Erro desconhecido ao salvar";
       console.error("[clsconfig] save error →", e);
-      if (!handleMaybeAuthError(e)) toast.error(msg);
+      if (!handleMaybeAuthError(e) && !handleMaybeForbiddenError(e)) toast.error(msg);
       saveHistory.pushDiff({
         roleid: entry.template.roleid,
         className: template.summary.class_name ?? `Classe ${template.summary.cls}`,
