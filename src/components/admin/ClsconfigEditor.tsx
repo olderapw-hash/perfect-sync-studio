@@ -565,32 +565,56 @@ export const ClsconfigEditor = ({ entry, allEntries = [], mode = "template", onS
                 Alterações não salvas
               </span>
             )}
-            <button
-              onClick={() => setPresetsOpen(true)}
-              className="inline-flex items-center gap-2 rounded-md border border-border bg-card/60 px-3 py-2 text-xs transition-smooth hover:border-primary/50"
-              title="Salvar/aplicar presets locais"
-            >
-              <Bookmark className="h-3.5 w-3.5" />
-              Presets
-            </button>
-            <button
-              onClick={() => setCompareOpen(true)}
-              disabled={allEntries.length < 2}
-              className="inline-flex items-center gap-2 rounded-md border border-border bg-card/60 px-3 py-2 text-xs transition-smooth hover:border-primary/50 disabled:opacity-50"
-              title="Comparar com outro CLS"
-            >
-              <ArrowRightLeft className="h-3.5 w-3.5" />
-              Comparar
-            </button>
-            <button
-              onClick={() => setBulkOpen(true)}
-              disabled={!dirty || allEntries.length < 2}
-              className="inline-flex items-center gap-2 rounded-md border border-border bg-card/60 px-3 py-2 text-xs transition-smooth hover:border-primary/50 disabled:opacity-50"
-              title="Aplicar mudanças em outros roleids"
-            >
-              <Send className="h-3.5 w-3.5" />
-              Aplicar em massa
-            </button>
+            {isRoleMode && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-destructive/15 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-destructive">
+                <UserCog className="h-3 w-3" />
+                Modo personagem real
+              </span>
+            )}
+            {!isRoleMode && (
+              <>
+                <button
+                  onClick={() => setPresetsOpen(true)}
+                  className="inline-flex items-center gap-2 rounded-md border border-border bg-card/60 px-3 py-2 text-xs transition-smooth hover:border-primary/50"
+                  title="Salvar/aplicar presets locais"
+                >
+                  <Bookmark className="h-3.5 w-3.5" />
+                  Presets
+                </button>
+                <button
+                  onClick={() => setCompareOpen(true)}
+                  disabled={allEntries.length < 2}
+                  className="inline-flex items-center gap-2 rounded-md border border-border bg-card/60 px-3 py-2 text-xs transition-smooth hover:border-primary/50 disabled:opacity-50"
+                  title="Comparar com outro CLS"
+                >
+                  <ArrowRightLeft className="h-3.5 w-3.5" />
+                  Comparar
+                </button>
+                <button
+                  onClick={() => setBulkOpen(true)}
+                  disabled={!dirty || allEntries.length < 2}
+                  className="inline-flex items-center gap-2 rounded-md border border-border bg-card/60 px-3 py-2 text-xs transition-smooth hover:border-primary/50 disabled:opacity-50"
+                  title="Aplicar mudanças em outros roleids"
+                >
+                  <Send className="h-3.5 w-3.5" />
+                  Aplicar em massa
+                </button>
+              </>
+            )}
+            {isRoleMode && (
+              <label
+                className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card/60 px-3 py-2 text-[11px] text-muted-foreground"
+                title="Por padrão NÃO disparamos exportclsconfig em personagem real."
+              >
+                <input
+                  type="checkbox"
+                  checked={exportClsconfigForRole}
+                  onChange={(e) => setExportClsconfigForRole(e.target.checked)}
+                  className="h-3.5 w-3.5 accent-destructive"
+                />
+                Disparar exportclsconfig (avançado)
+              </label>
+            )}
             <button
               onClick={handleReset}
               disabled={!dirty}
@@ -602,10 +626,15 @@ export const ClsconfigEditor = ({ entry, allEntries = [], mode = "template", onS
             <button
               onClick={handleSave}
               disabled={saving || !dirty}
-              className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-glow transition-smooth hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+              className={cn(
+                "inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-semibold shadow-glow transition-smooth hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50",
+                isRoleMode
+                  ? "bg-destructive text-destructive-foreground"
+                  : "bg-primary text-primary-foreground",
+              )}
             >
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-              {saving ? "Salvando..." : "Salvar"}
+              {saving ? "Salvando..." : isRoleMode ? "Salvar no personagem real" : "Salvar"}
             </button>
           </div>
         </div>
