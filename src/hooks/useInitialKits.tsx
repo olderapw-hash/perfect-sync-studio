@@ -388,6 +388,7 @@ export function useInitialKits({ tenantId }: UseInitialKitsOptions): UseInitialK
     refetch,
     createKit,
     updateKit,
+    updateKitPayload,
     deleteKit,
     duplicateKit,
     importKit,
