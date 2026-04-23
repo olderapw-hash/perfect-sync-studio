@@ -45,19 +45,26 @@ const RolesHistoryPage = () => {
                 key={e.id}
                 className={cn(
                   "rounded-lg border border-border bg-card/60 p-3 text-xs",
+                  e.status === "error" && "border-destructive/40",
                 )}
               >
                 <div className="flex items-center justify-between gap-2">
                   <span className="font-semibold text-foreground">
-                    {e.label}
+                    {e.className}{" "}
+                    <span className="font-mono text-muted-foreground">
+                      · {e.field}
+                    </span>
                   </span>
                   <time className="font-mono text-[10px] text-muted-foreground">
-                    {new Date(e.timestamp).toLocaleString("pt-BR")}
+                    {new Date(e.ts).toLocaleString("pt-BR")}
                   </time>
                 </div>
-                {e.target && (
-                  <div className="mt-1 font-mono text-[11px] text-muted-foreground">
-                    {e.target}
+                <div className="mt-1 font-mono text-[11px] text-muted-foreground">
+                  roleid {e.roleid} · {e.oldValue || "—"} → {e.newValue || "—"}
+                </div>
+                {e.error && (
+                  <div className="mt-1 text-[11px] text-destructive">
+                    {e.error}
                   </div>
                 )}
               </li>

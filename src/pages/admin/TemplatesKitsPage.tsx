@@ -15,7 +15,6 @@ import { Link } from "react-router-dom";
 import { useServerPermissions } from "@/hooks/useServerPermissions";
 import { useInitialKits } from "@/hooks/useInitialKits";
 import { countKitItems } from "@/lib/initialKits";
-import { getClassInfo } from "@/lib/pwClasses";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -95,8 +94,10 @@ const TemplatesKitsPage = () => {
         ) : (
           <div className="grid gap-3 sm:grid-cols-2">
             {sorted.map((k) => {
-              const cls =
-                k.target_cls != null ? getClassInfo(k.target_cls) : null;
+              // pwClasses.getClassInfo(race, cls) — sem race, mostramos só
+              // o número da classe.
+              const clsLabel =
+                k.target_cls != null ? `cls ${k.target_cls}` : null;
               return (
                 <div
                   key={k.id}
@@ -116,9 +117,9 @@ const TemplatesKitsPage = () => {
                         </p>
                       )}
                       <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[10px]">
-                        {cls && (
+                        {clsLabel && (
                           <span className="rounded bg-primary/10 px-1.5 py-0.5 font-mono text-primary">
-                            {cls.name}
+                            {clsLabel}
                           </span>
                         )}
                         {k.visibility && (
