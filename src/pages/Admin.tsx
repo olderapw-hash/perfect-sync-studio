@@ -27,7 +27,7 @@ import { ItemCatalogManager } from "@/components/admin/ItemCatalogManager";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { HistoryDrawer } from "@/components/admin/HistoryDrawer";
 import { BackupsDialog } from "@/components/admin/BackupsDialog";
-import { ItemCatalogSearchDialog } from "@/components/admin/ItemCatalogSearchDialog";
+import { ItemCatalogAdvancedDialog } from "@/components/admin/ItemCatalogAdvancedDialog";
 import { RolePersonagemTab } from "@/components/admin/RolePersonagemTab";
 import { ClassPhotosTab } from "@/components/admin/ClassPhotosTab";
 import { SettingsTab } from "@/components/admin/SettingsTab";
@@ -273,7 +273,7 @@ const Admin = () => {
       </div>
 
       <BackupsDialog open={backupsOpen} onOpenChange={setBackupsOpen} onRestored={reload} />
-      <ItemCatalogSearchDialog open={searchItemOpen} onOpenChange={setSearchItemOpen} />
+      <ItemCatalogAdvancedDialog open={searchItemOpen} onOpenChange={setSearchItemOpen} />
     </SidebarProvider>
   );
 };

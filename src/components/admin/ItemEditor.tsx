@@ -8,6 +8,7 @@ import {
   Sparkles,
   Files,
   Move,
+  Search,
 } from "lucide-react";
 import type { ClsItem } from "@/types/clsconfig";
 import {
@@ -48,6 +49,8 @@ import {
   stringifyItem,
 } from "@/lib/itemTools";
 import { summarizeIssues, validateItems } from "@/lib/validateItem";
+import { ItemCatalogAdvancedDialog } from "./ItemCatalogAdvancedDialog";
+import type { InsertResult } from "./ItemInsertModal";
 
 interface Props {
   item: ClsItem;
@@ -78,6 +81,7 @@ export const ItemEditor = ({
   const [pickerDest, setPickerDest] = useState<string>("");
   const [pasteOpen, setPasteOpen] = useState(false);
   const [pasteText, setPasteText] = useState("");
+  const [catalogOpen, setCatalogOpen] = useState(false);
   const [collisionConfirm, setCollisionConfirm] = useState<{
     mode: "duplicate" | "move" | "paste";
     incoming: ClsItem;
@@ -288,6 +292,10 @@ export const ItemEditor = ({
                 <ClipboardPaste className="mr-2 h-3.5 w-3.5" />
                 Colar JSON
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setCatalogOpen(true)}>
+                <Search className="mr-2 h-3.5 w-3.5" />
+                Buscar no catálogo
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleNormalize}>
                 <Sparkles className="mr-2 h-3.5 w-3.5" />
@@ -456,6 +464,26 @@ export const ItemEditor = ({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* ─── Catálogo avançado: preenche o slot atual ─── */}
+      <ItemCatalogAdvancedDialog
+        open={catalogOpen}
+        onOpenChange={setCatalogOpen}
+        contexts={{
+          "inventory.items": {
+            // Apenas o slot atual — força a inserção a manter o pos.
+            items: peerItems ?? [item],
+            capacity: totalSlots,
+          },
+        }}
+        defaultDestination="inventory.items"
+        onInsert={(res: InsertResult) => {
+          // Sempre força para o pos do slot que disparou o catálogo.
+          const next: ClsItem = { ...res.item, pos: item.pos };
+          onChange(next);
+          toast.success(`Item ${next.id} aplicado no slot ${item.pos}`);
+        }}
+      />
     </div>
   );
 };
