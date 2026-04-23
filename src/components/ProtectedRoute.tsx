@@ -59,7 +59,9 @@ export const ProtectedRoute = ({
     return <Navigate to="/auth" replace />;
   }
 
-  if (requireAdmin && !isAdmin) {
+  // Acesso ao painel: admin global OU membro de algum servidor (convidado aceito).
+  const canEnterAdmin = isAdmin || isServerMember === true;
+  if (requireAdmin && !canEnterAdmin) {
     const hasPending = pendingInvites.length > 0;
     return (
       <div className="flex h-screen items-center justify-center bg-hero p-4">
