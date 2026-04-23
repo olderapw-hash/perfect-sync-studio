@@ -229,7 +229,11 @@ export const EquipmentTab = ({ template, onChange }: Props) => {
     photo.reload();
   };
 
-  /** Renderiza um slot equipamento com label PW BR acima. */
+  /**
+   * Renderiza um slot equipamento com label PW BR acima.
+   * IMPORTANTE: lookup é SEMPRE por `pos` real (Map by-pos). Nunca por índice.
+   * Em dev, mostra o "pos X" abaixo pra ajudar a depurar mapeamento.
+   */
   const LabeledSlot = ({ pos, label, size = 44 }: { pos: number; label: string; size?: number }) => {
     const it = byPos.get(pos) ?? newEmptyItem(pos);
     return (
@@ -256,6 +260,14 @@ export const EquipmentTab = ({ template, onChange }: Props) => {
             emptyLabel=""
           />
         </div>
+        {import.meta.env.DEV && (
+          <span
+            className="font-mono text-[8px] leading-none opacity-60"
+            style={{ color: "hsl(40 35% 55%)" }}
+          >
+            pos {pos}
+          </span>
+        )}
       </div>
     );
   };
