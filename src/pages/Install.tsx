@@ -143,13 +143,16 @@ const Install = () => {
   }, [selected]);
 
   const apiUrl = expectedApiUrl(selected?.pw_api_base_url);
-  const ip = extractIp(selected?.pw_api_base_url);
-  const secretToken = secret ?? "<SECRET_DO_SERVIDOR>";
+  // Sempre usamos placeholders fictícios no comando exibido — o IP e o secret
+  // reais do servidor nunca aparecem no método recomendado, para evitar
+  // vazamento ao copiar/compartilhar a tela.
+  const ipPlaceholder = "IP_DA_VPS";
+  const secretPlaceholder = "SEU_SECRET";
 
   const installCommand = [
-    `scp api_cls.php root@${ip}:/root/api_cls.php`,
-    `scp install-apicls-centos7.sh root@${ip}:/root/install-apicls-centos7.sh`,
-    `ssh root@${ip} "bash /root/install-apicls-centos7.sh --secret ${secretToken} --api-src /root/api_cls.php"`,
+    `scp api_cls.php root@${ipPlaceholder}:/root/api_cls.php`,
+    `scp install-apicls-centos7.sh root@${ipPlaceholder}:/root/install-apicls-centos7.sh`,
+    `ssh root@${ipPlaceholder} "bash /root/install-apicls-centos7.sh --secret ${secretPlaceholder} --api-src /root/api_cls.php"`,
   ].join("\n");
 
   const handleDownload = (file: InstallerFile) => {
