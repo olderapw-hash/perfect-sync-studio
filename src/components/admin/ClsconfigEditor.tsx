@@ -65,6 +65,7 @@ import { CompareClsDialog } from "./CompareClsDialog";
 import { RoleidHistoryDialog } from "./RoleidHistoryDialog";
 import { InitialKitsDialog } from "./InitialKitsDialog";
 import { useTenant } from "@/hooks/useTenant";
+import { useCharacterPhoto } from "@/hooks/useCharacterPhoto";
 
 /**
  * Modo de operação:
