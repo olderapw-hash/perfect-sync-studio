@@ -493,6 +493,18 @@ export type Database = {
         Args: { _tenant_id: string; _user_id: string }
         Returns: boolean
       }
+      log_audit_event: {
+        Args: {
+          _action: string
+          _error?: string
+          _http_status?: number
+          _metadata?: Json
+          _status?: string
+          _target?: string
+          _tenant_id?: string
+        }
+        Returns: string
+      }
       set_active_tenant: {
         Args: { target_tenant_id: string }
         Returns: undefined
