@@ -21,6 +21,7 @@ import { useClsconfig } from "@/hooks/useClsconfig";
 import { useAuth } from "@/hooks/useAuth";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useServerPermissions } from "@/hooks/useServerPermissions";
+import { useServers } from "@/hooks/useServers";
 import { PendingInvitesBanner } from "@/components/PendingInvitesBanner";
 import { ClsconfigEditor } from "@/components/admin/ClsconfigEditor";
 import { ItemCatalogManager } from "@/components/admin/ItemCatalogManager";
@@ -41,6 +42,7 @@ const Admin = () => {
   const { user, signOut, isSuperadmin } = useAuth();
   const { settings } = useAppSettings();
   const { can } = useServerPermissions();
+  const { active: activeServer } = useServers();
   const [selected, setSelected] = useState<string | null>(null);
   const [mode, setMode] = useState<AdminMode>("template");
   const [backupsOpen, setBackupsOpen] = useState(false);
@@ -120,9 +122,28 @@ const Admin = () => {
             </div>
 
             <div className="ml-auto flex items-center gap-2">
-              <span className="rounded-full bg-success/15 px-3 py-1 text-[11px] font-medium text-success">
-                Edge proxy ativo
-              </span>
+              {activeServer ? (
+                <Link
+                  to="/servers"
+                  className="inline-flex max-w-[280px] items-center gap-2 rounded-full border border-success/40 bg-success/10 px-3 py-1 text-[11px] font-medium text-success transition-smooth hover:bg-success/20"
+                  title={`Servidor ativo: ${activeServer.server_name}\n${activeServer.pw_api_base_url ?? "(sem URL)"}`}
+                >
+                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-success" />
+                  <span className="truncate font-semibold">{activeServer.server_name}</span>
+                  <span className="hidden truncate text-success/70 md:inline">
+                    · {activeServer.pw_api_base_url ?? "—"}
+                  </span>
+                </Link>
+              ) : (
+                <Link
+                  to="/servers"
+                  className="inline-flex items-center gap-2 rounded-full border border-destructive/40 bg-destructive/10 px-3 py-1 text-[11px] font-medium text-destructive transition-smooth hover:bg-destructive/20"
+                  title="Nenhum servidor ativo — abra Servidores para cadastrar/ativar"
+                >
+                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-destructive" />
+                  Sem servidor ativo
+                </Link>
+              )}
               <button
                 onClick={() => setSearchItemOpen(true)}
                 className="inline-flex items-center gap-2 rounded-md border border-border bg-card/60 px-3 py-2 text-xs transition-smooth hover:border-primary/50"

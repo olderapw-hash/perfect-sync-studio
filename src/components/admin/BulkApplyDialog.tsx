@@ -11,10 +11,10 @@ import {
   type SimpleStatusField,
 } from "@/lib/clsconfig";
 import { saveHistory } from "@/lib/saveHistory";
-import { supabase } from "@/integrations/supabase/client";
+import { invokeClsconfigProxy } from "@/lib/clsconfigInvoke";
 import type { ClsEntry, ClsTemplate } from "@/types/clsconfig";
 import { toast } from "sonner";
-import { handleMaybeAuthError } from "@/lib/authErrors";
+import { handleMaybeAuthError, NoServerSelectedError } from "@/lib/authErrors";
 
 type SectionKey = "status" | "position";
 
@@ -136,17 +136,12 @@ export const BulkApplyDialog = ({
           });
         }
 
-        const { data, error } = await supabase.functions.invoke("clsconfig-proxy/clsconfig", {
+        const { data, error, rawBody } = await invokeClsconfigProxy("clsconfig-proxy/clsconfig", {
           method: "POST",
           body: payload,
         });
         if (error) {
-          const ctx = (error as unknown as { context?: Response }).context;
-          let extra = "";
-          if (ctx && typeof ctx.text === "function") {
-            try { extra = await ctx.text(); } catch { /* ignore */ }
-          }
-          throw new Error(extra ? `${error.message}: ${extra}` : error.message);
+          throw new Error(rawBody ? `${error.message}: ${rawBody}` : error.message);
         }
         if (data && typeof data === "object" && (data as { success?: boolean }).success === false) {
           throw new Error((data as { error?: string }).error || "save falhou");
@@ -166,6 +161,11 @@ export const BulkApplyDialog = ({
           status: "ok",
         });
       } catch (e) {
+        if (e instanceof NoServerSelectedError) {
+          toast.error(e.message);
+          setRunning(false);
+          return;
+        }
         errCount++;
         const msg = e instanceof Error ? e.message : "erro";
         handleMaybeAuthError(e);

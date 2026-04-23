@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { normalizeClsconfigResponse } from "@/lib/clsconfig";
 import { invokeClsconfigProxy } from "@/lib/clsconfigInvoke";
 import { NoServerSelectedError } from "@/lib/authErrors";
+import { useServers } from "@/hooks/useServers";
 import type { ClsconfigResponse } from "@/types/clsconfig";
 
 interface State {
@@ -12,6 +13,7 @@ interface State {
 }
 
 export function useClsconfig() {
+  const { active } = useServers();
   const [state, setState] = useState<State>({ data: null, raw: null, loading: true, error: null });
   const [reloadKey, setReloadKey] = useState(0);
 
@@ -44,7 +46,9 @@ export function useClsconfig() {
     return () => {
       cancelled = true;
     };
-  }, [reloadKey]);
+    // active?.id é a chave: troca de servidor → recarrega.
+  }, [reloadKey, active?.id]);
 
   return { ...state, reload: () => setReloadKey((k) => k + 1) };
 }
+
