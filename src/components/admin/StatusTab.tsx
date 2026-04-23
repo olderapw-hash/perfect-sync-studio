@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Loader2, MapPin, Save } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-import { handleMaybeAuthError } from "@/lib/authErrors";
+import { invokeClsconfigProxy } from "@/lib/clsconfigInvoke";
+import { handleMaybeAuthError, NoServerSelectedError } from "@/lib/authErrors";
 import {
   buildPositionPayload,
   normalizeClsconfigResponse,
@@ -63,28 +63,19 @@ export const StatusTab = ({ template, entry, onChange, onEntryRefreshed }: Props
         throw new Error("roleid inválido — não é possível salvar posição");
       }
 
-      const { data, error } = await supabase.functions.invoke("clsconfig-proxy/clsconfig", {
+      const { data, error, rawBody } = await invokeClsconfigProxy("clsconfig-proxy/clsconfig", {
         method: "POST",
         body: payload,
       });
       if (error) {
-        const ctx = (error as unknown as { context?: Response }).context;
-        let extra = "";
-        if (ctx && typeof ctx.text === "function") {
-          try {
-            extra = await ctx.text();
-          } catch {
-            /* ignore */
-          }
-        }
-        throw new Error(extra ? `${error.message}\n\n${extra}` : error.message);
+        throw new Error(rawBody ? `${error.message}\n\n${rawBody}` : error.message);
       }
       if (data && typeof data === "object" && (data as { success?: boolean }).success === false) {
         throw new Error((data as { error?: string }).error || "Falha ao salvar posição");
       }
 
       // Re-leitura para confirmar persistência real (worldtag/posx/posy/posz)
-      const reread = await supabase.functions.invoke("clsconfig-proxy/clsconfig", { method: "GET" });
+      const reread = await invokeClsconfigProxy("clsconfig-proxy/clsconfig", { method: "GET" });
       if (reread.error) {
         throw new Error("VPS aceitou o save mas falhou ao reler clsconfig");
       }
