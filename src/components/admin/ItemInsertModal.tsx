@@ -152,7 +152,7 @@ export const ItemInsertModal = ({
     if (!autoSlot) return;
     const ctx = contexts[destination];
     if (!ctx) return;
-    setPos(firstEmptyPos(ctx.items, effectiveCapacity(ctx)));
+    setPos(firstEmptyPos(ctx.items, effectiveCapacity(ctx), destination));
   }, [autoSlot, destination, contexts]);
 
   if (!source) return null;
