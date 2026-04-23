@@ -805,13 +805,82 @@ const KitCreateView = ({
         </p>
       </div>
 
+      <Separator />
+
+      <div className="space-y-2">
+        <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Onde salvar
+        </div>
+        <RadioGroup
+          value={destination}
+          onValueChange={(v) => setDestination(v as typeof destination)}
+        >
+          <label
+            className={`flex items-start gap-2 rounded-md border p-2 text-sm ${
+              cloudAvailable ? "border-border bg-background/40 hover:border-primary/50" : "border-border/40 bg-muted/20 opacity-60"
+            }`}
+          >
+            <RadioGroupItem
+              value="server"
+              id="dest-server"
+              className="mt-0.5"
+              disabled={!cloudAvailable}
+            />
+            <div className="flex-1">
+              <div className="flex items-center gap-1.5 font-medium text-foreground">
+                <Cloud className="h-3.5 w-3.5 text-primary" />
+                No servidor (visível para todos os membros)
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {cloudAvailable
+                  ? "Outros membros do servidor poderão ver e aplicar este kit."
+                  : "Sem permissão save_templates ou nenhum servidor ativo."}
+              </div>
+            </div>
+          </label>
+          <label
+            className={`flex items-start gap-2 rounded-md border p-2 text-sm ${
+              cloudAvailable ? "border-border bg-background/40 hover:border-primary/50" : "border-border/40 bg-muted/20 opacity-60"
+            }`}
+          >
+            <RadioGroupItem
+              value="private"
+              id="dest-private"
+              className="mt-0.5"
+              disabled={!cloudAvailable}
+            />
+            <div className="flex-1">
+              <div className="flex items-center gap-1.5 font-medium text-foreground">
+                <EyeOff className="h-3.5 w-3.5 text-primary" />
+                Privado no servidor (só você vê)
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Salvo na nuvem, mas invisível para outros membros.
+              </div>
+            </div>
+          </label>
+          <label className="flex items-start gap-2 rounded-md border border-border bg-background/40 p-2 text-sm hover:border-primary/50">
+            <RadioGroupItem value="local" id="dest-local" className="mt-0.5" />
+            <div className="flex-1">
+              <div className="flex items-center gap-1.5 font-medium text-foreground">
+                <HardDrive className="h-3.5 w-3.5 text-muted-foreground" />
+                Apenas neste navegador
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Não vai para a nuvem. Some se você limpar dados do navegador.
+              </div>
+            </div>
+          </label>
+        </RadioGroup>
+      </div>
+
       <DialogFooter className="gap-2 border-t border-border pt-3">
-        <Button variant="outline" onClick={onCancel}>
+        <Button variant="outline" onClick={onCancel} disabled={saving}>
           <X className="h-4 w-4" />
           Cancelar
         </Button>
-        <Button onClick={handleSave} className="gap-2">
-          <Save className="h-4 w-4" />
+        <Button onClick={handleSave} disabled={saving} className="gap-2">
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
           Salvar kit
         </Button>
       </DialogFooter>
