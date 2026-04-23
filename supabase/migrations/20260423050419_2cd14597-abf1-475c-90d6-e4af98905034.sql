@@ -1,0 +1,1 @@
+UPDATE public.tenants SET pw_api_base_url = 'http://' || pw_api_base_url WHERE pw_api_base_url IS NOT NULL AND pw_api_base_url !~* '^https?://';

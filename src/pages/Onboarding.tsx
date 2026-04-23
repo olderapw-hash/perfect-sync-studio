@@ -119,13 +119,20 @@ const Onboarding = () => {
       toast.error("Preencha URL e secret");
       return;
     }
+    // Garante protocolo (http:// por padrão se o usuário esqueceu).
+    let normalizedUrl = apiUrl.trim();
+    if (!/^https?:\/\//i.test(normalizedUrl)) {
+      normalizedUrl = `http://${normalizedUrl}`;
+    }
+    normalizedUrl = normalizedUrl.replace(/\/+$/, "");
+    setApiUrl(normalizedUrl);
     setSaving(true);
     const { data, error } = await supabase
       .from("tenants")
       .insert({
         owner_id: session.user.id,
         server_name: serverName || "Meu Servidor PW",
-        pw_api_base_url: apiUrl.replace(/\/+$/, ""),
+        pw_api_base_url: normalizedUrl,
         pw_api_secret: apiSecret,
         icon_base_url: iconBase ? iconBase.replace(/\/+$/, "/") : null,
         onboarding_completed: false,
