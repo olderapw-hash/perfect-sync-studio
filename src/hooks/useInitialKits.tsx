@@ -229,7 +229,12 @@ export function useInitialKits({ tenantId }: UseInitialKitsOptions): UseInitialK
   const updateKit = useCallback<UseInitialKitsResult["updateKit"]>(
     async (id, patch) => {
       if (!tenantId) return false;
-      const updates: Record<string, unknown> = {};
+      const updates: {
+        name?: string;
+        description?: string | null;
+        target_cls?: number | null;
+        visibility?: KitVisibility;
+      } = {};
       if (patch.name !== undefined) updates.name = patch.name;
       if (patch.description !== undefined) updates.description = patch.description;
       if (patch.target_cls !== undefined) updates.target_cls = patch.target_cls;
