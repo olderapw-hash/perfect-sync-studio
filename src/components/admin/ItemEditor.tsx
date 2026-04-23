@@ -8,6 +8,7 @@ import {
   Sparkles,
   Files,
   Move,
+  Search,
 } from "lucide-react";
 import type { ClsItem } from "@/types/clsconfig";
 import {
@@ -48,6 +49,8 @@ import {
   stringifyItem,
 } from "@/lib/itemTools";
 import { summarizeIssues, validateItems } from "@/lib/validateItem";
+import { ItemCatalogAdvancedDialog } from "./ItemCatalogAdvancedDialog";
+import type { InsertResult } from "./ItemInsertModal";
 
 interface Props {
   item: ClsItem;
