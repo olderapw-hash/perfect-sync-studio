@@ -401,15 +401,11 @@ const Install = () => {
               <Copy className="mr-2 h-3.5 w-3.5" /> Copiar
             </Button>
           </div>
-          {!secret && (
-            <p className="mt-2 text-[11px] text-amber-500">
-              <AlertTriangle className="mr-1 inline h-3 w-3" />
-              Selecione (e ative) um servidor acima para o comando vir com o secret real.
-            </p>
-          )}
           <p className="mt-3 text-xs text-muted-foreground">
-            Depois que terminar, volte aqui e clique em <strong>Testar conexão</strong>{" "}
-            ou cadastre/atualize a VPS em <strong>Meus Servidores</strong>.
+            Substitua <code className="rounded bg-muted px-1 font-mono">IP_DA_VPS</code> pelo IP/host
+            real e <code className="rounded bg-muted px-1 font-mono">SEU_SECRET</code> pelo secret
+            mostrado em <strong>Meus Servidores</strong>. Depois volte aqui e clique em{" "}
+            <strong>Testar conexão</strong>.
           </p>
         </section>
 
