@@ -457,8 +457,9 @@ const KitListView = ({
           <FileUp className="h-4 w-4" />
           Importar JSON
         </Button>
-        <span className="ml-auto text-xs text-muted-foreground">
-          {kits.length} kit{kits.length === 1 ? "" : "s"} salvo{kits.length === 1 ? "" : "s"}
+        <span className="ml-auto inline-flex items-center gap-1 text-xs text-muted-foreground">
+          {loading && <Loader2 className="h-3 w-3 animate-spin" />}
+          {kits.length} kit{kits.length === 1 ? "" : "s"} disponível{kits.length === 1 ? "" : "is"}
         </span>
       </div>
 
