@@ -287,77 +287,106 @@ export const InitialKitsDialog = ({
         />
 
         {view === "list" && (
-          <>
-            {localKits.length > 0 && tenantId && (
-              <div className="rounded-md border border-warning/40 bg-warning/5 p-3 text-xs">
-                <div className="flex items-start gap-2">
-                  <CloudUpload className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
-                  <div className="flex-1">
-                    <div className="font-semibold text-foreground">
-                      {localKits.length} kit{localKits.length === 1 ? "" : "s"} local{localKits.length === 1 ? "" : "is"} encontrado{localKits.length === 1 ? "" : "s"}
-                    </div>
-                    <p className="mt-0.5 text-muted-foreground">
-                      Migre para este servidor para que outros membros possam ver.
-                      Os kits locais não serão apagados automaticamente.
-                    </p>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      <Button
-                        size="sm"
-                        onClick={handleMigrateLocals}
-                        disabled={!canManageCloud || migrating}
-                        title={
-                          !canManageCloud
-                            ? "Você não tem permissão para criar kits no servidor"
-                            : undefined
-                        }
-                        className="gap-1.5"
-                      >
-                        {migrating ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          <CloudUpload className="h-3.5 w-3.5" />
-                        )}
-                        Migrar para o servidor
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={handleClearLocals}
-                        disabled={migrating}
-                        className="gap-1.5"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                        Limpar locais
-                      </Button>
+          <Tabs value={listTab} onValueChange={(v) => setListTab(v as typeof listTab)}>
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="my_kits" className="gap-1.5">
+                <Boxes className="h-3.5 w-3.5" />
+                Meus Kits
+                <span className="ml-1 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-mono">
+                  {kits.length}
+                </span>
+              </TabsTrigger>
+              <TabsTrigger value="presets" className="gap-1.5">
+                <Sparkles className="h-3.5 w-3.5" />
+                Presets
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="my_kits" className="mt-3 space-y-3">
+              {localKits.length > 0 && tenantId && (
+                <div className="rounded-md border border-warning/40 bg-warning/5 p-3 text-xs">
+                  <div className="flex items-start gap-2">
+                    <CloudUpload className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+                    <div className="flex-1">
+                      <div className="font-semibold text-foreground">
+                        {localKits.length} kit{localKits.length === 1 ? "" : "s"} local{localKits.length === 1 ? "" : "is"} encontrado{localKits.length === 1 ? "" : "s"}
+                      </div>
+                      <p className="mt-0.5 text-muted-foreground">
+                        Migre para este servidor para que outros membros possam ver.
+                        Os kits locais não serão apagados automaticamente.
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <Button
+                          size="sm"
+                          onClick={handleMigrateLocals}
+                          disabled={!canManageCloud || migrating}
+                          title={
+                            !canManageCloud
+                              ? "Você não tem permissão para criar kits no servidor"
+                              : undefined
+                          }
+                          className="gap-1.5"
+                        >
+                          {migrating ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <CloudUpload className="h-3.5 w-3.5" />
+                          )}
+                          Migrar para o servidor
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={handleClearLocals}
+                          disabled={migrating}
+                          className="gap-1.5"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          Limpar locais
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            <KitListView
-              kits={kits}
-              loading={cloudLoading}
-              onCreate={() => setView("create")}
-              onImport={handleImportClick}
-              onApply={(k) => {
-                setSelectedKit(k);
-                setView("apply");
-              }}
-              onBulkApply={(k) => {
-                setSelectedKit(k);
-                setView("bulk_apply");
-              }}
-              onDuplicate={(k) => void handleDuplicate(k)}
-              onRemove={(k) => void handleRemove(k)}
-              onExport={handleExport}
-              canApply={canApply}
-              applyDeniedTitle={applyDeniedTitle}
-              bulkAvailable={bulkAvailable}
-              canBulkApply={canBulkApply}
-              bulkDeniedTitle={bulkDeniedTitle}
-            />
-          </>
+              <KitListView
+                kits={kits}
+                loading={cloudLoading}
+                onCreate={() => setView("create")}
+                onImport={handleImportClick}
+                onApply={(k) => {
+                  setSelectedKit(k);
+                  setView("apply");
+                }}
+                onBulkApply={(k) => {
+                  setSelectedKit(k);
+                  setView("bulk_apply");
+                }}
+                onDuplicate={(k) => void handleDuplicate(k)}
+                onRemove={(k) => void handleRemove(k)}
+                onExport={handleExport}
+                canApply={canApply}
+                applyDeniedTitle={applyDeniedTitle}
+                bulkAvailable={bulkAvailable}
+                canBulkApply={canBulkApply}
+                bulkDeniedTitle={bulkDeniedTitle}
+              />
+            </TabsContent>
+
+            <TabsContent value="presets" className="mt-3">
+              <PresetsTabView
+                tenantId={tenantId}
+                canDuplicateToServer={canDuplicatePresetServer}
+                canDuplicatePrivate={canDuplicatePresetPrivate}
+                onCreateCloud={createCloudKit}
+                onDuplicated={async () => {
+                  await refetchCloud();
+                  setListTab("my_kits");
+                }}
+              />
+            </TabsContent>
+          </Tabs>
         )}
 
         {view === "create" && (
