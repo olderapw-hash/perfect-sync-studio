@@ -51,6 +51,7 @@ import {
 import { summarizeIssues, validateItems } from "@/lib/validateItem";
 import { ItemCatalogAdvancedDialog } from "./ItemCatalogAdvancedDialog";
 import type { InsertResult } from "./ItemInsertModal";
+import { getEquipmentSlotDef, getEquipmentSlotLabel } from "@/lib/equipmentSlots";
 
 interface Props {
   item: ClsItem;
