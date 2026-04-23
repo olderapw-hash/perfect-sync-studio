@@ -1,9 +1,11 @@
+import { useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowRight, Check, Loader2, Shield } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { usePaddleCheckout } from "@/hooks/usePaddleCheckout";
 import { useSubscription } from "@/hooks/useSubscription";
+import { useServers } from "@/hooks/useServers";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 
 const PLAN_FEATURES = [
