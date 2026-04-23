@@ -265,6 +265,40 @@ export const pwApi = {
       query: { roleid },
     });
   },
+  /**
+   * Diagnóstico: tenta carregar vários roleids de uma vez via
+   * `getRoleEditable` (não há endpoint batch dedicado). Útil para o
+   * botão "Testar roleids padrão" quando `getClsconfig` retorna vazio
+   * — se `getRoleEditable` também falhar para todos, o problema está na
+   * leitura do gamedbd, não na configuração de roleids do clsconfig.
+   *
+   * Erros individuais são capturados por roleid e devolvidos com
+   * `success:false` em vez de quebrar o batch.
+   */
+  async getRolesEditable(roleids: number[]): Promise<
+    Array<{ roleid: number; success: boolean; online?: boolean; error?: string }>
+  > {
+    const results = await Promise.all(
+      roleids.map(async (roleid) => {
+        try {
+          const res = await pwApi.getRoleEditable(roleid);
+          return {
+            roleid,
+            success: Boolean(res?.success),
+            online: res?.online,
+            error: res?.success ? undefined : res?.error,
+          };
+        } catch (e) {
+          return {
+            roleid,
+            success: false,
+            error: e instanceof Error ? e.message : String(e),
+          };
+        }
+      }),
+    );
+    return results;
+  },
   saveRoleEditable(body: SaveRoleEditablePayload) {
     return callAction<SaveRoleEditableResponse>("saveRoleEditable", { method: "POST", body });
   },
