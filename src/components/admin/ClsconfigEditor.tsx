@@ -578,19 +578,19 @@ export const ClsconfigEditor = ({ entry, allEntries = [], mode = "template", onS
           <div className="relative flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3 sm:gap-4">
               <div className="avatar-frame shrink-0">
-                <div className="flex h-14 w-14 items-center justify-center sm:h-16 sm:w-16">
+                <div className="flex h-20 w-20 items-center justify-center overflow-hidden sm:h-24 sm:w-24">
                   {iconUrl ? (
                     <img
                       src={iconUrl}
                       alt={className}
-                      className="h-full w-full object-cover"
+                      className="h-full w-full object-cover object-top"
                       loading="lazy"
                       onError={(e) => {
                         (e.currentTarget as HTMLImageElement).style.display = "none";
                       }}
                     />
                   ) : (
-                    <User className="h-6 w-6 text-bronze" />
+                    <User className="h-8 w-8 text-bronze" />
                   )}
                 </div>
               </div>
