@@ -1138,9 +1138,34 @@ interface BulkRowResult {
   cls: number;
   status: BulkRowStatus;
   message?: string;
+  attempt?: number;
   backupRoleJson?: string;
   backupClsconfigFile?: string;
   exportLogFile?: string;
+}
+
+/** Delay entre roleids (300-700ms aleatório, evita rajada). */
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+const interRoleidDelay = () => 300 + Math.floor(Math.random() * 400);
+
+/** Classifica erro: deve dar retry? é proibido (não dar retry)? */
+function classifyError(message: string): { retryable: boolean; forbidden: boolean } {
+  const retryable =
+    message.includes("Failed to send a request") ||
+    message.includes("Failed to fetch") ||
+    message.includes("network") ||
+    message.includes("NetworkError") ||
+    message.includes("timeout") ||
+    message.includes("Edge Function");
+  const forbidden =
+    message.includes("401") ||
+    message.includes("403") ||
+    message.includes("permission") ||
+    message.includes("Permission") ||
+    message.includes("Acesso negado") ||
+    message.includes("Validação") ||
+    message.includes("validação");
+  return { retryable, forbidden };
 }
 
 const CONFIRM_PHRASE = "APLICAR KIT EM TODOS";
