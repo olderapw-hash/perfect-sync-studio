@@ -1,10 +1,12 @@
-// Página /install — entrega o pacote de instalação para a VPS do cliente.
-// Cada arquivo é baixado individualmente; também tem botão "Copiar conteúdo"
-// para colar direto no editor da VPS via SSH.
+// Página /install — entrega o pacote de instalação automática para a VPS.
 //
-// Mostra o secret e a URL esperada do servidor ATIVO (ou um seletor caso o
-// usuário tenha múltiplas VPS), para que ele saiba exatamente o que colar
-// no $SECRET = '__PW_API_SECRET__'; do api_cls.php.
+// Método recomendado:
+//   scp api_cls.php root@IP:/root/api_cls.php
+//   scp install-apicls-centos7.sh root@IP:/root/install-apicls-centos7.sh
+//   bash /root/install-apicls-centos7.sh --secret <SECRET> --api-src /root/api_cls.php
+//
+// O secret é o do servidor selecionado (vem do tenant ativo via RPC).
+// O teste de conexão usa a edge function test-server-connection do tenant.
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -20,7 +22,7 @@ import {
   KeyRound,
   Link as LinkIcon,
   Loader2,
-  ShieldCheck,
+  Settings2,
   Terminal,
   Wifi,
 } from "lucide-react";
@@ -44,36 +46,34 @@ import { cn } from "@/lib/utils";
 interface InstallerFile {
   name: string;
   description: string;
-  path: string; // public path
+  path: string;
   icon: typeof FileCode;
-  language: "php" | "bash" | "ini" | "markdown";
+  language: "php" | "bash" | "markdown";
+  primary?: boolean;
 }
 
 const FILES: InstallerFile[] = [
   {
     name: "api_cls.php",
-    description: "Ponte HTTP entre o painel e o gamedbd da sua VPS.",
+    description:
+      "Bridge HTTP completa (gamedbd, templates CLS, backups, restore, item catalog).",
     path: "/installer/api_cls.php",
     icon: FileCode,
     language: "php",
+    primary: true,
   },
   {
-    name: "exportclsconfig-api.sh",
-    description: "Script que roda o gamedbd ./exportclsconfig.",
-    path: "/installer/exportclsconfig-api.sh",
+    name: "install-apicls-centos7.sh",
+    description:
+      "Instalador automático para CentOS 7. Configura Apache, sudoers, scripts e backups.",
+    path: "/installer/install-apicls-centos7.sh",
     icon: Terminal,
     language: "bash",
-  },
-  {
-    name: "sudoers.example",
-    description: "Linha do /etc/sudoers.d/apicls para o www-data/apache.",
-    path: "/installer/sudoers.example",
-    icon: ShieldCheck,
-    language: "ini",
+    primary: true,
   },
   {
     name: "README.md",
-    description: "Passo-a-passo completo de instalação.",
+    description: "Tutorial completo atualizado (instalação, testes, troubleshooting).",
     path: "/installer/README.md",
     icon: FileText,
     language: "markdown",
@@ -88,6 +88,18 @@ function expectedApiUrl(rawUrl: string | null | undefined): string {
   return `${trimmed}/apicls/api_cls.php`;
 }
 
+function extractIp(rawUrl: string | null | undefined): string {
+  if (!rawUrl) return "IP_DA_VPS";
+  try {
+    const u = new URL(
+      rawUrl.startsWith("http") ? rawUrl : `http://${rawUrl}`,
+    );
+    return u.hostname || "IP_DA_VPS";
+  } catch {
+    return "IP_DA_VPS";
+  }
+}
+
 const Install = () => {
   const navigate = useNavigate();
   const { session, loading: authLoading } = useAuth();
@@ -100,7 +112,6 @@ const Install = () => {
   const [showSecret, setShowSecret] = useState(false);
   const [testing, setTesting] = useState(false);
 
-  // Default: servidor ativo, ou o primeiro da lista.
   useEffect(() => {
     if (!selectedId) {
       const fallback = active?.id ?? servers[0]?.id ?? "";
@@ -113,17 +124,13 @@ const Install = () => {
     [servers, selectedId],
   );
 
-  // Carrega o secret apenas para o servidor ATIVO (RPC só retorna o do ativo).
+  // RPC só retorna o secret do tenant ativo do usuário.
   useEffect(() => {
     let alive = true;
     setSecret(null);
     setShowSecret(false);
     if (!selected) return;
-    if (!selected.is_active) {
-      // Para servidores inativos, não conseguimos exibir o secret aqui — o
-      // usuário precisa ativar primeiro ou abrir em "Meus Servidores".
-      return;
-    }
+    if (!selected.is_active) return;
     setSecretLoading(true);
     supabase.rpc("get_my_tenant_secret").then(({ data }) => {
       if (!alive) return;
@@ -136,24 +143,29 @@ const Install = () => {
   }, [selected]);
 
   const apiUrl = expectedApiUrl(selected?.pw_api_base_url);
+  const ip = extractIp(selected?.pw_api_base_url);
+  const secretToken = secret ?? "<SECRET_DO_SERVIDOR>";
+
+  const installCommand = [
+    `scp api_cls.php root@${ip}:/root/api_cls.php`,
+    `scp install-apicls-centos7.sh root@${ip}:/root/install-apicls-centos7.sh`,
+    `ssh root@${ip} "bash /root/install-apicls-centos7.sh --secret ${secretToken} --api-src /root/api_cls.php"`,
+  ].join("\n");
+
+  const handleDownload = (file: InstallerFile) => {
+    // Ancora <a download> faz o navegador baixar; nada além de um toast aqui.
+    toast.success(`Baixando ${file.name}`);
+  };
 
   const handleCopy = async (file: InstallerFile) => {
     try {
       const res = await fetch(file.path);
       if (!res.ok) throw new Error("Arquivo ainda não disponível");
-      let text = await res.text();
-      // Auto-substitui o placeholder do api_cls.php pelo secret real, se houver.
-      if (file.name === "api_cls.php" && secret) {
-        text = text.replace(/__PW_API_SECRET__/g, secret);
-      }
+      const text = await res.text();
       await navigator.clipboard.writeText(text);
       setCopied(file.name);
       setTimeout(() => setCopied(null), 2000);
-      toast.success(
-        file.name === "api_cls.php" && secret
-          ? `${file.name} copiado (com secret embutido)`
-          : `${file.name} copiado`,
-      );
+      toast.success(`${file.name} copiado`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Falha ao copiar");
     }
@@ -205,25 +217,42 @@ const Install = () => {
               Instalador da VPS
             </h1>
             <p className="text-xs text-muted-foreground">
-              Arquivos para conectar sua VPS ao painel
+              Conecte sua VPS Perfect World ao painel
             </p>
           </div>
         </div>
       </header>
 
       <main className="mx-auto max-w-4xl px-4 py-8">
-        {/* ===== Credenciais do servidor selecionado ===== */}
+        {/* Aviso de origem da conexão */}
+        <div className="mb-6 flex flex-wrap items-start gap-3 rounded-xl border border-primary/40 bg-primary/5 p-4 text-xs">
+          <Settings2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+          <div className="flex-1">
+            <p className="font-semibold text-foreground">
+              A conexão da VPS agora é gerenciada em <strong>Servidores</strong>.
+            </p>
+            <p className="mt-1 text-muted-foreground">
+              A tela antiga de Configurações <em>não</em> é mais usada para chamar
+              a API da VPS. Cadastre/edite cada VPS em <strong>Meus Servidores</strong>{" "}
+              e mantenha um servidor ativo.
+            </p>
+          </div>
+          <Button size="sm" variant="outline" onClick={() => navigate("/servers")}>
+            Meus Servidores
+          </Button>
+        </div>
+
+        {/* Seletor de servidor + credenciais */}
         {session && servers.length > 0 && (
-          <section className="mb-8 rounded-2xl border border-primary/40 bg-primary/5 p-6">
+          <section className="mb-8 rounded-2xl border border-border bg-card/40 p-6">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h2 className="flex items-center gap-2 text-sm font-extrabold uppercase tracking-wider">
                   <KeyRound className="h-4 w-4 text-primary" />
-                  Credenciais para esta instalação
+                  Credenciais desta instalação
                 </h2>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Cole estes valores no <code className="font-mono">api_cls.php</code> e em
-                  "Meus Servidores".
+                  O comando abaixo já preenche o secret do servidor escolhido.
                 </p>
               </div>
               {servers.length > 1 && (
@@ -248,7 +277,6 @@ const Install = () => {
               )}
             </div>
 
-            {/* URL esperada */}
             <div className="space-y-3">
               <div>
                 <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
@@ -256,11 +284,7 @@ const Install = () => {
                   URL esperada do api_cls.php
                 </Label>
                 <div className="mt-1 flex gap-2">
-                  <Input
-                    readOnly
-                    value={apiUrl}
-                    className="font-mono text-xs"
-                  />
+                  <Input readOnly value={apiUrl} className="font-mono text-xs" />
                   <Button
                     variant="outline"
                     size="sm"
@@ -271,7 +295,6 @@ const Install = () => {
                 </div>
               </div>
 
-              {/* Secret */}
               <div>
                 <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
                   <KeyRound className="mr-1 inline h-3 w-3" />
@@ -285,7 +308,10 @@ const Install = () => {
                       value={
                         secretLoading
                           ? "Carregando..."
-                          : secret ?? (selected?.is_active ? "(sem secret configurado)" : "(ative este servidor para ver)")
+                          : secret ??
+                            (selected?.is_active
+                              ? "(sem secret configurado)"
+                              : "(ative este servidor para ver)")
                       }
                       className="pr-10 font-mono text-xs"
                     />
@@ -296,7 +322,11 @@ const Install = () => {
                       aria-label="Mostrar/ocultar secret"
                       disabled={!secret}
                     >
-                      {showSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {showSecret ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
                     </button>
                   </div>
                   <Button
@@ -310,16 +340,16 @@ const Install = () => {
                 </div>
                 {selected && !selected.is_active && (
                   <p className="mt-1 text-[11px] text-amber-500">
-                    Este servidor não é o ativo. Ative-o em <strong>Meus Servidores</strong>{" "}
-                    para visualizar o secret aqui.
+                    Este servidor não é o ativo. Ative-o em{" "}
+                    <strong>Meus Servidores</strong> para ver o secret aqui.
                   </p>
                 )}
               </div>
 
               <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-600 dark:text-amber-400">
                 <AlertTriangle className="mr-1 inline h-3.5 w-3.5" />
-                <strong>Não reutilize</strong> o secret de outro servidor. Cada VPS deve ter
-                o seu próprio secret — assim, se um vazar, os outros continuam seguros.
+                <strong>Não reutilize</strong> o secret de outro servidor. Cada VPS
+                deve ter o seu — se um vazar, os outros continuam seguros.
               </div>
 
               <div className="flex flex-wrap items-center gap-2 pt-2">
@@ -329,7 +359,7 @@ const Install = () => {
                   ) : (
                     <Wifi className="mr-2 h-3.5 w-3.5" />
                   )}
-                  Testar conexão depois da instalação
+                  Testar conexão
                 </Button>
                 <Button variant="outline" onClick={() => navigate("/servers")}>
                   Ir para Meus Servidores
@@ -345,8 +375,8 @@ const Install = () => {
               Nenhum servidor cadastrado
             </h2>
             <p className="mt-2 text-sm text-muted-foreground">
-              Cadastre uma VPS em <strong>Meus Servidores</strong> primeiro — assim o
-              secret aparece aqui já pronto para colar no <code>api_cls.php</code>.
+              Cadastre uma VPS em <strong>Meus Servidores</strong> primeiro — o secret
+              aparece aqui pronto para colar no comando do instalador.
             </p>
             <Button className="mt-3" onClick={() => navigate("/servers")}>
               Ir para Meus Servidores
@@ -354,57 +384,45 @@ const Install = () => {
           </section>
         )}
 
-        {/* ===== Passo a passo ===== */}
-        <section className="mb-8 rounded-2xl border border-border bg-card/40 p-6">
-          <h2 className="text-lg font-extrabold">Como instalar</h2>
-          <ol className="mt-4 space-y-3 text-sm text-muted-foreground">
-            <li>
-              <strong className="text-foreground">1.</strong> Crie a pasta na VPS:{" "}
-              <code className="rounded bg-muted px-1 font-mono text-xs">sudo mkdir -p /var/www/html/apicls</code>.
-            </li>
-            <li>
-              <strong className="text-foreground">2.</strong> Suba o{" "}
-              <code className="rounded bg-muted px-1 font-mono text-xs">api_cls.php</code> para essa pasta
-              (ou use o botão <em>Copiar</em> abaixo — ele já cola o seu secret no lugar).
-            </li>
-            <li>
-              <strong className="text-foreground">3.</strong> Se editou na VPS, abra o arquivo
-              e troque{" "}
-              <code className="rounded bg-muted px-1 font-mono text-xs">__PW_API_SECRET__</code> pelo
-              secret mostrado acima.
-            </li>
-            <li>
-              <strong className="text-foreground">4.</strong> Crie a pasta de backups:{" "}
-              <code className="rounded bg-muted px-1 font-mono text-xs">sudo mkdir -p /var/backups/clsconfig</code>{" "}
-              e ajuste o owner para o usuário do PHP.
-            </li>
-            <li>
-              <strong className="text-foreground">5.</strong> Instale o{" "}
-              <code className="rounded bg-muted px-1 font-mono text-xs">exportclsconfig-api.sh</code>{" "}
-              em <code className="rounded bg-muted px-1 font-mono text-xs">/usr/local/sbin/</code>{" "}
-              com <code className="rounded bg-muted px-1 font-mono text-xs">chmod 750</code>.
-            </li>
-            <li>
-              <strong className="text-foreground">6.</strong> Adicione a linha de{" "}
-              <code className="rounded bg-muted px-1 font-mono text-xs">sudoers.example</code> em{" "}
-              <code className="rounded bg-muted px-1 font-mono text-xs">/etc/sudoers.d/apicls</code>{" "}
-              e rode <code className="rounded bg-muted px-1 font-mono text-xs">sudo visudo -c</code>.
-            </li>
-            <li>
-              <strong className="text-foreground">7.</strong> Valide com{" "}
-              <code className="rounded bg-muted px-1 font-mono text-xs">php -l</code> e teste{" "}
-              <code className="rounded bg-muted px-1 font-mono text-xs">?action=ping</code>,{" "}
-              <code className="rounded bg-muted px-1 font-mono text-xs">?action=getClasses</code>{" "}
-              e <code className="rounded bg-muted px-1 font-mono text-xs">?action=exportClsconfig</code>.
-            </li>
-            <li>
-              <strong className="text-foreground">8.</strong> Volte aqui e clique em{" "}
-              <em>Testar conexão depois da instalação</em>.
-            </li>
-          </ol>
+        {/* Método recomendado: instalador automático */}
+        <section className="mb-8 rounded-2xl border border-primary/40 bg-primary/5 p-6">
+          <div className="mb-3 flex items-center gap-2">
+            <Terminal className="h-4 w-4 text-primary" />
+            <h2 className="text-sm font-extrabold uppercase tracking-wider">
+              Método recomendado · instalador automático
+            </h2>
+          </div>
+          <p className="mb-3 text-xs text-muted-foreground">
+            Baixe os dois arquivos abaixo, suba pra VPS e rode o instalador. Ele
+            instala Apache + PHP, configura sudoers, cria as pastas de backup e
+            testa a conexão sozinho.
+          </p>
+          <div className="relative">
+            <pre className="overflow-x-auto rounded-md border border-border bg-background p-3 font-mono text-xs">
+              {installCommand}
+            </pre>
+            <Button
+              size="sm"
+              variant="outline"
+              className="absolute right-2 top-2"
+              onClick={() => copyValue("Comando", installCommand)}
+            >
+              <Copy className="mr-2 h-3.5 w-3.5" /> Copiar
+            </Button>
+          </div>
+          {!secret && (
+            <p className="mt-2 text-[11px] text-amber-500">
+              <AlertTriangle className="mr-1 inline h-3 w-3" />
+              Selecione (e ative) um servidor acima para o comando vir com o secret real.
+            </p>
+          )}
+          <p className="mt-3 text-xs text-muted-foreground">
+            Depois que terminar, volte aqui e clique em <strong>Testar conexão</strong>{" "}
+            ou cadastre/atualize a VPS em <strong>Meus Servidores</strong>.
+          </p>
         </section>
 
-        {/* ===== Arquivos ===== */}
+        {/* Arquivos */}
         <section>
           <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-muted-foreground">
             Arquivos do instalador
@@ -412,11 +430,13 @@ const Install = () => {
           <div className="space-y-3">
             {FILES.map((f) => {
               const Icon = f.icon;
-              const willEmbedSecret = f.name === "api_cls.php" && !!secret;
               return (
                 <div
                   key={f.name}
-                  className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-border bg-card/40 p-4"
+                  className={cn(
+                    "flex flex-wrap items-start justify-between gap-3 rounded-xl border bg-card/40 p-4",
+                    f.primary ? "border-primary/40" : "border-border",
+                  )}
                 >
                   <div className="flex min-w-0 flex-1 items-start gap-3">
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary/10">
@@ -427,11 +447,6 @@ const Install = () => {
                       <p className="text-xs text-muted-foreground">{f.description}</p>
                       <p className="mt-1 font-mono text-[10px] text-muted-foreground/70">
                         {f.language}
-                        {willEmbedSecret && (
-                          <span className="ml-2 text-emerald-500">
-                            · Copiar embute o secret automaticamente
-                          </span>
-                        )}
                       </p>
                     </div>
                   </div>
@@ -440,7 +455,9 @@ const Install = () => {
                       variant="outline"
                       size="sm"
                       onClick={() => handleCopy(f)}
-                      className={cn(copied === f.name && "border-emerald-500/60 text-emerald-500")}
+                      className={cn(
+                        copied === f.name && "border-emerald-500/60 text-emerald-500",
+                      )}
                     >
                       {copied === f.name ? (
                         <Check className="mr-2 h-3.5 w-3.5" />
@@ -449,7 +466,7 @@ const Install = () => {
                       )}
                       {copied === f.name ? "Copiado" : "Copiar"}
                     </Button>
-                    <Button asChild size="sm">
+                    <Button asChild size="sm" onClick={() => handleDownload(f)}>
                       <a href={f.path} download={f.name}>
                         <Download className="mr-2 h-3.5 w-3.5" /> Baixar
                       </a>
@@ -461,10 +478,11 @@ const Install = () => {
           </div>
 
           <p className="mt-6 rounded-md border border-border bg-card/30 p-4 text-xs text-muted-foreground">
-            💡 O download <strong>não</strong> embute o secret — o arquivo baixado vem com{" "}
-            <code className="rounded bg-muted px-1 font-mono">__PW_API_SECRET__</code>{" "}
-            como placeholder. Use o botão <strong>Copiar</strong> acima para que o secret
-            já vá embutido, ou troque manualmente na VPS.
+            💡 O instalador <strong>injeta o secret automaticamente</strong> no
+            <code className="mx-1 rounded bg-muted px-1 font-mono">api_cls.php</code>
+            antes de copiar para
+            <code className="mx-1 rounded bg-muted px-1 font-mono">/var/www/html/apicls/</code>.
+            Você não precisa editar nada manualmente.
           </p>
         </section>
       </main>
