@@ -542,7 +542,7 @@ const KitListView = ({
                     <Button
                       size="icon"
                       variant="ghost"
-                      onClick={() => onDuplicate(kit.id)}
+                      onClick={() => onDuplicate(kit)}
                       title="Duplicar"
                     >
                       <Copy className="h-3.5 w-3.5" />
@@ -604,11 +604,21 @@ const KitTargetBadge = ({ cls }: { cls: number | null }) => {
 
 interface CreateViewProps {
   template: ClsTemplate;
+  tenantId: string | null;
+  canManageCloud: boolean;
+  onCreateCloud: (kit: InitialKit, visibility: KitVisibility) => Promise<InitialKit | null>;
   onCancel: () => void;
-  onSaved: () => void;
+  onSaved: () => void | Promise<void>;
 }
 
-const KitCreateView = ({ template, onCancel, onSaved }: CreateViewProps) => {
+const KitCreateView = ({
+  template,
+  tenantId,
+  canManageCloud,
+  onCreateCloud,
+  onCancel,
+  onSaved,
+}: CreateViewProps) => {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [targetCls, setTargetCls] = useState<number | null>(template.summary.cls);
@@ -617,8 +627,14 @@ const KitCreateView = ({ template, onCancel, onSaved }: CreateViewProps) => {
     storehouse_money: false,
     task_inventory: false,
   });
+  // server | private | local
+  const cloudAvailable = !!tenantId && canManageCloud;
+  const [destination, setDestination] = useState<"server" | "private" | "local">(
+    cloudAvailable ? "server" : "local",
+  );
+  const [saving, setSaving] = useState(false);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!name.trim()) {
       toast.error("Dê um nome ao kit");
       return;
@@ -630,9 +646,27 @@ const KitCreateView = ({ template, onCancel, onSaved }: CreateViewProps) => {
       includes,
       template,
     });
-    kitStore.save(kit);
-    toast.success(`Kit "${kit.name}" salvo (${countKitItems(kit)} itens)`);
-    onSaved();
+    setSaving(true);
+    try {
+      if (destination === "local" || !cloudAvailable) {
+        kitStore.save(kit);
+        toast.success(`Kit "${kit.name}" salvo localmente (${countKitItems(kit)} itens)`);
+      } else {
+        const r = await onCreateCloud(kit, destination);
+        if (!r) {
+          toast.error("Falha ao salvar no servidor");
+          return;
+        }
+        toast.success(
+          `Kit "${r.name}" salvo no servidor (${countKitItems(kit)} itens · ${
+            destination === "server" ? "visível para todos" : "privado"
+          })`,
+        );
+      }
+      await onSaved();
+    } finally {
+      setSaving(false);
+    }
   };
 
   const invFilled = template.inventory.items.filter((i) => i.id > 0).length;
