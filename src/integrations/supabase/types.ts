@@ -137,6 +137,53 @@ export type Database = {
         }
         Relationships: []
       }
+      initial_kits: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          name: string
+          payload: Json
+          target_cls: number | null
+          tenant_id: string
+          updated_at: string
+          visibility: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          name: string
+          payload: Json
+          target_cls?: number | null
+          tenant_id: string
+          updated_at?: string
+          visibility?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          name?: string
+          payload?: Json
+          target_cls?: number | null
+          tenant_id?: string
+          updated_at?: string
+          visibility?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "initial_kits_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       item_catalogs: {
         Row: {
           created_at: string
@@ -445,6 +492,18 @@ export type Database = {
       is_server_member: {
         Args: { _tenant_id: string; _user_id: string }
         Returns: boolean
+      }
+      log_audit_event: {
+        Args: {
+          _action: string
+          _error?: string
+          _http_status?: number
+          _metadata?: Json
+          _status?: string
+          _target?: string
+          _tenant_id?: string
+        }
+        Returns: string
       }
       set_active_tenant: {
         Args: { target_tenant_id: string }

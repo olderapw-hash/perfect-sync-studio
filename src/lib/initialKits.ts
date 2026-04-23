@@ -17,6 +17,12 @@ export interface KitIncludes {
   task_inventory: boolean;
 }
 
+/** Origem do kit — `local` (localStorage), `cloud` (Supabase). */
+export type KitSource = "local" | "cloud";
+
+/** Visibilidade de kit cloud. */
+export type KitVisibility = "private" | "server";
+
 export interface InitialKit {
   id: string;
   name: string;
@@ -26,6 +32,14 @@ export interface InitialKit {
   created_at: string;
   updated_at: string;
   includes: KitIncludes;
+  /** Quando vem do Supabase. Ausente em kits do localStorage legados. */
+  source?: KitSource;
+  /** Apenas para kits cloud. */
+  visibility?: KitVisibility;
+  /** Apenas para kits cloud — id do tenant a que pertence. */
+  tenant_id?: string;
+  /** Apenas para kits cloud — id do usuário criador. */
+  created_by?: string;
   inventory: {
     money?: number;
     items: ClsItem[];
