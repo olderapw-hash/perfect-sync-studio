@@ -21,6 +21,7 @@ import { useClsconfig } from "@/hooks/useClsconfig";
 import { useAuth } from "@/hooks/useAuth";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useServerPermissions } from "@/hooks/useServerPermissions";
+import { useTenant } from "@/hooks/useTenant";
 import { PendingInvitesBanner } from "@/components/PendingInvitesBanner";
 import { ClsconfigEditor } from "@/components/admin/ClsconfigEditor";
 import { ItemCatalogManager } from "@/components/admin/ItemCatalogManager";
@@ -32,6 +33,7 @@ import { RolePersonagemTab } from "@/components/admin/RolePersonagemTab";
 import { ClassPhotosTab } from "@/components/admin/ClassPhotosTab";
 import { SettingsTab } from "@/components/admin/SettingsTab";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { pwApi } from "@/lib/pwApiActions";
 import { cn } from "@/lib/utils";
 
 type AdminMode = "template" | "role" | "photos" | "settings";
