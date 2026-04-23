@@ -56,8 +56,12 @@ function jsonError(message: string, status: number): Response {
 }
 
 /**
- * Valida o JWT do chamador e exige `admin` em `public.user_roles`.
- * Retorna `{ userId }` se autorizado, ou uma `Response` de erro caso contrário.
+ * Valida o JWT do chamador e exige acesso mínimo:
+ *   - role global `admin`/`superadmin` em `public.user_roles`, OU
+ *   - ser membro de pelo menos um servidor (`server_members`).
+ *
+ * A checagem fina (qual permissão dentro do servidor) acontece adiante
+ * via `has_server_permission` para a action específica.
  */
 async function requireAdmin(req: Request): Promise<Response | { userId: string }> {
   const authHeader = req.headers.get("Authorization");
@@ -84,21 +88,37 @@ async function requireAdmin(req: Request): Promise<Response | { userId: string }
     return jsonError("Unauthorized: token inválido ou expirado", 401);
   }
 
-  // Aceita admin OU superadmin — superadmin é estritamente mais permissivo.
+  const userId = userRes.user.id;
+
+  // 1) Tenta admin/superadmin global.
   const { data: roleRows, error: roleErr } = await supabase
     .from("user_roles")
     .select("role")
-    .eq("user_id", userRes.user.id)
+    .eq("user_id", userId)
     .in("role", ["admin", "superadmin"]);
   if (roleErr) {
     console.error("[clsconfig-proxy] role lookup error", roleErr.message);
     return jsonError("Forbidden", 403);
   }
-  if (!roleRows || roleRows.length === 0) {
-    return jsonError("Forbidden: admin role required", 403);
+  if (roleRows && roleRows.length > 0) {
+    return { userId };
   }
 
-  return { userId: userRes.user.id };
+  // 2) Senão, aceita se for membro de algum servidor.
+  const { data: memberRows, error: memberErr } = await supabase
+    .from("server_members")
+    .select("id")
+    .eq("user_id", userId)
+    .limit(1);
+  if (memberErr) {
+    console.error("[clsconfig-proxy] member lookup error", memberErr.message);
+    return jsonError("Forbidden", 403);
+  }
+  if (!memberRows || memberRows.length === 0) {
+    return jsonError("Forbidden: você não tem acesso a nenhum servidor", 403);
+  }
+
+  return { userId };
 }
 
 Deno.serve(async (req: Request) => {
