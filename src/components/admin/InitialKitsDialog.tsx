@@ -68,6 +68,7 @@ import { saveHistory } from "@/lib/saveHistory";
 import { seenBackups } from "@/lib/seenBackups";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PresetsTabView } from "./PresetsTabView";
+import { KitEditSlotsView } from "./KitEditSlotsView";
 
 export type KitsDialogMode = "template" | "role";
 
@@ -94,7 +95,7 @@ interface Props {
   onBulkReload?: () => void;
 }
 
-type View = "list" | "create" | "apply" | "bulk_apply";
+type View = "list" | "create" | "apply" | "bulk_apply" | "edit";
 
 const APPLY_MODE_LABEL: Record<ApplyMode, { title: string; desc: string }> = {
   replace_section: {
