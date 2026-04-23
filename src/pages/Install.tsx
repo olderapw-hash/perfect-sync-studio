@@ -88,18 +88,6 @@ function expectedApiUrl(rawUrl: string | null | undefined): string {
   return `${trimmed}/apicls/api_cls.php`;
 }
 
-function extractIp(rawUrl: string | null | undefined): string {
-  if (!rawUrl) return "IP_DA_VPS";
-  try {
-    const u = new URL(
-      rawUrl.startsWith("http") ? rawUrl : `http://${rawUrl}`,
-    );
-    return u.hostname || "IP_DA_VPS";
-  } catch {
-    return "IP_DA_VPS";
-  }
-}
-
 const Install = () => {
   const navigate = useNavigate();
   const { session, loading: authLoading } = useAuth();
