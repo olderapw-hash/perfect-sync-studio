@@ -256,6 +256,7 @@ export const ItemEditor = ({
           <span className="rounded-md bg-muted/40 px-2 py-0.5 font-mono text-[11px] text-muted-foreground">
             {isEquipmentSection ? (
               <>
+                <span className="opacity-70">Slot:</span>{" "}
                 <span className={slotDef ? "text-foreground" : "text-warning"}>
                   {slotLabel}
                 </span>
