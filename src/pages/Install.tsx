@@ -41,6 +41,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useServers } from "@/hooks/useServers";
 import { supabase } from "@/integrations/supabase/client";
 import { testServerConnection } from "@/lib/serverConnection";
+import { friendlyConnectionError } from "@/lib/connectionErrors";
 import { cn } from "@/lib/utils";
 
 interface InstallerFile {
@@ -99,6 +100,7 @@ const Install = () => {
   const [secretLoading, setSecretLoading] = useState(false);
   const [showSecret, setShowSecret] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [showRealValues, setShowRealValues] = useState(false);
 
   useEffect(() => {
     if (!selectedId) {
@@ -112,35 +114,51 @@ const Install = () => {
     [servers, selectedId],
   );
 
-  // RPC só retorna o secret do tenant ativo do usuário.
+  // Busca o secret do servidor selecionado (RPC valida ownership).
+  // Funciona mesmo quando o servidor NÃO está ativo — útil logo após criar
+  // o 1º servidor no onboarding, antes de ativar.
   useEffect(() => {
     let alive = true;
     setSecret(null);
     setShowSecret(false);
     if (!selected) return;
-    if (!selected.is_active) return;
     setSecretLoading(true);
-    supabase.rpc("get_my_tenant_secret").then(({ data }) => {
-      if (!alive) return;
-      setSecret((data as string | null) ?? null);
-      setSecretLoading(false);
-    });
+    supabase
+      .rpc("get_tenant_secret", { _tenant_id: selected.id })
+      .then(({ data }) => {
+        if (!alive) return;
+        setSecret((data as string | null) ?? null);
+        setSecretLoading(false);
+      });
     return () => {
       alive = false;
     };
   }, [selected]);
 
   const apiUrl = expectedApiUrl(selected?.pw_api_base_url);
-  // Sempre usamos placeholders fictícios no comando exibido — o IP e o secret
-  // reais do servidor nunca aparecem no método recomendado, para evitar
-  // vazamento ao copiar/compartilhar a tela.
-  const ipPlaceholder = "IP_DA_VPS";
-  const secretPlaceholder = "SEU_SECRET";
+
+  // Extrai host/IP da URL pra pré-preencher o comando quando o usuário escolher.
+  const ipFromUrl = useMemo(() => {
+    if (!selected?.pw_api_base_url) return null;
+    try {
+      const u = new URL(
+        selected.pw_api_base_url.startsWith("http")
+          ? selected.pw_api_base_url
+          : `http://${selected.pw_api_base_url}`,
+      );
+      return u.hostname;
+    } catch {
+      return null;
+    }
+  }, [selected]);
+
+  const ipDisplay = showRealValues && ipFromUrl ? ipFromUrl : "IP_DA_VPS";
+  const secretDisplay = showRealValues && secret ? secret : "SEU_SECRET";
 
   const installCommand = [
-    `scp api_cls.php root@${ipPlaceholder}:/root/api_cls.php`,
-    `scp install-apicls-centos7.sh root@${ipPlaceholder}:/root/install-apicls-centos7.sh`,
-    `ssh root@${ipPlaceholder} "bash /root/install-apicls-centos7.sh --secret ${secretPlaceholder} --api-src /root/api_cls.php"`,
+    `scp api_cls.php root@${ipDisplay}:/root/api_cls.php`,
+    `scp install-apicls-centos7.sh root@${ipDisplay}:/root/install-apicls-centos7.sh`,
+    `ssh root@${ipDisplay} "bash /root/install-apicls-centos7.sh --secret ${secretDisplay} --api-src /root/api_cls.php"`,
   ].join("\n");
 
   const handleDownload = (file: InstallerFile) => {
@@ -181,7 +199,8 @@ const Install = () => {
         `Conexão OK${r.entries != null ? ` · ${r.entries} entries` : ""} (${r.elapsed_ms}ms)`,
       );
     } else {
-      toast.error(`Falha: ${r.error ?? "erro desconhecido"}`);
+      const f = friendlyConnectionError(r);
+      toast.error(f.title, { description: f.hint, duration: 8000 });
     }
   };
 
