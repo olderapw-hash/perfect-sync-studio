@@ -12,6 +12,7 @@ import {
   HardDrive,
   Loader2,
   Package,
+  Pencil,
   Plus,
   Save,
   Send,
