@@ -66,6 +66,18 @@ interface Props {
   onSlotsChange?: (next: ClsItem[]) => void;
   /** Capacidade da seção (limita destinos válidos). Default: max(peer pos)+1 ou 64. */
   capacity?: number;
+  /**
+   * Seção em que o item vive — habilita label real do slot quando for
+   * `equipment.items` (ex: "Slot: Arma (pos 0)") em vez de só "pos 0".
+   */
+  section?:
+    | "inventory.items"
+    | "equipment.items"
+    | "storehouse.items"
+    | "storehouse.dress"
+    | "storehouse.material"
+    | "storehouse.generalcard"
+    | "task.task_inventory";
 }
 
 type SlotPickerMode = "duplicate" | "move" | null;
@@ -77,6 +89,7 @@ export const ItemEditor = ({
   peerItems,
   onSlotsChange,
   capacity,
+  section,
 }: Props) => {
   const [pickerMode, setPickerMode] = useState<SlotPickerMode>(null);
   const [pickerDest, setPickerDest] = useState<string>("");
