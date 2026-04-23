@@ -174,10 +174,8 @@ export const EquipmentTab = ({ template, onChange }: Props) => {
       : SLOTS.find((s) => s.pos === editingPos)?.label
         ?? (LEADER_POSITIONS.has(editingPos) ? "Líder" : "extra");
 
-  // Grid de slots extras (sempre mostra ao menos 32 caixas, no estilo da imagem)
-  const EXTRA_GRID_SIZE = 32;
-  const extrasByPos = new Map<number, ClsItem>();
-  extras.forEach((it) => extrasByPos.set(it.pos, it));
+  // Removido: grid de extras com pos virtual (100+i). Items não-mapeados
+  // agora aparecem por pos real na seção "Slots especiais detectados".
 
   // Roupas: lê direto do storehouse.dress (array de fashion do servidor PW).
   const dress = template.storehouse?.dress ?? [];
