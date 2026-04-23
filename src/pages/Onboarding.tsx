@@ -203,6 +203,20 @@ const Onboarding = () => {
             PW <span className="text-primary">Admin</span>
           </span>
           <span className="ml-2 text-xs text-muted-foreground">· Configuração inicial</span>
+          <div className="ml-auto">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={async () => {
+                await signOut();
+                navigate("/auth", { replace: true });
+              }}
+              className="gap-2"
+            >
+              <LogOut className="h-4 w-4" />
+              Sair
+            </Button>
+          </div>
         </div>
       </header>
 
