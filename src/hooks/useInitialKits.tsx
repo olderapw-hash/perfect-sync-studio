@@ -273,6 +273,44 @@ export function useInitialKits({ tenantId }: UseInitialKitsOptions): UseInitialK
     [tenantId, refetch],
   );
 
+  const updateKitPayload = useCallback(
+    async (id: string, kit: InitialKit) => {
+      if (!tenantId) return false;
+      const payload = kitToPayload(kit);
+      const { error: err } = await supabase
+        .from("initial_kits")
+        .update({
+          payload: payload as never,
+          // Mantém os "includes" coerentes com o conteúdo (para que reaplicar
+          // o kit decida corretamente se respeita money/task).
+          name: kit.name,
+          description: kit.description || null,
+          target_cls: kit.target_cls,
+        })
+        .eq("id", id);
+      if (err) {
+        await logAuditEvent({
+          action: "initial_kit.update",
+          tenantId,
+          target: id,
+          status: "error",
+          error: err.message,
+          metadata: { scope: "payload", item_count: countKitItems(kit) },
+        });
+        return false;
+      }
+      await logAuditEvent({
+        action: "initial_kit.update",
+        tenantId,
+        target: id,
+        metadata: { scope: "payload", item_count: countKitItems(kit), name: kit.name },
+      });
+      await refetch();
+      return true;
+    },
+    [tenantId, refetch],
+  );
+
   const deleteKit = useCallback(
     async (id: string) => {
       if (!tenantId) return false;
