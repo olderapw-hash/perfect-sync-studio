@@ -33,7 +33,6 @@ export const ProtectedRoute = ({
       setIsServerMember(false);
       return;
     }
-    // Safety: nunca deixar preso no spinner mais que 4s.
     const safety = setTimeout(() => {
       if (!cancelled) {
         console.warn("[ProtectedRoute] server_members lookup timeout — assuming non-member");
@@ -64,7 +63,11 @@ export const ProtectedRoute = ({
     };
   }, [session?.user]);
 
-  if (loading || (requireSubscription && (subLoading || tenantLoading)) || (requireAdmin && isServerMember === null && !!session)) {
+  if (
+    loading ||
+    (requireSubscription && (subLoading || tenantLoading)) ||
+    (requireAdmin && isServerMember === null && !!session)
+  ) {
     return (
       <div className="flex h-screen items-center justify-center bg-hero">
         <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -76,8 +79,30 @@ export const ProtectedRoute = ({
     return <Navigate to="/auth" replace />;
   }
 
-  // Acesso ao painel: admin global OU membro de algum servidor (convidado aceito).
-  const canEnterAdmin = isAdmin || isServerMember === true;
+  // Acesso ao painel: admin global OU membro convidado OU dono de um tenant próprio.
+  const hasOwnedTenant = !!tenant;
+  const canEnterAdmin = isAdmin || isServerMember === true || hasOwnedTenant;
+
+  // Subscription gate. Superadmin, admins manualmente aprovados E membros convidados
+  // de servidores existentes fazem bypass — convidados operam no tenant do dono,
+  // não precisam pagar nem fazer onboarding próprio.
+  const isGuestMember = isServerMember === true && !isAdmin && !isSuperadmin;
+  if (requireSubscription && !isSuperadmin && !isAdmin && !isGuestMember) {
+    if (!isActive) {
+      return <Navigate to="/pricing" replace />;
+    }
+    if (!tenant?.onboarding_completed) {
+      return <Navigate to="/onboarding" replace />;
+    }
+  }
+
+  // Admins não-superadmin ainda precisam ter onboarding feito (tenant próprio).
+  if (requireSubscription && isAdmin && !isSuperadmin && !isGuestMember) {
+    if (!tenant?.onboarding_completed) {
+      return <Navigate to="/onboarding" replace />;
+    }
+  }
+
   if (requireAdmin && !canEnterAdmin) {
     const hasPending = pendingInvites.length > 0;
     return (
@@ -122,26 +147,6 @@ export const ProtectedRoute = ({
         </div>
       </div>
     );
-  }
-
-  // Subscription gate. Superadmin, admins manualmente aprovados E membros convidados
-  // de servidores existentes fazem bypass — convidados operam no tenant do dono,
-  // não precisam pagar nem fazer onboarding próprio.
-  const isGuestMember = isServerMember === true && !isAdmin && !isSuperadmin;
-  if (requireSubscription && !isSuperadmin && !isAdmin && !isGuestMember) {
-    if (!isActive) {
-      return <Navigate to="/pricing" replace />;
-    }
-    if (!tenant?.onboarding_completed) {
-      return <Navigate to="/onboarding" replace />;
-    }
-  }
-
-  // Admins não-superadmin ainda precisam ter onboarding feito (tenant próprio).
-  if (requireSubscription && isAdmin && !isSuperadmin && !isGuestMember) {
-    if (!tenant?.onboarding_completed) {
-      return <Navigate to="/onboarding" replace />;
-    }
   }
 
   return <>{children}</>;
