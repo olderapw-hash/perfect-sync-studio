@@ -260,14 +260,22 @@ export const ItemInsertModal = ({
                       <SelectValue placeholder="Selecione o slot" />
                     </SelectTrigger>
                     <SelectContent>
-                      {PW_EQUIPMENT_SLOTS.map((s) => (
-                        <SelectItem key={s.pos} value={String(s.pos)}>
-                          {s.label}{" "}
-                          <span className="ml-1 font-mono text-[10px] text-muted-foreground">
-                            (pos {s.pos})
-                          </span>
-                        </SelectItem>
-                      ))}
+                      {PW_EQUIPMENT_SLOTS.map((s) => {
+                        const occupied = ctx?.items.some(
+                          (it) => it.pos === s.pos && it.id > 0,
+                        );
+                        return (
+                          <SelectItem key={s.pos} value={String(s.pos)}>
+                            {s.label}
+                            <span className="ml-1 font-mono text-[10px] text-muted-foreground">
+                              (pos {s.pos})
+                            </span>
+                            {occupied && (
+                              <span className="ml-1 text-[10px] text-warning">• ocupado</span>
+                            )}
+                          </SelectItem>
+                        );
+                      })}
                     </SelectContent>
                   </Select>
                   <p className="font-mono text-[10px] text-muted-foreground">
