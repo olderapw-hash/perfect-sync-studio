@@ -2,16 +2,20 @@ import { useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
   Boxes,
+  CheckCircle2,
   Copy,
   Download,
   FileUp,
+  Loader2,
   Package,
   Plus,
   Save,
+  Send,
   Sparkles,
   Trash2,
   Upload,
   X,
+  XCircle,
 } from "lucide-react";
 import {
   Dialog,
@@ -35,6 +39,7 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import {
   applyKitToTemplate,
+  buildKitBulkPayload,
   countKitItems,
   createKitFromTemplate,
   downloadKitJson,
@@ -44,10 +49,15 @@ import {
   type InitialKit,
   type KitIncludes,
 } from "@/lib/initialKits";
-import type { ClsTemplate } from "@/types/clsconfig";
+import type { ClsEntry, ClsTemplate } from "@/types/clsconfig";
 import { summarizeIssues, validateAllItems } from "@/lib/validateItem";
 import { ValidationPanel } from "./ValidationPanel";
 import { getClassInfo } from "@/lib/pwClasses";
+import { invokeClsconfigProxy } from "@/lib/clsconfigInvoke";
+import { saveHistory } from "@/lib/saveHistory";
+import { seenBackups } from "@/lib/seenBackups";
+
+export type KitsDialogMode = "template" | "role";
 
 interface Props {
   open: boolean;
@@ -60,6 +70,16 @@ interface Props {
   canApply: boolean;
   /** Tooltip exibido quando canApply=false. */
   applyDeniedTitle?: string;
+  /** Modo do editor — bulk apply só funciona em "template". */
+  mode?: KitsDialogMode;
+  /** Todas as entries carregadas (para "Aplicar em todos os CLS"). */
+  allEntries?: ClsEntry[];
+  /** True se o usuário pode aplicar em massa (bulk_apply). */
+  canBulkApply?: boolean;
+  /** Tooltip exibido quando canBulkApply=false. */
+  bulkDeniedTitle?: string;
+  /** Disparado após bulk apply para recarregar o getClsconfig. */
+  onBulkReload?: () => void;
 }
 
 type View = "list" | "create" | "apply";
