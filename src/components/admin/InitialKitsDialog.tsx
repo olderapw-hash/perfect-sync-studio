@@ -7,7 +7,6 @@ import {
   CloudUpload,
   Copy,
   Download,
-  Eye,
   EyeOff,
   FileUp,
   HardDrive,
