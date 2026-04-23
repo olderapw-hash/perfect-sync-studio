@@ -32,8 +32,8 @@ import { ItemCatalogAdvancedDialog } from "@/components/admin/ItemCatalogAdvance
 import { RolePersonagemTab } from "@/components/admin/RolePersonagemTab";
 import { ClassPhotosTab } from "@/components/admin/ClassPhotosTab";
 import { SettingsTab } from "@/components/admin/SettingsTab";
+import { EmptyClsconfigBanner } from "@/components/admin/EmptyClsconfigBanner";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { pwApi } from "@/lib/pwApiActions";
 import { cn } from "@/lib/utils";
 
 type AdminMode = "template" | "role" | "photos" | "settings";
