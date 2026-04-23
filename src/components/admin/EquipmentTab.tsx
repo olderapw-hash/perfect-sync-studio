@@ -612,6 +612,34 @@ export const EquipmentTab = ({ template, onChange }: Props) => {
             </div>
           </section>
 
+          {/* Slots especiais detectados — items com pos fora do mapeamento canônico
+              (e fora dos líderes). Nunca são apagados, mesmo sem nome canônico. */}
+          {extras.some((it) => !isKnownEquipmentPos(it.pos)) && (
+            <section className="mt-3">
+              <div className="mb-1.5 flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-amber-200/80">
+                <span>Slots especiais detectados</span>
+                <span className="font-mono opacity-70">
+                  {extras.filter((it) => !isKnownEquipmentPos(it.pos)).length} item(ns)
+                </span>
+              </div>
+              <div className="grid grid-cols-6 gap-1.5">
+                {extras
+                  .filter((it) => !isKnownEquipmentPos(it.pos))
+                  .map((it) => (
+                    <div key={it.pos} className="flex flex-col items-center gap-0.5">
+                      <span
+                        className="text-[9px] font-bold uppercase tracking-wider"
+                        style={{ color: "hsl(40 45% 65%)" }}
+                      >
+                        pos {it.pos}
+                      </span>
+                      <ItemSlot item={it} onClick={() => openSlot(it.pos)} size={40} />
+                    </div>
+                  ))}
+              </div>
+            </section>
+          )}
+
           {/* Slots extras — grid 8x4 estilo bag do cliente */}
           <section className="mt-3">
             <div
