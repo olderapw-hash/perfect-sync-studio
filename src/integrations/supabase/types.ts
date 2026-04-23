@@ -214,6 +214,50 @@ export type Database = {
         }
         Relationships: []
       }
+      item_favorites: {
+        Row: {
+          created_at: string
+          icon_path: string | null
+          id: string
+          item_id: number
+          max_count: number | null
+          metadata: Json | null
+          name: string | null
+          tenant_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          icon_path?: string | null
+          id?: string
+          item_id: number
+          max_count?: number | null
+          metadata?: Json | null
+          name?: string | null
+          tenant_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          icon_path?: string | null
+          id?: string
+          item_id?: number
+          max_count?: number | null
+          metadata?: Json | null
+          name?: string | null
+          tenant_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_favorites_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       server_invites: {
         Row: {
           accepted_at: string | null
