@@ -194,6 +194,27 @@ export function validateItems(
       }
     }
 
+    // Equipamento: pos desconhecida com item válido → AVISO (não erro).
+    // Slot é preservado; só sinaliza pra UX que o painel não tem layout pra ele.
+    if (
+      opts.section === "equipment.items" &&
+      isFiniteNumber(pos) &&
+      pos >= 0 &&
+      isFiniteNumber(id) &&
+      id > 0 &&
+      isUnknownEquipmentPos(pos)
+    ) {
+      issues.push({
+        section: opts.section,
+        tab: opts.tab,
+        index: idx,
+        pos,
+        field: "pos",
+        severity: "warning",
+        message: `Slot especial/desconhecido detectado (pos ${pos}). Será preservado.`,
+      });
+    }
+
     // Regra 7: data hex par
     if (!isValidHexData(it?.data)) {
       push("error", "data", "data deve ser HEX válido com tamanho par");
