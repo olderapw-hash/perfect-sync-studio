@@ -74,11 +74,11 @@ export const EmptyClsconfigBanner = ({
   const failed = probe?.filter((r) => !r.success) ?? [];
 
   return (
-    <div className="space-y-4 rounded-xl border border-amber-500/40 bg-amber-500/10 p-5 text-sm">
+    <div className="space-y-4 rounded-xl border border-warning/40 bg-warning/10 p-5 text-sm">
       <div className="flex items-start gap-3">
-        <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
+        <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
         <div className="space-y-1">
-          <p className="font-bold uppercase tracking-wider text-amber-500">
+          <p className="font-bold uppercase tracking-wider text-warning">
             API respondeu, mas nenhum template CLS foi retornado
           </p>
           <p className="text-foreground/90">
