@@ -70,7 +70,18 @@ Deno.serve(async (req: Request) => {
       .eq("id", tenantId)
       .maybeSingle();
     if (tErr || !t) return jsonResponse({ success: false, error: "Servidor não encontrado" }, 404);
-    if (t.owner_id !== userId) return jsonResponse({ success: false, error: "Acesso negado" }, 403);
+    // Aceita owner OU membro do servidor (convidado aceito).
+    let allowed = t.owner_id === userId;
+    if (!allowed) {
+      const { data: m } = await admin
+        .from("server_members")
+        .select("id")
+        .eq("tenant_id", tenantId)
+        .eq("user_id", userId)
+        .maybeSingle();
+      allowed = !!m;
+    }
+    if (!allowed) return jsonResponse({ success: false, error: "Acesso negado" }, 403);
     url = (t.pw_api_base_url ?? "").replace(/\/+$/, "");
     secret = t.pw_api_secret ?? "";
   }
