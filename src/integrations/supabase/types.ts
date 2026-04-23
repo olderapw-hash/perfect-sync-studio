@@ -518,6 +518,7 @@ export type Database = {
           server_name: string
         }[]
       }
+      get_tenant_secret: { Args: { _tenant_id: string }; Returns: string }
       has_active_subscription: {
         Args: { check_env?: string; user_uuid: string }
         Returns: boolean
