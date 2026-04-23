@@ -1,9 +1,11 @@
+import { useEffect, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { Loader2, Mail, ShieldAlert } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useTenant } from "@/hooks/useTenant";
 import { useMyPendingInvites } from "@/hooks/useServerMembers";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Props {
   children: React.ReactNode;
@@ -22,7 +24,30 @@ export const ProtectedRoute = ({
   const { tenant, loading: tenantLoading } = useTenant();
   const { invites: pendingInvites } = useMyPendingInvites();
 
-  if (loading || (requireSubscription && (subLoading || tenantLoading))) {
+  // Membros de servidor (owner OU convidado aceito) também podem entrar no /admin,
+  // mesmo sem role admin global.
+  const [isServerMember, setIsServerMember] = useState<boolean | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    if (!session?.user) {
+      setIsServerMember(false);
+      return;
+    }
+    (async () => {
+      const { data, error } = await supabase
+        .from("server_members")
+        .select("id")
+        .eq("user_id", session.user.id)
+        .limit(1);
+      if (cancelled) return;
+      setIsServerMember(!error && (data?.length ?? 0) > 0);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.user]);
+
+  if (loading || (requireSubscription && (subLoading || tenantLoading)) || (requireAdmin && isServerMember === null && !!session)) {
     return (
       <div className="flex h-screen items-center justify-center bg-hero">
         <Loader2 className="h-6 w-6 animate-spin text-primary" />
