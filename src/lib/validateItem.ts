@@ -19,7 +19,7 @@
 // Saída inclui severidade ("error" | "critical" | "warning") e contexto
 // suficiente para o painel de validação abrir o slot correspondente.
 import type { ClsItem, ClsTemplate } from "@/types/clsconfig";
-import { getEquipmentSlotLabel } from "@/lib/equipmentSlots";
+import { getEquipmentSlotLabel, isKnownEquipmentPos } from "@/lib/equipmentSlots";
 
 /** Identifica em qual lista o erro foi gerado. Usado pela UI pra abrir a tab certa. */
 export type ItemSection =
@@ -178,7 +178,7 @@ export function validateItems(
         const isEquipment = opts.section === "equipment.items";
         const slotName = isEquipment ? getEquipmentSlotLabel(pos) : null;
         const dupMsg = isEquipment
-          ? `${opts.label} duplicado no slot ${slotName} (pos ${pos}) — também no índice ${seenPos.get(pos)}`
+          ? `Equipamento duplicado no slot ${slotName} (pos ${pos}) — também no índice ${seenPos.get(pos)}`
           : `${opts.label} · pos ${pos}: duplicada (também no slot índice ${seenPos.get(pos)})`;
         issues.push({
           section: opts.section,
@@ -192,6 +192,29 @@ export function validateItems(
       } else {
         seenPos.set(pos, idx);
       }
+    }
+
+    // Equipamento com pos desconhecida + item válido → AVISO (não erro).
+    // Servidores customizados podem ter slots especiais (26, 29, 32, 33, ...)
+    // que devem ser preservados no payload mesmo sem nome canônico.
+    if (
+      opts.section === "equipment.items" &&
+      isFiniteNumber(pos) &&
+      pos >= 0 &&
+      !looksEmpty &&
+      isFiniteNumber(id) &&
+      id > 0 &&
+      !isKnownEquipmentPos(pos)
+    ) {
+      issues.push({
+        section: opts.section,
+        tab: opts.tab,
+        index: idx,
+        pos,
+        field: "pos",
+        severity: "warning",
+        message: `Slot especial/desconhecido detectado (pos ${pos}). Será preservado no payload.`,
+      });
     }
 
     // Regra 7: data hex par
