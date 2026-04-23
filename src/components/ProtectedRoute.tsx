@@ -33,17 +33,34 @@ export const ProtectedRoute = ({
       setIsServerMember(false);
       return;
     }
+    // Safety: nunca deixar preso no spinner mais que 4s.
+    const safety = setTimeout(() => {
+      if (!cancelled) {
+        console.warn("[ProtectedRoute] server_members lookup timeout — assuming non-member");
+        setIsServerMember(false);
+      }
+    }, 4000);
     (async () => {
-      const { data, error } = await supabase
-        .from("server_members")
-        .select("id")
-        .eq("user_id", session.user.id)
-        .limit(1);
-      if (cancelled) return;
-      setIsServerMember(!error && (data?.length ?? 0) > 0);
+      try {
+        const { data, error } = await supabase
+          .from("server_members")
+          .select("id")
+          .eq("user_id", session.user.id)
+          .limit(1);
+        if (cancelled) return;
+        if (error) console.warn("[ProtectedRoute] server_members error", error);
+        setIsServerMember(!error && (data?.length ?? 0) > 0);
+      } catch (e) {
+        if (cancelled) return;
+        console.error("[ProtectedRoute] server_members threw", e);
+        setIsServerMember(false);
+      } finally {
+        clearTimeout(safety);
+      }
     })();
     return () => {
       cancelled = true;
+      clearTimeout(safety);
     };
   }, [session?.user]);
 
