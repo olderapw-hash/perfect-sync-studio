@@ -783,6 +783,14 @@ export const ClsconfigEditor = ({ entry, allEntries = [], mode = "template", onS
             allEntries={allEntries}
           />
 
+          <BulkClearInventoryDialog
+            open={bulkClearInvOpen}
+            onOpenChange={setBulkClearInvOpen}
+            allEntries={allEntries}
+            tenantId={tenant?.id}
+            onBulkReload={onReload}
+          />
+
           <CompareClsDialog
             open={compareOpen}
             onOpenChange={setCompareOpen}
