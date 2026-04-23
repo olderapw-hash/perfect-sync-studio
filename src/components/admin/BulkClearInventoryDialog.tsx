@@ -304,7 +304,8 @@ export const BulkClearInventoryDialog = ({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="-mx-6 flex-1 overflow-y-auto px-6">
+          <div className="space-y-4">
           {/* Avisos */}
           <div className="rounded-md border border-warning/40 bg-warning/10 p-3 text-xs">
             <div className="mb-1 flex items-center gap-1.5 font-semibold text-warning">
