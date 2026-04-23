@@ -3,19 +3,55 @@ import { useNavigate } from "react-router-dom";
 import { Loader2, Shield } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useSubscription } from "@/hooks/useSubscription";
+import { useServers } from "@/hooks/useServers";
 import { toast } from "sonner";
 
 const Auth = () => {
   const navigate = useNavigate();
-  const { session, loading: authLoading } = useAuth();
+  const { session, loading: authLoading, isAdmin, isSuperadmin } = useAuth();
+  const { isActive, loading: subLoading } = useSubscription();
+  const { servers, active, loading: serversLoading } = useServers();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (!authLoading && session) navigate("/admin", { replace: true });
-  }, [session, authLoading, navigate]);
+    if (authLoading || subLoading || serversLoading || !session) return;
+
+    const next = new URLSearchParams(window.location.search).get("next");
+    if (next && ["/pricing", "/onboarding", "/servers", "/install"].includes(next)) {
+      navigate(next, { replace: true });
+      return;
+    }
+
+    const hasServerAccess = servers.length > 0;
+    const hasCompletedActiveServer = !!active?.onboarding_completed;
+
+    if (isSuperadmin || isAdmin || hasCompletedActiveServer) {
+      navigate("/admin", { replace: true });
+      return;
+    }
+
+    if (hasServerAccess || isActive) {
+      navigate("/onboarding", { replace: true });
+      return;
+    }
+
+    navigate("/pricing", { replace: true });
+  }, [
+    active?.onboarding_completed,
+    authLoading,
+    isActive,
+    isAdmin,
+    isSuperadmin,
+    navigate,
+    servers.length,
+    serversLoading,
+    session,
+    subLoading,
+  ]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,16 +62,15 @@ const Auth = () => {
         const { error } = await supabase.auth.signUp({
           email,
           password,
-          options: { emailRedirectTo: `${window.location.origin}/admin` },
+          options: { emailRedirectTo: `${window.location.origin}/auth` },
         });
         if (error) throw error;
-        toast.success("Conta criada. Faça login.");
+        toast.success("Conta criada. Faça login para continuar.");
         setMode("signin");
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         toast.success("Bem-vindo!");
-        navigate("/admin", { replace: true });
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Erro de autenticação";
@@ -56,7 +91,7 @@ const Auth = () => {
             Painel Admin
           </h1>
           <p className="text-xs text-muted-foreground">
-            Acesso restrito · Perfect World
+            Login e cadastro · Perfect World
           </p>
         </header>
 
@@ -118,7 +153,7 @@ const Auth = () => {
           )}
         </p>
         <p className="mt-3 text-center text-[10px] text-muted-foreground/70">
-          O primeiro cadastro vira admin. Outros usuários ficam sem acesso ao editor.
+          Depois do login, você será guiado para assinatura ou configuração inicial do servidor.
         </p>
       </section>
     </main>
