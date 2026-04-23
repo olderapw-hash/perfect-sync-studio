@@ -15,6 +15,14 @@ import type { ClsItem } from "@/types/clsconfig";
 import type { CatalogItem } from "@/lib/pwApiActions";
 import { normalizeItem } from "@/lib/itemTools";
 import { summarizeIssues, validateItems } from "@/lib/validateItem";
+import { PW_EQUIPMENT_SLOTS, getEquipmentSlotLabel } from "@/lib/equipmentSlots";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export type InsertDestination =
   | "inventory.items"
@@ -218,31 +226,60 @@ export const ItemInsertModal = ({
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div>
+            <div className="col-span-2 sm:col-span-1">
               <Label className="mb-1 block text-xs uppercase tracking-wider text-muted-foreground">
-                Pos {ctx ? `(0..${cap - 1})` : ""}
+                {destination === "equipment.items" ? "Slot de equipamento" : `Pos ${ctx ? `(0..${cap - 1})` : ""}`}
               </Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  type="number"
-                  min={0}
-                  max={Math.max(0, cap - 1)}
-                  value={pos}
-                  onChange={(e) => {
-                    setAutoSlot(false);
-                    setPos(parseInt(e.target.value, 10) || 0);
-                  }}
-                  disabled={!destination}
-                />
-                <label className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                  <input
-                    type="checkbox"
-                    checked={autoSlot}
-                    onChange={(e) => setAutoSlot(e.target.checked)}
+              {destination === "equipment.items" ? (
+                <div className="space-y-1">
+                  <Select
+                    value={String(pos)}
+                    onValueChange={(v) => {
+                      setAutoSlot(false);
+                      setPos(parseInt(v, 10) || 0);
+                    }}
+                  >
+                    <SelectTrigger className="text-xs">
+                      <SelectValue placeholder="Selecione o slot" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PW_EQUIPMENT_SLOTS.map((s) => (
+                        <SelectItem key={s.pos} value={String(s.pos)}>
+                          {s.label}{" "}
+                          <span className="ml-1 font-mono text-[10px] text-muted-foreground">
+                            (pos {s.pos})
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="font-mono text-[10px] text-muted-foreground">
+                    Slot atual: {getEquipmentSlotLabel(pos)} · pos {pos}
+                  </p>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    min={0}
+                    max={Math.max(0, cap - 1)}
+                    value={pos}
+                    onChange={(e) => {
+                      setAutoSlot(false);
+                      setPos(parseInt(e.target.value, 10) || 0);
+                    }}
+                    disabled={!destination}
                   />
-                  auto
-                </label>
-              </div>
+                  <label className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                    <input
+                      type="checkbox"
+                      checked={autoSlot}
+                      onChange={(e) => setAutoSlot(e.target.checked)}
+                    />
+                    auto
+                  </label>
+                </div>
+              )}
               {collided && (
                 <p className="mt-1 flex items-center gap-1 text-[10px] text-warning">
                   <AlertTriangle className="h-3 w-3" />

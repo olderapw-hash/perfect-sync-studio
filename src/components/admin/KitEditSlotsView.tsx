@@ -52,6 +52,7 @@ import {
   type InsertDestination,
   type InsertResult,
 } from "./ItemInsertModal";
+import { getEquipmentSlotLabel } from "@/lib/equipmentSlots";
 
 type SectionKey =
   | "inventory.items"
@@ -615,6 +616,14 @@ const SlotList = ({
                 <div className="min-w-0 flex-1">
                   <div className="truncate font-medium text-foreground">{name}</div>
                   <div className="font-mono text-[10px] text-muted-foreground">
+                    {section === "equipment.items" && (
+                      <>
+                        <span className="text-foreground/80">
+                          {getEquipmentSlotLabel(it.pos)}
+                        </span>
+                        {" · "}
+                      </>
+                    )}
                     id {it.id} · pos {it.pos} · ×{it.count}
                     {it.max_count > 0 && <> / {it.max_count}</>}
                     {it.proctype > 0 && <> · proc {it.proctype}</>}

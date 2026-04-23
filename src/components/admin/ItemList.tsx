@@ -3,13 +3,24 @@ import type { ClsItem } from "@/types/clsconfig";
 import { newEmptyItem } from "@/lib/clsconfig";
 import { ItemEditor } from "./ItemEditor";
 
+type Section =
+  | "inventory.items"
+  | "equipment.items"
+  | "storehouse.items"
+  | "storehouse.dress"
+  | "storehouse.material"
+  | "storehouse.generalcard"
+  | "task.task_inventory";
+
 interface Props {
   title: string;
   items: ClsItem[];
   onChange: (next: ClsItem[]) => void;
+  /** Identifica a seção — habilita labels reais de slot p/ equipamento. */
+  section?: Section;
 }
 
-export const ItemList = ({ title, items, onChange }: Props) => {
+export const ItemList = ({ title, items, onChange, section }: Props) => {
   const filledCount = items.filter((i) => i.id > 0).length;
 
   const updateAt = (idx: number, next: ClsItem) =>
@@ -53,6 +64,7 @@ export const ItemList = ({ title, items, onChange }: Props) => {
               onRemove={() => removeAt(i)}
               peerItems={items}
               onSlotsChange={onChange}
+              section={section}
             />
           ))}
         </div>
