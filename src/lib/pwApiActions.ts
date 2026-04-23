@@ -226,6 +226,19 @@ async function callAction<T>(
     if (status === 400 && /acao\s+invalida|a[cç][aã]o\s+inv[aá]lida|unknown\s+action/i.test(rawBody)) {
       throw new EndpointMissingError(action);
     }
+    // gamedbd offline / VPS-side connection refused — traduzir para algo acionável.
+    if (/gamedbd|connection\s+refused|29400/i.test(rawBody)) {
+      let detail = "";
+      try {
+        const j = JSON.parse(rawBody);
+        detail = typeof j?.error === "string" ? j.error : "";
+      } catch { /* ignore */ }
+      throw new Error(
+        `O serviço gamedbd está offline na sua VPS (porta 29400 recusou conexão).\n\n` +
+        `Acesse o servidor e rode:\n  cd /home/gamedbd && ./gamedbd ./gamesys.conf\n\n` +
+        (detail ? `Detalhe do servidor: ${detail}` : `Resposta bruta: ${rawBody.slice(0, 300)}`),
+      );
+    }
     throw new Error(rawBody ? `${error.message}\n\n${rawBody}` : error.message);
   }
   // Resposta 2xx mas com {error:"..."} no corpo (sem success:false).
