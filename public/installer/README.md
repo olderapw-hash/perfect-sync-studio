@@ -1,140 +1,193 @@
-# PW Admin — Instalação na VPS
+# PW Admin - Instalacao da API na VPS
 
-Conecta sua VPS Perfect World ao painel via uma única ponte HTTP (`api_cls.php`).
-Toda comunicação é autenticada por um **secret** que você gera no painel.
+Este pacote instala a ponte HTTP que conecta sua VPS Perfect World ao PW Admin.
 
-> ⚠️ **Cada VPS deve ter o seu próprio secret.** Nunca reuse o secret de outro
-> servidor — se um for comprometido, todos ficam expostos.
+A API correta e a `api_cls.php` completa, que fala com o `gamedbd` em
+`127.0.0.1:29400`, lista templates CLS, edita personagens reais, cria backups,
+restaura backups e consulta catalogo de itens.
 
----
+> Nao use a versao antiga baseada em `/home/gamedbd/clsconfig.data`. Ela retorna
+> `count:0` / `classes:[]` e nao e compativel com o painel atual.
 
-## Pré-requisitos
+## Requisitos
 
-- VPS rodando o **gamedbd** do Perfect World em `/home/gamedbd/`
-- Apache (ou Nginx) + PHP 7.4+
-- Acesso SSH como `root` (ou `sudo`)
-- Secret copiado de **PW Admin → Meus Servidores → (seu servidor) → Secret**
+- CentOS 7 ou equivalente.
+- Acesso SSH como `root`.
+- Perfect World instalado em `/home/gamedbd`.
+- Apache/httpd com PHP 7+ ou PHP 8.x. O instalador tenta instalar PHP 8.2 via Remi se o PHP estiver ausente ou antigo.
+- Secret gerado no painel em `Servidores`.
 
----
+## Instalacao automatica
 
-## 1. Criar a pasta do bridge
+Suba estes dois arquivos para a VPS:
 
-```bash
-sudo mkdir -p /var/www/html/apicls
+- `api_cls.php`
+- `install-apicls-centos7.sh`
+
+No seu computador:
+
+```powershell
+scp "api_cls.php" root@IP_DA_VPS:/root/api_cls.php
+scp "install-apicls-centos7.sh" root@IP_DA_VPS:/root/install-apicls-centos7.sh
 ```
 
-## 2. Subir o `api_cls.php`
-
-Copie o `api_cls.php` para `/var/www/html/apicls/` (via `scp`, `rsync`, painel
-da hospedagem, etc).
+Na VPS:
 
 ```bash
-sudo chown apache:apache /var/www/html/apicls/api_cls.php   # ou www-data
-sudo chmod 640 /var/www/html/apicls/api_cls.php
+bash /root/install-apicls-centos7.sh --secret SEU_SECRET --api-src /root/api_cls.php
 ```
 
-## 3. Colar o secret
+O instalador faz automaticamente:
 
-Edite o arquivo na VPS e troque o placeholder pelo secret real:
+- Instala/ativa Apache e PHP quando necessario.
+- Cria `/var/www/html/apicls`.
+- Instala o `api_cls.php` com seu secret.
+- Instala `/usr/local/sbin/exportclsconfig-api.sh`.
+- Instala `/usr/local/sbin/backupgamedbd-api.sh`.
+- Configura `/etc/sudoers.d/apicls-pwadmin`.
+- Cria pastas de backup.
+- Ajusta permissoes.
+- Reinicia o Apache.
+- Testa `getClasses`.
+- Testa `backupGamedbd`.
+
+Ao finalizar, ele imprime:
+
+- URL local.
+- URL para cadastrar no painel.
+- Secret usado.
+- Usuario web detectado.
+
+## Comando recomendado
 
 ```bash
-sudo nano /var/www/html/apicls/api_cls.php
-# Procure a linha:
-#   $SECRET = '__PW_API_SECRET__';
-# E substitua __PW_API_SECRET__ pelo secret gerado no painel.
+bash /root/install-apicls-centos7.sh --secret SEU_SECRET --api-src /root/api_cls.php
 ```
 
-Verifique que a sintaxe ficou ok:
+Se quiser que o instalador gere um secret novo:
+
+```bash
+bash /root/install-apicls-centos7.sh --api-src /root/api_cls.php
+```
+
+Depois cadastre o secret gerado em `PW Admin -> Servidores`.
+
+## Testes manuais
+
+Na VPS:
 
 ```bash
 php -l /var/www/html/apicls/api_cls.php
-# Deve imprimir: No syntax errors detected
 ```
-
-## 4. Pasta de backups
 
 ```bash
-sudo mkdir -p /var/backups/clsconfig
-sudo chown apache:apache /var/backups/clsconfig    # ou www-data
-sudo chmod 750 /var/backups/clsconfig
+curl -s -H "x-sync-secret: SEU_SECRET" \
+"http://127.0.0.1/apicls/api_cls.php?action=getClasses"
 ```
-
-## 5. Script de export
 
 ```bash
-sudo cp exportclsconfig-api.sh /usr/local/sbin/exportclsconfig-api.sh
-sudo chown root:root /usr/local/sbin/exportclsconfig-api.sh
-sudo chmod 750 /usr/local/sbin/exportclsconfig-api.sh
+curl -s -H "x-sync-secret: SEU_SECRET" \
+"http://127.0.0.1/apicls/api_cls.php?action=getClsconfigDebug" \
+| head -c 3000
 ```
-
-## 6. Sudoers
 
 ```bash
-sudo cp sudoers.example /etc/sudoers.d/apicls
-sudo chmod 440 /etc/sudoers.d/apicls
-sudo visudo -c           # valida — NÃO pule
+curl -s -X POST -H "x-sync-secret: SEU_SECRET" -H "Content-Type: application/json" \
+-d '{"reason":"manual-test","force":true}' \
+"http://127.0.0.1/apicls/api_cls.php?action=backupGamedbd"
 ```
 
-> Se o usuário do seu PHP for `www-data` (Debian/Ubuntu) em vez de `apache`
-> (CentOS/RHEL), edite `/etc/sudoers.d/apicls` antes de validar.
-
----
-
-## 7. Teste local na VPS
-
-```bash
-# Substitua SEU_SECRET pelo valor real e SEU_IP pelo IP/host público.
-curl -s -H "X-Sync-Secret: SEU_SECRET" \
-  "http://SEU_IP/apicls/api_cls.php?action=ping"
-```
-
-Deve retornar algo como:
+Resultado esperado do backup:
 
 ```json
-{ "success": true, "pong": true, "php": "8.x.x", "clsconfig": true, "backup_dir": true }
+{"success":true,"backup":{"type":"gamedbd_backup","file":"...gamedbd-backup-....tgz"}}
 ```
 
-Outros testes úteis:
+## Cadastro no painel
+
+No PW Admin:
+
+1. Abra `Servidores`.
+2. Adicione ou edite a VPS.
+3. URL da API:
+
+```text
+http://IP_DA_VPS/apicls/api_cls.php
+```
+
+4. Secret: o mesmo usado no instalador.
+5. Clique em `Testar conexao`.
+6. Ative esse servidor.
+
+As chamadas do painel devem usar o servidor ativo em `Servidores`, nao a conexao
+legada da tela de Configuracoes.
+
+## Backups automaticos
+
+A API cria backup completo antes das operacoes sensiveis:
+
+- `saveRoleEditable`
+- `saveClsconfigTemplate`
+- `restoreBackup`
+- `exportClsconfig`
+
+O backup fica em:
+
+```text
+/var/www/html/apicls/backups/gamedbd/
+```
+
+Ele inclui, quando existirem:
+
+- `/home/gamedbd/gamesys.conf`
+- `/home/gamedbd/clsconfig`
+- `/home/gamedbd/dbdata`
+- `/home/gamedbd/dblogs`
+- `/home/gamedbd/dbhome`
+- `/home/gamedbd/backup`
+
+Durante aplicacoes em massa, a API reutiliza backup recente por alguns minutos
+para nao lotar o disco.
+
+## Sudoers instalado
+
+O instalador cria `/etc/sudoers.d/apicls-pwadmin` com:
+
+```text
+apache ALL=(root) NOPASSWD: /usr/local/sbin/exportclsconfig-api.sh
+apache ALL=(root) NOPASSWD: /usr/local/sbin/backupgamedbd-api.sh
+```
+
+Se sua VPS usa outro usuario web (`nginx` ou `www-data`), rode:
 
 ```bash
-# Lista de classes (lê o clsconfig.data)
-curl -s -H "X-Sync-Secret: SEU_SECRET" \
-  "http://SEU_IP/apicls/api_cls.php?action=getClasses"
-
-# Dispara export do gamedbd (precisa do sudoers ok)
-curl -s -H "X-Sync-Secret: SEU_SECRET" \
-  "http://SEU_IP/apicls/api_cls.php?action=exportClsconfig"
+bash /root/install-apicls-centos7.sh --secret SEU_SECRET --api-src /root/api_cls.php --web-user nginx
 ```
 
----
+## Solucao de problemas
 
-## 8. Cadastrar no painel
+| Sintoma | Causa provavel | Como resolver |
+|---|---|---|
+| `Unauthorized` | Secret errado no painel ou no PHP | Compare o secret em `/var/www/html/apicls/api_cls.php` com `Servidores` |
+| `classes: []` | API antiga ou secret/servidor errado | Garanta que `api_cls.php` contem `backupGamedbd` e `CLASS_INFO` |
+| `count:0` com classes preenchidas | `gamedbd` nao respondeu ou `clsconfig` vazio | Rode `getClsconfigDebug` |
+| `Connection refused 127.0.0.1:29400` | `gamedbd` desligado | Inicie o `gamedbd` e teste `ss -lntp | grep 29400` |
+| `Backup gamedbd falhou` | sudoers/permissao faltando | Rode `visudo -cf /etc/sudoers.d/apicls-pwadmin` |
+| Tela usa VPS errada | Painel lendo configuracao legada | Usar `Servidores` e servidor ativo |
 
-1. Volte ao **PW Admin → Meus Servidores**
-2. Clique em **Adicionar VPS** (ou edite o servidor existente)
-3. Preencha:
-   - **URL da API:** `http://SEU_IP/apicls/api_cls.php`
-   - **Secret:** o mesmo que você colou no PHP
-4. Clique em **Testar conexão**. Deve retornar **Conexão OK**.
-5. Clique em **Adicionar servidor**.
+## Atualizacao futura
 
----
+Para atualizar a API:
 
-## Solução de problemas
+```powershell
+scp "api_cls.php" root@IP_DA_VPS:/root/api_cls.php
+scp "install-apicls-centos7.sh" root@IP_DA_VPS:/root/install-apicls-centos7.sh
+```
 
-| Erro                  | Causa provável                                                  |
-|-----------------------|-----------------------------------------------------------------|
-| `Unauthorized`        | Secret diferente entre painel e PHP                             |
-| `Server not configured` | Você esqueceu de trocar `__PW_API_SECRET__` no `api_cls.php`  |
-| Resposta não-JSON     | Outro app está respondendo na URL ou erro de PHP em `display_errors` |
-| `Connection refused`  | Firewall bloqueando porta 80/443                                |
-| `404`                 | Caminho errado — confira `/var/www/html/apicls/api_cls.php`     |
-| `Export script failed`| `sudoers.d/apicls` ausente ou usuário do PHP errado             |
+Na VPS:
 
----
+```bash
+bash /root/install-apicls-centos7.sh --secret SEU_SECRET --api-src /root/api_cls.php
+```
 
-## Atualização futura
-
-Para atualizar o `api_cls.php`, baixe a nova versão no painel, suba para
-`/var/www/html/apicls/` e cole novamente o seu secret. As pastas de backups e
-o script de export não precisam ser refeitos.
+O instalador cria backup da instalacao anterior em `/root/apicls-before-install-*.tgz`.
