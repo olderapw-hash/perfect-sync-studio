@@ -16,6 +16,7 @@ import {
   UserCog,
   History,
   Sparkles,
+  Eraser,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -59,9 +60,11 @@ import { SavePreviewDialog } from "./SavePreviewDialog";
 import { SaveChecklistDialog, type SaveChecklistResult } from "./SaveChecklistDialog";
 import { PresetsDialog } from "./PresetsDialog";
 import { BulkApplyDialog } from "./BulkApplyDialog";
+import { BulkClearInventoryDialog } from "./BulkClearInventoryDialog";
 import { CompareClsDialog } from "./CompareClsDialog";
 import { RoleidHistoryDialog } from "./RoleidHistoryDialog";
 import { InitialKitsDialog } from "./InitialKitsDialog";
+import { useTenant } from "@/hooks/useTenant";
 
 /**
  * Modo de operação:
@@ -127,6 +130,7 @@ export const ClsconfigEditor = ({ entry, allEntries = [], mode = "template", onS
   const [checklistResult, setChecklistResult] = useState<SaveChecklistResult | null>(null);
   const [presetsOpen, setPresetsOpen] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkClearInvOpen, setBulkClearInvOpen] = useState(false);
   const [compareOpen, setCompareOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [kitsOpen, setKitsOpen] = useState(false);
@@ -136,10 +140,12 @@ export const ClsconfigEditor = ({ entry, allEntries = [], mode = "template", onS
   const [roleConfirmOpen, setRoleConfirmOpen] = useState(false);
 
   const { can } = useServerPermissions();
+  const { tenant } = useTenant();
   const isRoleMode = mode === "role";
   const requiredSavePerm = isRoleMode ? "save_real_roles" : "save_templates";
   const canSave = can(requiredSavePerm);
   const canBulkApply = can("bulk_apply");
+  const canBulkClearInv = !isRoleMode && canBulkApply && can("save_templates");
   const canCompare = can("compare_backup");
   const permDeniedTitle = "Seu acesso não permite esta ação.";
 
@@ -630,6 +636,19 @@ export const ClsconfigEditor = ({ entry, allEntries = [], mode = "template", onS
                   <Send className="h-3.5 w-3.5" />
                   Aplicar em massa
                 </button>
+                <button
+                  onClick={() => setBulkClearInvOpen(true)}
+                  disabled={allEntries.length === 0 || !canBulkClearInv}
+                  className="inline-flex items-center gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive transition-smooth hover:border-destructive/70 hover:bg-destructive/20 disabled:opacity-50"
+                  title={
+                    canBulkClearInv
+                      ? "Esvazia o inventário de TODOS os templates carregados"
+                      : permDeniedTitle
+                  }
+                >
+                  <Eraser className="h-3.5 w-3.5" />
+                  Limpar inventários
+                </button>
               </>
             )}
             {isRoleMode && (
@@ -762,6 +781,14 @@ export const ClsconfigEditor = ({ entry, allEntries = [], mode = "template", onS
             sourceEntry={entry}
             currentTemplate={template}
             allEntries={allEntries}
+          />
+
+          <BulkClearInventoryDialog
+            open={bulkClearInvOpen}
+            onOpenChange={setBulkClearInvOpen}
+            allEntries={allEntries}
+            tenantId={tenant?.id}
+            onBulkReload={onReload}
           />
 
           <CompareClsDialog
