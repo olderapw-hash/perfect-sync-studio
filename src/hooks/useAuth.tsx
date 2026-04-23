@@ -77,7 +77,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
     }, 5000);
 
-    return () => sub.subscription.unsubscribe();
+    return () => {
+      sub.subscription.unsubscribe();
+      clearTimeout(safety);
+    };
   }, []);
 
   const checkRoles = async (userId: string) => {
