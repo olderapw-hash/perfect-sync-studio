@@ -11,10 +11,29 @@ const PLAN_FEATURES = [
   "Templates iniciais por classe (clsconfig)",
   "Backups automáticos + restauração 1-clique",
   "Histórico completo de alterações",
-  "Múltiplos administradores",
-  "Fotos personalizadas das classes",
+  "Múltiplos administradores com permissões granulares",
+  "Fotos personalizadas das classes e personagens",
   "Branding do seu servidor (logo, nome, cor)",
   "Suporte por Discord",
+];
+
+const FAQ = [
+  {
+    q: "Como funcionam os 7 dias grátis?",
+    a: "Você cadastra o cartão, mas não é cobrado nos primeiros 7 dias. Pode cancelar a qualquer momento dentro desse período sem pagar nada.",
+  },
+  {
+    q: "Preciso instalar algo na minha VPS?",
+    a: "Sim, um arquivo PHP único (api_cls.php) que faz a ponte entre o painel e o Perfect World. Temos um instalador automático pra CentOS 7 — leva 2 minutos.",
+  },
+  {
+    q: "Posso cancelar quando quiser?",
+    a: "Sim, sem multa, sem fidelidade. O cancelamento é imediato pela página /admin → Conta.",
+  },
+  {
+    q: "Funciona com qualquer versão do Perfect World?",
+    a: "Funciona com servidores que rodam gamedbd padrão (1.5.5+). Compatível com a maioria dos servidores PT-BR e internacionais.",
+  },
 ];
 
 const Pricing = () => {
@@ -81,10 +100,12 @@ const Pricing = () => {
         <div className="mb-10 text-center">
           <p className="text-xs font-bold uppercase tracking-wider text-primary">Assinar</p>
           <h1 className="mt-2 text-3xl font-extrabold tracking-tight sm:text-4xl">
-            Acesso completo ao PW Admin
+            Pare de editar SQL na unha
           </h1>
           <p className="mx-auto mt-3 max-w-xl text-sm text-muted-foreground">
-            Sem fidelidade. Cancele quando quiser. 7 dias de teste grátis pra você sentir.
+            Painel completo pra administrar seu servidor Perfect World.
+            <strong className="text-foreground"> 7 dias grátis</strong> · cancele quando quiser ·
+            sem fidelidade.
           </p>
         </div>
 
@@ -92,7 +113,7 @@ const Pricing = () => {
           <div className="absolute -right-12 -top-12 h-40 w-40 rounded-full bg-primary/20 blur-3xl" />
           <div className="relative">
             <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-primary/15 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-primary">
-              Plano único
+              Plano único · tudo incluso
             </div>
 
             <div className="mb-2 flex items-baseline gap-2">
@@ -100,7 +121,7 @@ const Pricing = () => {
               <span className="text-base text-muted-foreground">/mês</span>
             </div>
             <p className="mb-6 text-sm text-muted-foreground">
-              Por servidor. Sem limite de personagens editados.
+              Por servidor. Sem limite de personagens, edições ou administradores.
             </p>
 
             <ul className="mb-8 space-y-3">
@@ -130,10 +151,31 @@ const Pricing = () => {
             </button>
 
             <p className="mt-4 text-center text-xs text-muted-foreground">
-              Cancele quando quiser • Cobrança gerenciada pelo Paddle
+              Sem cobrança nos 7 primeiros dias · Pagamento seguro via Paddle
             </p>
           </div>
         </div>
+
+        {/* FAQ */}
+        <section className="mt-16">
+          <h2 className="mb-6 text-center text-lg font-extrabold tracking-tight">
+            Perguntas frequentes
+          </h2>
+          <div className="space-y-3">
+            {FAQ.map((item) => (
+              <details
+                key={item.q}
+                className="group rounded-xl border border-border bg-card/40 p-4 transition-smooth hover:border-primary/30"
+              >
+                <summary className="cursor-pointer list-none text-sm font-bold text-foreground">
+                  <span className="mr-2 text-primary">+</span>
+                  {item.q}
+                </summary>
+                <p className="mt-3 text-sm text-muted-foreground">{item.a}</p>
+              </details>
+            ))}
+          </div>
+        </section>
       </main>
     </div>
   );

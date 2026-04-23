@@ -41,6 +41,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useServers } from "@/hooks/useServers";
 import { supabase } from "@/integrations/supabase/client";
 import { testServerConnection } from "@/lib/serverConnection";
+import { friendlyConnectionError } from "@/lib/connectionErrors";
 import { cn } from "@/lib/utils";
 
 interface InstallerFile {
@@ -99,6 +100,7 @@ const Install = () => {
   const [secretLoading, setSecretLoading] = useState(false);
   const [showSecret, setShowSecret] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [showRealValues, setShowRealValues] = useState(false);
 
   useEffect(() => {
     if (!selectedId) {
@@ -112,35 +114,51 @@ const Install = () => {
     [servers, selectedId],
   );
 
-  // RPC só retorna o secret do tenant ativo do usuário.
+  // Busca o secret do servidor selecionado (RPC valida ownership).
+  // Funciona mesmo quando o servidor NÃO está ativo — útil logo após criar
+  // o 1º servidor no onboarding, antes de ativar.
   useEffect(() => {
     let alive = true;
     setSecret(null);
     setShowSecret(false);
     if (!selected) return;
-    if (!selected.is_active) return;
     setSecretLoading(true);
-    supabase.rpc("get_my_tenant_secret").then(({ data }) => {
-      if (!alive) return;
-      setSecret((data as string | null) ?? null);
-      setSecretLoading(false);
-    });
+    supabase
+      .rpc("get_tenant_secret", { _tenant_id: selected.id })
+      .then(({ data }) => {
+        if (!alive) return;
+        setSecret((data as string | null) ?? null);
+        setSecretLoading(false);
+      });
     return () => {
       alive = false;
     };
   }, [selected]);
 
   const apiUrl = expectedApiUrl(selected?.pw_api_base_url);
-  // Sempre usamos placeholders fictícios no comando exibido — o IP e o secret
-  // reais do servidor nunca aparecem no método recomendado, para evitar
-  // vazamento ao copiar/compartilhar a tela.
-  const ipPlaceholder = "IP_DA_VPS";
-  const secretPlaceholder = "SEU_SECRET";
+
+  // Extrai host/IP da URL pra pré-preencher o comando quando o usuário escolher.
+  const ipFromUrl = useMemo(() => {
+    if (!selected?.pw_api_base_url) return null;
+    try {
+      const u = new URL(
+        selected.pw_api_base_url.startsWith("http")
+          ? selected.pw_api_base_url
+          : `http://${selected.pw_api_base_url}`,
+      );
+      return u.hostname;
+    } catch {
+      return null;
+    }
+  }, [selected]);
+
+  const ipDisplay = showRealValues && ipFromUrl ? ipFromUrl : "IP_DA_VPS";
+  const secretDisplay = showRealValues && secret ? secret : "SEU_SECRET";
 
   const installCommand = [
-    `scp api_cls.php root@${ipPlaceholder}:/root/api_cls.php`,
-    `scp install-apicls-centos7.sh root@${ipPlaceholder}:/root/install-apicls-centos7.sh`,
-    `ssh root@${ipPlaceholder} "bash /root/install-apicls-centos7.sh --secret ${secretPlaceholder} --api-src /root/api_cls.php"`,
+    `scp api_cls.php root@${ipDisplay}:/root/api_cls.php`,
+    `scp install-apicls-centos7.sh root@${ipDisplay}:/root/install-apicls-centos7.sh`,
+    `ssh root@${ipDisplay} "bash /root/install-apicls-centos7.sh --secret ${secretDisplay} --api-src /root/api_cls.php"`,
   ].join("\n");
 
   const handleDownload = (file: InstallerFile) => {
@@ -181,7 +199,8 @@ const Install = () => {
         `Conexão OK${r.entries != null ? ` · ${r.entries} entries` : ""} (${r.elapsed_ms}ms)`,
       );
     } else {
-      toast.error(`Falha: ${r.error ?? "erro desconhecido"}`);
+      const f = friendlyConnectionError(r);
+      toast.error(f.title, { description: f.hint, duration: 8000 });
     }
   };
 
@@ -388,6 +407,41 @@ const Install = () => {
             instala Apache + PHP, configura sudoers, cria as pastas de backup e
             testa a conexão sozinho.
           </p>
+
+          {/* Toggle: placeholders vs valores reais */}
+          <div className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-border bg-card/40 p-2 text-xs">
+            <button
+              type="button"
+              onClick={() => setShowRealValues(false)}
+              className={cn(
+                "flex-1 rounded px-3 py-1.5 font-semibold transition-smooth",
+                !showRealValues
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              🛡️ Modo seguro (placeholders)
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowRealValues(true)}
+              disabled={!secret || !ipFromUrl}
+              className={cn(
+                "flex-1 rounded px-3 py-1.5 font-semibold transition-smooth disabled:opacity-40",
+                showRealValues
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+              title={
+                !secret || !ipFromUrl
+                  ? "Selecione um servidor com URL e secret cadastrados"
+                  : ""
+              }
+            >
+              ⚡ Pronto pra colar (valores reais)
+            </button>
+          </div>
+
           <div className="relative">
             <pre className="overflow-x-auto rounded-md border border-border bg-background p-3 font-mono text-xs">
               {installCommand}
@@ -401,12 +455,23 @@ const Install = () => {
               <Copy className="mr-2 h-3.5 w-3.5" /> Copiar
             </Button>
           </div>
-          <p className="mt-3 text-xs text-muted-foreground">
-            Substitua <code className="rounded bg-muted px-1 font-mono">IP_DA_VPS</code> pelo IP/host
-            real e <code className="rounded bg-muted px-1 font-mono">SEU_SECRET</code> pelo secret
-            mostrado em <strong>Meus Servidores</strong>. Depois volte aqui e clique em{" "}
-            <strong>Testar conexão</strong>.
-          </p>
+          {!showRealValues ? (
+            <p className="mt-3 text-xs text-muted-foreground">
+              Substitua <code className="rounded bg-muted px-1 font-mono">IP_DA_VPS</code> pelo IP/host
+              real e <code className="rounded bg-muted px-1 font-mono">SEU_SECRET</code> pelo secret
+              mostrado em <strong>Meus Servidores</strong>. Depois volte aqui e clique em{" "}
+              <strong>Testar conexão</strong>.
+            </p>
+          ) : (
+            <p className="mt-3 flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-600 dark:text-amber-400">
+              <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              <span>
+                O comando agora contém <strong>seu IP e secret reais</strong>. Não cole em chats,
+                screenshots ou repos públicos — qualquer pessoa com esse comando consegue acesso
+                root à sua VPS.
+              </span>
+            </p>
+          )}
         </section>
 
         {/* Arquivos */}

@@ -28,6 +28,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useServers } from "@/hooks/useServers";
 import { testServerConnection } from "@/lib/serverConnection";
+import { friendlyConnectionError } from "@/lib/connectionErrors";
+import { validateApiUrl } from "@/lib/connectionErrors";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -115,26 +117,27 @@ const Onboarding = () => {
   };
 
   // ===== Caso B: zero servidores -> wizard =====
+  const urlValidation = useMemo(() => validateApiUrl(apiUrl), [apiUrl]);
+
   const handleCreateServer = async () => {
     if (!session?.user) return;
-    if (!apiUrl || !apiSecret) {
-      toast.error("Preencha URL e secret");
+    if (!urlValidation.ok) {
+      toast.error("URL inválida", { description: urlValidation.error });
       return;
     }
-    // Garante protocolo (http:// por padrão se o usuário esqueceu).
-    let normalizedUrl = apiUrl.trim();
-    if (!/^https?:\/\//i.test(normalizedUrl)) {
-      normalizedUrl = `http://${normalizedUrl}`;
+    if (!apiSecret || apiSecret.length < 16) {
+      toast.error("Secret muito curto", {
+        description: "Use 'Gerar' pra criar um secret forte de 48 caracteres.",
+      });
+      return;
     }
-    normalizedUrl = normalizedUrl.replace(/\/+$/, "");
-    setApiUrl(normalizedUrl);
     setSaving(true);
     const { data, error } = await supabase
       .from("tenants")
       .insert({
         owner_id: session.user.id,
         server_name: serverName || "Meu Servidor PW",
-        pw_api_base_url: normalizedUrl,
+        pw_api_base_url: urlValidation.normalized,
         pw_api_secret: apiSecret,
         icon_base_url: iconBase ? iconBase.replace(/\/+$/, "/") : null,
         onboarding_completed: false,
@@ -148,6 +151,7 @@ const Onboarding = () => {
       return;
     }
     setCreatedId(data.id);
+    setApiUrl(urlValidation.normalized);
     await refetch();
     setStep("install");
     toast.success("Servidor criado! Agora instale o api_cls.php na sua VPS.");
@@ -159,7 +163,8 @@ const Onboarding = () => {
     const r = await testServerConnection({ tenant_id: createdId });
     setTesting(false);
     if (!r.success) {
-      toast.error(`Falha na conexão: ${r.error ?? "erro"}`);
+      const f = friendlyConnectionError(r);
+      toast.error(f.title, { description: f.hint, duration: 10000 });
       return;
     }
     toast.success(`Conexão OK · ${r.elapsed_ms}ms`);
@@ -307,12 +312,28 @@ const Onboarding = () => {
                       value={apiUrl}
                       onChange={(e) => setApiUrl(e.target.value)}
                       placeholder="http://SEU_IP/apicls/api_cls.php"
-                      className="font-mono text-xs"
+                      className={cn(
+                        "font-mono text-xs",
+                        apiUrl && !urlValidation.ok && "border-destructive",
+                      )}
                     />
-                    <p className="mt-1 text-[11px] text-muted-foreground">
-                      Endereço do <code className="font-mono">api_cls.php</code> que você vai
-                      instalar.
-                    </p>
+                    {apiUrl && !urlValidation.ok && (
+                      <p className="mt-1 text-[11px] text-destructive">
+                        ✗ {urlValidation.error}
+                      </p>
+                    )}
+                    {apiUrl && urlValidation.ok && (
+                      <p className="mt-1 text-[11px] text-emerald-500">
+                        ✓ Endpoint final:{" "}
+                        <code className="font-mono">{urlValidation.endpoint}</code>
+                      </p>
+                    )}
+                    {!apiUrl && (
+                      <p className="mt-1 text-[11px] text-muted-foreground">
+                        Endereço do <code className="font-mono">api_cls.php</code> que você vai
+                        instalar.
+                      </p>
+                    )}
                   </div>
                   <div>
                     <Label htmlFor="ob-secret">Secret</Label>
@@ -353,7 +374,9 @@ const Onboarding = () => {
                 <div className="mt-8 flex justify-end">
                   <Button
                     onClick={handleCreateServer}
-                    disabled={saving || !apiUrl || !apiSecret}
+                    disabled={
+                      saving || !urlValidation.ok || !apiSecret || apiSecret.length < 16
+                    }
                   >
                     {saving ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
