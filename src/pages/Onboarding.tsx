@@ -374,7 +374,9 @@ const Onboarding = () => {
                 <div className="mt-8 flex justify-end">
                   <Button
                     onClick={handleCreateServer}
-                    disabled={saving || !apiUrl || !apiSecret}
+                    disabled={
+                      saving || !urlValidation.ok || !apiSecret || apiSecret.length < 16
+                    }
                   >
                     {saving ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />

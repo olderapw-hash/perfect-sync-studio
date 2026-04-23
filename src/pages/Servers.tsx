@@ -27,6 +27,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useServers, type Server as ServerRow } from "@/hooks/useServers";
 import { useServerPermissions } from "@/hooks/useServerPermissions";
 import { testServerConnection } from "@/lib/serverConnection";
+import { friendlyConnectionError } from "@/lib/connectionErrors";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -79,7 +80,8 @@ const Servers = () => {
         `Conexão OK${r.entries != null ? ` · ${r.entries} entries` : ""} (${r.elapsed_ms}ms)`,
       );
     } else {
-      toast.error(`Falha: ${r.error ?? "erro desconhecido"}`);
+      const f = friendlyConnectionError(r);
+      toast.error(f.title, { description: f.hint, duration: 8000 });
     }
     refetch();
   };
