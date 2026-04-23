@@ -64,8 +64,10 @@ const Onboarding = () => {
       navigate("/pricing", { replace: true });
       return;
     }
-    // Já tem ativo -> nada a fazer aqui.
-    if (active) {
+    // Só sai do onboarding quando o servidor ativo já concluiu o onboarding.
+    // Se existir servidor ativo porém ainda incompleto, permanece aqui para evitar
+    // loop /onboarding -> /admin -> /onboarding.
+    if (active?.onboarding_completed) {
       navigate("/admin", { replace: true });
     }
   }, [
