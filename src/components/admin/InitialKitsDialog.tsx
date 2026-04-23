@@ -415,11 +415,12 @@ export const InitialKitsDialog = ({
 
 interface ListViewProps {
   kits: InitialKit[];
+  loading: boolean;
   onCreate: () => void;
   onImport: () => void;
   onApply: (kit: InitialKit) => void;
   onBulkApply: (kit: InitialKit) => void;
-  onDuplicate: (id: string) => void;
+  onDuplicate: (kit: InitialKit) => void;
   onRemove: (kit: InitialKit) => void;
   onExport: (kit: InitialKit) => void;
   canApply: boolean;
@@ -431,6 +432,7 @@ interface ListViewProps {
 
 const KitListView = ({
   kits,
+  loading,
   onCreate,
   onImport,
   onApply,
