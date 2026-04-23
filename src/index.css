@@ -71,6 +71,10 @@
     --gradient-card: linear-gradient(135deg, hsl(0 0% 6% / 0.6) 0%, hsl(0 0% 4% / 0.6) 100%);
     --gradient-gold: linear-gradient(135deg, hsl(38 47% 58%) 0%, hsl(38 51% 37%) 100%);
     --gradient-border: linear-gradient(135deg, hsl(38 47% 53% / 0.5), hsl(38 47% 53% / 0.2));
+    /* Bronze panel — quente, com leve âmbar profundo */
+    --gradient-bronze: linear-gradient(160deg, hsl(28 38% 14%) 0%, hsl(22 35% 9%) 45%, hsl(20 40% 6%) 100%);
+    --gradient-bronze-soft: linear-gradient(160deg, hsl(28 35% 10% / 0.85) 0%, hsl(20 35% 5% / 0.85) 100%);
+    --gradient-hero-profile: radial-gradient(ellipse 80% 60% at 20% 0%, hsl(38 60% 30% / 0.25), transparent 60%), linear-gradient(135deg, hsl(28 35% 10%) 0%, hsl(0 0% 5%) 70%);
 
     /* Shadows & glow */
     --shadow-elegant: 0 15px 40px -12px hsl(0 0% 0% / 0.5);
@@ -205,3 +209,144 @@
 
 .animate-pulse-glow { animation: pulse-glow 2.4s ease-in-out infinite; }
 .animate-fade-in-up { animation: fade-in-up 0.4s ease-out both; }
+
+/* ───────── Character profile (bronze MMO) ───────── */
+@layer utilities {
+  .bg-bronze { background: var(--gradient-bronze); }
+  .bg-bronze-soft { background: var(--gradient-bronze-soft); }
+  .bg-hero-profile { background: var(--gradient-hero-profile); }
+
+  .border-bronze {
+    border: 1px solid hsl(38 45% 35% / 0.4);
+    box-shadow:
+      inset 0 1px 0 hsl(38 60% 55% / 0.15),
+      0 0 0 1px hsl(20 30% 5% / 0.6),
+      0 20px 50px -20px hsl(0 0% 0% / 0.7);
+  }
+
+  .border-bronze-soft {
+    border: 1px solid hsl(38 40% 30% / 0.35);
+    box-shadow: inset 0 1px 0 hsl(38 50% 50% / 0.08);
+  }
+
+  .text-bronze { color: hsl(38 55% 65%); }
+  .text-bronze-muted { color: hsl(35 25% 60%); }
+
+  .nav-card {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    padding: 1rem 1.125rem;
+    border-radius: 14px;
+    background: linear-gradient(135deg, hsl(28 25% 9% / 0.85), hsl(20 25% 5% / 0.85));
+    border: 1px solid hsl(38 30% 25% / 0.4);
+    color: hsl(35 20% 75%);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    text-align: left;
+    overflow: hidden;
+  }
+  .nav-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, hsl(38 60% 50% / 0.08), transparent 60%);
+    opacity: 0;
+    transition: opacity 0.25s;
+    pointer-events: none;
+  }
+  .nav-card:hover {
+    border-color: hsl(38 55% 45% / 0.55);
+    color: hsl(38 60% 80%);
+    transform: translateY(-1px);
+  }
+  .nav-card:hover::before { opacity: 1; }
+  .nav-card[data-active="true"] {
+    border-color: hsl(38 65% 50% / 0.7);
+    color: hsl(38 80% 75%);
+    background: linear-gradient(135deg, hsl(38 50% 18% / 0.9), hsl(28 35% 10% / 0.9));
+    box-shadow:
+      0 0 0 1px hsl(38 60% 45% / 0.3),
+      0 0 25px hsl(38 60% 45% / 0.25),
+      inset 0 1px 0 hsl(38 70% 60% / 0.25);
+  }
+
+  .pill-gold {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.375rem 0.875rem;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    background: linear-gradient(135deg, hsl(38 55% 22%), hsl(28 50% 14%));
+    border: 1px solid hsl(38 55% 40% / 0.5);
+    color: hsl(38 75% 75%);
+    box-shadow: inset 0 1px 0 hsl(38 70% 55% / 0.2);
+  }
+
+  .pill-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.5rem 1rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: hsl(35 20% 65%);
+    background: hsl(20 20% 8% / 0.6);
+    border: 1px solid hsl(38 25% 22% / 0.5);
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+  .pill-tab:hover {
+    color: hsl(38 60% 75%);
+    border-color: hsl(38 50% 40% / 0.6);
+  }
+  .pill-tab[data-active="true"] {
+    color: hsl(28 30% 12%);
+    background: linear-gradient(135deg, hsl(38 70% 65%), hsl(35 60% 50%));
+    border-color: hsl(38 70% 55%);
+    box-shadow: 0 4px 14px hsl(38 60% 40% / 0.35);
+  }
+
+  .frame-bronze {
+    position: relative;
+    border-radius: 20px;
+    background: var(--gradient-bronze);
+    border: 1px solid hsl(38 45% 32% / 0.5);
+    box-shadow:
+      inset 0 1px 0 hsl(38 60% 55% / 0.18),
+      0 30px 70px -30px hsl(0 0% 0% / 0.8);
+  }
+  .frame-bronze::before,
+  .frame-bronze::after {
+    content: "";
+    position: absolute;
+    left: 1.25rem;
+    right: 1.25rem;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, hsl(38 55% 50% / 0.5), transparent);
+    pointer-events: none;
+  }
+  .frame-bronze::before { top: 0.65rem; }
+  .frame-bronze::after { bottom: 0.65rem; }
+
+  .avatar-frame {
+    position: relative;
+    border-radius: 18px;
+    padding: 4px;
+    background: linear-gradient(135deg, hsl(38 65% 55%), hsl(28 50% 25%) 60%, hsl(38 60% 45%));
+    box-shadow:
+      0 0 0 1px hsl(20 30% 5%),
+      0 0 30px hsl(38 55% 40% / 0.35);
+  }
+  .avatar-frame > * {
+    border-radius: 14px;
+    background: hsl(20 25% 6%);
+    overflow: hidden;
+  }
+}
+

@@ -550,203 +550,261 @@ export const ClsconfigEditor = ({ entry, allEntries = [], mode = "template", onS
   const iconUrl = buildClassIconUrl(template.summary.class_icon_path);
   const className = template.summary.class_name ?? `Classe ${template.summary.cls}`;
 
+  const activeTabMeta = TABS.find((t) => t.key === tab) ?? TABS[0];
+  const ActiveTabIcon = activeTabMeta.icon;
+
   return (
-    <div className="flex h-full flex-col">
-      {/* Header */}
-      <header className="border-b border-border bg-card/40 px-6 py-4 backdrop-blur-md">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-3">
-            {iconUrl && (
-              <img
-                src={iconUrl}
-                alt={className}
-                className="h-10 w-10 shrink-0 rounded-lg border border-border object-cover"
-                loading="lazy"
-                onError={(e) => {
-                  (e.currentTarget as HTMLImageElement).style.display = "none";
-                }}
-              />
-            )}
-            <div className="min-w-0">
-              <h2 className="truncate text-xl font-extrabold tracking-tight text-foreground">
-                {template.summary.name || "(sem nome)"}
-              </h2>
-              <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                <span className="font-semibold text-foreground/80">{className}</span>
-                <span>·</span>
-                {isRoleMode ? (
-                  <span className="font-mono text-destructive">
-                    Personagem REAL · roleid {entry.template.roleid}
+    <div className="flex h-full flex-col bg-hero-profile">
+      {/* ─────────── Header de personagem (vitrine) ─────────── */}
+      <header className="px-4 pt-5 pb-3 sm:px-6 lg:px-8">
+        <div className="frame-bronze relative overflow-hidden p-5 sm:p-6">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -top-20 -left-20 h-64 w-64 rounded-full opacity-40 blur-3xl"
+            style={{ background: "radial-gradient(circle, hsl(38 70% 50% / 0.35), transparent 70%)" }}
+          />
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -bottom-16 right-0 h-56 w-56 rounded-full opacity-30 blur-3xl"
+            style={{ background: "radial-gradient(circle, hsl(28 60% 35% / 0.4), transparent 70%)" }}
+          />
+
+          <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-4 sm:gap-5">
+              <div className="avatar-frame shrink-0">
+                <div className="flex h-20 w-20 items-center justify-center sm:h-24 sm:w-24">
+                  {iconUrl ? (
+                    <img
+                      src={iconUrl}
+                      alt={className}
+                      className="h-full w-full object-cover"
+                      loading="lazy"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).style.display = "none";
+                      }}
+                    />
+                  ) : (
+                    <User className="h-8 w-8 text-bronze" />
+                  )}
+                </div>
+              </div>
+
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <h1
+                    className="truncate font-serif text-2xl font-extrabold tracking-tight text-bronze sm:text-3xl"
+                    style={{ textShadow: "0 2px 12px hsl(38 70% 40% / 0.45)" }}
+                  >
+                    {template.summary.name || "(sem nome)"}
+                  </h1>
+                  <span className="pill-gold">
+                    <span className="opacity-70">LV</span>
+                    <span className="text-base font-black tracking-tight">{template.status.level}</span>
+                    {template.status.level2 > 0 && <span className="opacity-70">·{template.status.level2}</span>}
                   </span>
-                ) : (
-                  <span className="font-mono">key {entry.key_hex.slice(0, 12)}…</span>
+                </div>
+                <p className="mt-1.5 text-sm font-medium text-bronze-muted">
+                  <span className="text-bronze/90">{className}</span>
+                  <span className="mx-2 opacity-40">•</span>
+                  <span>Cultivo {template.status.level2}</span>
+                </p>
+                <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                  {isRoleMode ? (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-destructive/50 bg-destructive/15 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-destructive">
+                      <UserCog className="h-3 w-3" />
+                      Personagem real · {entry.template.roleid}
+                    </span>
+                  ) : (
+                    <span className="rounded-full border border-bronze-soft bg-card/40 px-2.5 py-1 font-mono text-[10px] text-bronze-muted">
+                      key {entry.key_hex.slice(0, 10)}…
+                    </span>
+                  )}
+                  <span className="rounded-full border border-bronze-soft bg-card/40 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-bronze-muted">
+                    {template.base.gender === 0 ? "♂ Masculino" : template.base.gender === 1 ? "♀ Feminino" : `gen ${template.base.gender}`}
+                  </span>
+                  <span className="rounded-full border border-bronze-soft bg-card/40 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-bronze-muted">
+                    Raça {template.base.race}
+                  </span>
+                  <span className="rounded-full border border-bronze-soft bg-card/40 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-bronze-muted">
+                    Fama {template.status.reputation}
+                  </span>
+                  {dirty && (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-primary/50 bg-primary/15 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-primary animate-pulse-glow">
+                      ● Não salvo
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              {!isRoleMode && (
+                <>
+                  <button
+                    onClick={() => setPresetsOpen(true)}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-bronze-soft bg-card/50 px-3 py-1.5 text-[11px] font-semibold text-bronze-muted transition hover:border-primary/60 hover:text-bronze"
+                    title="Salvar/aplicar presets locais"
+                  >
+                    <Bookmark className="h-3.5 w-3.5" />
+                    Presets
+                  </button>
+                  <button
+                    onClick={() => setCompareOpen(true)}
+                    disabled={allEntries.length < 2 || !canCompare}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-bronze-soft bg-card/50 px-3 py-1.5 text-[11px] font-semibold text-bronze-muted transition hover:border-primary/60 hover:text-bronze disabled:opacity-40"
+                    title={canCompare ? "Comparar com outro CLS" : permDeniedTitle}
+                  >
+                    <ArrowRightLeft className="h-3.5 w-3.5" />
+                    Comparar
+                  </button>
+                  <button
+                    onClick={() => setBulkOpen(true)}
+                    disabled={!dirty || allEntries.length < 2 || !canBulkApply}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-bronze-soft bg-card/50 px-3 py-1.5 text-[11px] font-semibold text-bronze-muted transition hover:border-primary/60 hover:text-bronze disabled:opacity-40"
+                    title={canBulkApply ? "Aplicar mudanças em outros roleids" : permDeniedTitle}
+                  >
+                    <Send className="h-3.5 w-3.5" />
+                    Em massa
+                  </button>
+                  <button
+                    onClick={() => setBulkClearInvOpen(true)}
+                    disabled={allEntries.length === 0 || !canBulkClearInv}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-destructive/40 bg-destructive/10 px-3 py-1.5 text-[11px] font-semibold text-destructive transition hover:border-destructive/70 hover:bg-destructive/20 disabled:opacity-40"
+                    title={
+                      canBulkClearInv
+                        ? "Esvazia o inventário de TODOS os templates carregados"
+                        : permDeniedTitle
+                    }
+                  >
+                    <Eraser className="h-3.5 w-3.5" />
+                    Limpar invs
+                  </button>
+                </>
+              )}
+              {isRoleMode && (
+                <label
+                  className="inline-flex items-center gap-1.5 rounded-full border border-bronze-soft bg-card/50 px-3 py-1.5 text-[10px] text-bronze-muted"
+                  title="Por padrão NÃO disparamos exportclsconfig em personagem real."
+                >
+                  <input
+                    type="checkbox"
+                    checked={exportClsconfigForRole}
+                    onChange={(e) => setExportClsconfigForRole(e.target.checked)}
+                    className="h-3 w-3 accent-destructive"
+                  />
+                  exportclsconfig
+                </label>
+              )}
+              <button
+                onClick={() => setKitsOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-full border border-bronze-soft bg-card/50 px-3 py-1.5 text-[11px] font-semibold text-bronze-muted transition hover:border-primary/60 hover:text-bronze"
+                title="Kits iniciais por classe"
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                Kits
+              </button>
+              <button
+                onClick={() => setHistoryOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-full border border-bronze-soft bg-card/50 px-3 py-1.5 text-[11px] font-semibold text-bronze-muted transition hover:border-primary/60 hover:text-bronze"
+                title="Histórico de backups role_json"
+              >
+                <History className="h-3.5 w-3.5" />
+                Histórico
+              </button>
+              <button
+                onClick={handleReset}
+                disabled={!dirty}
+                className="inline-flex items-center gap-1.5 rounded-full border border-bronze-soft bg-card/50 px-3 py-1.5 text-[11px] font-semibold text-bronze-muted transition hover:border-primary/60 hover:text-bronze disabled:opacity-40"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+                Reset
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={saving || !dirty || !canSave}
+                title={canSave ? undefined : permDeniedTitle}
+                className={cn(
+                  "inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-bold tracking-wide transition disabled:cursor-not-allowed disabled:opacity-50",
+                  isRoleMode
+                    ? "bg-destructive text-destructive-foreground shadow-[0_6px_20px_hsl(0_70%_45%/0.4)] hover:brightness-110"
+                    : "bg-gradient-to-br from-[hsl(38_75%_60%)] to-[hsl(32_60%_40%)] text-[hsl(28_30%_10%)] shadow-[0_6px_22px_hsl(38_60%_40%/0.45)] hover:brightness-110",
                 )}
-                <span>·</span>
-                <span>cls {template.summary.cls}</span>
-                <span>·</span>
-                <span>raça {template.base.race}</span>
-                <span>·</span>
-                <span>gen {template.base.gender}</span>
-                <span>·</span>
-                <span>lvl {template.status.level}</span>
-                <span>·</span>
-                <span>cult {template.status.level2}</span>
-                <span>·</span>
-                <span>fama {template.status.reputation}</span>
-              </p>
+              >
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                {saving ? "Salvando..." : isRoleMode ? "Salvar real" : "Salvar"}
+              </button>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {dirty && (
-              <span className="rounded-full bg-primary/15 px-3 py-1 text-[11px] font-medium text-primary">
-                Alterações não salvas
-              </span>
-            )}
-            {isRoleMode && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-destructive/15 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-destructive">
-                <UserCog className="h-3 w-3" />
-                Modo personagem real
-              </span>
-            )}
-            {!isRoleMode && (
-              <>
-                <button
-                  onClick={() => setPresetsOpen(true)}
-                  className="inline-flex items-center gap-2 rounded-md border border-border bg-card/60 px-3 py-2 text-xs transition-smooth hover:border-primary/50"
-                  title="Salvar/aplicar presets locais"
-                >
-                  <Bookmark className="h-3.5 w-3.5" />
-                  Presets
-                </button>
-                <button
-                  onClick={() => setCompareOpen(true)}
-                  disabled={allEntries.length < 2 || !canCompare}
-                  className="inline-flex items-center gap-2 rounded-md border border-border bg-card/60 px-3 py-2 text-xs transition-smooth hover:border-primary/50 disabled:opacity-50"
-                  title={canCompare ? "Comparar com outro CLS" : permDeniedTitle}
-                >
-                  <ArrowRightLeft className="h-3.5 w-3.5" />
-                  Comparar
-                </button>
-                <button
-                  onClick={() => setBulkOpen(true)}
-                  disabled={!dirty || allEntries.length < 2 || !canBulkApply}
-                  className="inline-flex items-center gap-2 rounded-md border border-border bg-card/60 px-3 py-2 text-xs transition-smooth hover:border-primary/50 disabled:opacity-50"
-                  title={canBulkApply ? "Aplicar mudanças em outros roleids" : permDeniedTitle}
-                >
-                  <Send className="h-3.5 w-3.5" />
-                  Aplicar em massa
-                </button>
-                <button
-                  onClick={() => setBulkClearInvOpen(true)}
-                  disabled={allEntries.length === 0 || !canBulkClearInv}
-                  className="inline-flex items-center gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive transition-smooth hover:border-destructive/70 hover:bg-destructive/20 disabled:opacity-50"
-                  title={
-                    canBulkClearInv
-                      ? "Esvazia o inventário de TODOS os templates carregados"
-                      : permDeniedTitle
-                  }
-                >
-                  <Eraser className="h-3.5 w-3.5" />
-                  Limpar inventários
-                </button>
-              </>
-            )}
-            {isRoleMode && (
-              <label
-                className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card/60 px-3 py-2 text-[11px] text-muted-foreground"
-                title="Por padrão NÃO disparamos exportclsconfig em personagem real."
-              >
-                <input
-                  type="checkbox"
-                  checked={exportClsconfigForRole}
-                  onChange={(e) => setExportClsconfigForRole(e.target.checked)}
-                  className="h-3.5 w-3.5 accent-destructive"
-                />
-                Disparar exportclsconfig (avançado)
-              </label>
-            )}
-            <button
-              onClick={() => setKitsOpen(true)}
-              className="inline-flex items-center gap-2 rounded-md border border-border bg-card/60 px-3 py-2 text-xs transition-smooth hover:border-primary/50"
-              title="Kits iniciais por classe (localStorage)"
-            >
-              <Sparkles className="h-3.5 w-3.5" />
-              Kits
-            </button>
-            <button
-              onClick={() => setHistoryOpen(true)}
-              className="inline-flex items-center gap-2 rounded-md border border-border bg-card/60 px-3 py-2 text-xs transition-smooth hover:border-primary/50"
-              title="Histórico de backups role_json para este roleid"
-            >
-              <History className="h-3.5 w-3.5" />
-              Histórico
-            </button>
-            <button
-              onClick={handleReset}
-              disabled={!dirty}
-              className="inline-flex items-center gap-2 rounded-md border border-border bg-card/60 px-3 py-2 text-sm transition-smooth hover:border-primary/50 disabled:opacity-50"
-            >
-              <RotateCcw className="h-4 w-4" />
-              Reset
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={saving || !dirty || !canSave}
-              title={canSave ? undefined : permDeniedTitle}
-              className={cn(
-                "inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-semibold shadow-glow transition-smooth hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50",
-                isRoleMode
-                  ? "bg-destructive text-destructive-foreground"
-                  : "bg-primary text-primary-foreground",
-              )}
-            >
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-              {saving ? "Salvando..." : isRoleMode ? "Salvar no personagem real" : "Salvar"}
-            </button>
-          </div>
         </div>
+      </header>
 
-        {/* Tabs */}
-        <nav className="mt-4 flex flex-wrap gap-1 border-b border-border/60">
+      {/* ─────────── Navegação modular ─────────── */}
+      <nav className="px-4 pb-3 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
           {TABS.map((t) => {
             const Icon = t.icon;
             const active = tab === t.key;
             return (
               <button
                 key={t.key}
+                type="button"
+                data-active={active}
                 onClick={() => setTab(t.key)}
-                className={cn(
-                  "inline-flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-wider transition-smooth",
-                  "border-b-2",
-                  active
-                    ? "border-primary text-primary"
-                    : "border-transparent text-muted-foreground hover:text-foreground"
-                )}
+                className="nav-card group"
               >
-                <Icon className="h-3.5 w-3.5" />
-                {t.label}
+                <span
+                  className={cn(
+                    "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition",
+                    active
+                      ? "border-primary/60 bg-primary/15 text-primary shadow-[0_0_18px_hsl(38_70%_50%/0.35)]"
+                      : "border-bronze-soft bg-black/30 text-bronze-muted group-hover:text-bronze",
+                  )}
+                >
+                  <Icon className="h-5 w-5" />
+                </span>
+                <span className="text-sm font-semibold tracking-wide">{t.label}</span>
               </button>
             );
           })}
-        </nav>
-      </header>
+        </div>
+      </nav>
 
-      <div className="flex-1 overflow-y-auto p-6">
-        {tab === "base" && <BaseTab template={template} onChange={setTemplate} />}
-        {tab === "status" && (
-          <StatusTab
-            template={template}
-            entry={entry}
-            onChange={setTemplate}
-            onEntryRefreshed={(next) => {
-              entry.template = next;
-            }}
-          />
-        )}
-        {tab === "inventory" && <InventoryTab template={template} onChange={setTemplate} />}
-        {tab === "equipment" && <EquipmentTab template={template} onChange={setTemplate} />}
-        {tab === "storehouse" && <StorehouseTab template={template} onChange={setTemplate} />}
-        {tab === "task" && <TaskTab template={template} onChange={setTemplate} />}
+      {/* ─────────── Painel principal ─────────── */}
+      <div className="flex-1 overflow-y-auto px-4 pb-6 sm:px-6 lg:px-8">
+        <section key={tab} className="frame-bronze relative animate-fade-in-up">
+          <header className="flex flex-wrap items-center justify-between gap-3 px-5 pt-6 pb-4 sm:px-7">
+            <div className="flex items-center gap-3">
+              <ActiveTabIcon className="h-5 w-5 text-bronze" />
+              <h2
+                className="font-serif text-xl font-bold tracking-wide text-bronze sm:text-2xl"
+                style={{ textShadow: "0 2px 10px hsl(38 70% 40% / 0.35)" }}
+              >
+                {activeTabMeta.label}
+              </h2>
+            </div>
+            <div className="hidden text-[10px] font-semibold uppercase tracking-[0.2em] text-bronze-muted sm:block">
+              {className} · LV {template.status.level}
+            </div>
+          </header>
+          <div className="ornate-divider mx-7 mb-4 opacity-60" />
+          <div className="px-4 pb-6 sm:px-6 lg:px-7">
+            {tab === "base" && <BaseTab template={template} onChange={setTemplate} />}
+            {tab === "status" && (
+              <StatusTab
+                template={template}
+                entry={entry}
+                onChange={setTemplate}
+                onEntryRefreshed={(next) => {
+                  entry.template = next;
+                }}
+              />
+            )}
+            {tab === "inventory" && <InventoryTab template={template} onChange={setTemplate} />}
+            {tab === "equipment" && <EquipmentTab template={template} onChange={setTemplate} />}
+            {tab === "storehouse" && <StorehouseTab template={template} onChange={setTemplate} />}
+            {tab === "task" && <TaskTab template={template} onChange={setTemplate} />}
+          </div>
+        </section>
       </div>
 
       <SavePreviewDialog
