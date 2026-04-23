@@ -223,17 +223,41 @@ Deno.serve(async (req: Request) => {
           PW_API_SECRET = tenantRow.pw_api_secret;
           resolvedTenantId = tenantRow.id;
           credSource = "tenant_active";
-        } else {
-          // 3) Fallback global (superadmin sem tenant)
-          const { data: cfg } = await admin
-            .from("app_settings")
-            .select("pw_api_base_url, pw_api_secret")
-            .eq("id", 1)
-            .maybeSingle();
-          if (cfg?.pw_api_base_url) PW_API_BASE_URL = cfg.pw_api_base_url;
-          if (cfg?.pw_api_secret) PW_API_SECRET = cfg.pw_api_secret;
-          if (cfg?.pw_api_base_url || cfg?.pw_api_secret) credSource = "app_settings";
         }
+      }
+
+      // 2.5) Convidado: nenhum tenant próprio. Pega via server_members.
+      // Se for membro de exatamente 1 servidor, usa ele direto. Se for múltiplos,
+      // pega o mais recente (cliente deveria mandar x-server-id pra ser explícito).
+      if (credSource === "env") {
+        const { data: memberships } = await admin
+          .from("server_members")
+          .select("tenant_id, created_at, tenants:tenant_id(id, pw_api_base_url, pw_api_secret)")
+          .eq("user_id", callerUserId)
+          .order("created_at", { ascending: false });
+        const firstWithCreds = (memberships ?? []).find((m) => {
+          const t = (m as { tenants: { pw_api_base_url?: string; pw_api_secret?: string } | null }).tenants;
+          return t?.pw_api_base_url && t?.pw_api_secret;
+        });
+        if (firstWithCreds) {
+          const t = (firstWithCreds as { tenants: { id: string; pw_api_base_url: string; pw_api_secret: string } }).tenants;
+          PW_API_BASE_URL = t.pw_api_base_url;
+          PW_API_SECRET = t.pw_api_secret;
+          resolvedTenantId = t.id;
+          credSource = "tenant_active";
+        }
+      }
+
+      // 3) Fallback global (superadmin sem tenant nenhum)
+      if (credSource === "env") {
+        const { data: cfg } = await admin
+          .from("app_settings")
+          .select("pw_api_base_url, pw_api_secret")
+          .eq("id", 1)
+          .maybeSingle();
+        if (cfg?.pw_api_base_url) PW_API_BASE_URL = cfg.pw_api_base_url;
+        if (cfg?.pw_api_secret) PW_API_SECRET = cfg.pw_api_secret;
+        if (cfg?.pw_api_base_url || cfg?.pw_api_secret) credSource = "app_settings";
       }
     }
   } catch (e) {
