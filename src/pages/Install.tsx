@@ -407,6 +407,41 @@ const Install = () => {
             instala Apache + PHP, configura sudoers, cria as pastas de backup e
             testa a conexão sozinho.
           </p>
+
+          {/* Toggle: placeholders vs valores reais */}
+          <div className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-border bg-card/40 p-2 text-xs">
+            <button
+              type="button"
+              onClick={() => setShowRealValues(false)}
+              className={cn(
+                "flex-1 rounded px-3 py-1.5 font-semibold transition-smooth",
+                !showRealValues
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              🛡️ Modo seguro (placeholders)
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowRealValues(true)}
+              disabled={!secret || !ipFromUrl}
+              className={cn(
+                "flex-1 rounded px-3 py-1.5 font-semibold transition-smooth disabled:opacity-40",
+                showRealValues
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+              title={
+                !secret || !ipFromUrl
+                  ? "Selecione um servidor com URL e secret cadastrados"
+                  : ""
+              }
+            >
+              ⚡ Pronto pra colar (valores reais)
+            </button>
+          </div>
+
           <div className="relative">
             <pre className="overflow-x-auto rounded-md border border-border bg-background p-3 font-mono text-xs">
               {installCommand}
@@ -420,12 +455,23 @@ const Install = () => {
               <Copy className="mr-2 h-3.5 w-3.5" /> Copiar
             </Button>
           </div>
-          <p className="mt-3 text-xs text-muted-foreground">
-            Substitua <code className="rounded bg-muted px-1 font-mono">IP_DA_VPS</code> pelo IP/host
-            real e <code className="rounded bg-muted px-1 font-mono">SEU_SECRET</code> pelo secret
-            mostrado em <strong>Meus Servidores</strong>. Depois volte aqui e clique em{" "}
-            <strong>Testar conexão</strong>.
-          </p>
+          {!showRealValues ? (
+            <p className="mt-3 text-xs text-muted-foreground">
+              Substitua <code className="rounded bg-muted px-1 font-mono">IP_DA_VPS</code> pelo IP/host
+              real e <code className="rounded bg-muted px-1 font-mono">SEU_SECRET</code> pelo secret
+              mostrado em <strong>Meus Servidores</strong>. Depois volte aqui e clique em{" "}
+              <strong>Testar conexão</strong>.
+            </p>
+          ) : (
+            <p className="mt-3 flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-600 dark:text-amber-400">
+              <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              <span>
+                O comando agora contém <strong>seu IP e secret reais</strong>. Não cole em chats,
+                screenshots ou repos públicos — qualquer pessoa com esse comando consegue acesso
+                root à sua VPS.
+              </span>
+            </p>
+          )}
         </section>
 
         {/* Arquivos */}
