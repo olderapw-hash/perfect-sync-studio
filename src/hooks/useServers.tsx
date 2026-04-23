@@ -34,12 +34,30 @@ export function useServers() {
       return;
     }
     setLoading(true);
-    const { data } = await supabase
-      .from("tenants")
-      .select(COLUMNS)
-      .eq("owner_id", session.user.id)
-      .order("created_at", { ascending: true });
-    setServers((data ?? []) as Server[]);
+    // Traz tenants em que o usuário é dono OU membro convidado.
+    // A RLS já filtra: "Users can view own tenant" + "Members can view tenant".
+    const [{ data: owned }, { data: memberships }] = await Promise.all([
+      supabase
+        .from("tenants")
+        .select(COLUMNS)
+        .eq("owner_id", session.user.id),
+      supabase
+        .from("server_members")
+        .select(`tenant:tenants(${COLUMNS})`)
+        .eq("user_id", session.user.id),
+    ]);
+    const fromMemberships = ((memberships ?? [])
+      .map((m: { tenant: Server | null }) => m.tenant)
+      .filter(Boolean)) as Server[];
+    // Dedup por id (owner também aparece em server_members como 'owner').
+    const map = new Map<string, Server>();
+    for (const s of [...(owned ?? []), ...fromMemberships] as Server[]) {
+      map.set(s.id, s);
+    }
+    const all = Array.from(map.values()).sort((a, b) =>
+      a.created_at.localeCompare(b.created_at),
+    );
+    setServers(all);
     setLoading(false);
   }, [session?.user]);
 
