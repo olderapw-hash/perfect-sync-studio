@@ -292,7 +292,7 @@ export const BulkClearInventoryDialog = ({
         onOpenChange(o);
       }}
     >
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="flex max-h-[90vh] max-w-3xl flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-destructive">
             <Eraser className="h-5 w-5" />
