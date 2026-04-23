@@ -81,6 +81,19 @@ function firstEmptyPos(items: ClsItem[], cap: number): number {
   return Math.max(0, cap - 1);
 }
 
+/**
+ * Para equipamento: prefere o primeiro slot CONHECIDO vazio (na ordem da
+ * tabela PW_EQUIPMENT_SLOTS). Se todos conhecidos estiverem ocupados, cai
+ * pro primeiro pos numérico vazio dentro da capacidade.
+ */
+function firstEmptyEquipmentPos(items: ClsItem[], cap: number): number {
+  const used = new Set(items.filter((it) => it.id > 0).map((it) => it.pos));
+  for (const slot of PW_EQUIPMENT_SLOTS) {
+    if (!used.has(slot.pos)) return slot.pos;
+  }
+  return firstEmptyPos(items, cap);
+}
+
 function effectiveCapacity(ctx: InsertContextSlot | undefined): number {
   if (!ctx) return 64;
   if (ctx.capacity && Number.isFinite(ctx.capacity)) return Math.max(1, ctx.capacity);
@@ -137,7 +150,11 @@ export const ItemInsertModal = ({
     if (!autoSlot) return;
     const ctx = contexts[destination];
     if (!ctx) return;
-    setPos(firstEmptyPos(ctx.items, effectiveCapacity(ctx)));
+    const next =
+      destination === "equipment.items"
+        ? firstEmptyEquipmentPos(ctx.items, effectiveCapacity(ctx))
+        : firstEmptyPos(ctx.items, effectiveCapacity(ctx));
+    setPos(next);
   }, [autoSlot, destination, contexts]);
 
   if (!source) return null;
