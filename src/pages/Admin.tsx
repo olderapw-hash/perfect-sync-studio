@@ -109,12 +109,14 @@ const Admin = () => {
                 icon={<ImageIcon className="h-3.5 w-3.5" />}
                 label="Fotos das Classes"
               />
-              <ModeButton
-                active={mode === "settings"}
-                onClick={() => setMode("settings")}
-                icon={<SettingsIcon className="h-3.5 w-3.5" />}
-                label={isSuperadmin ? "Configurações" : "Config (RO)"}
-              />
+              {(isSuperadmin || can("manage_servers")) && (
+                <ModeButton
+                  active={mode === "settings"}
+                  onClick={() => setMode("settings")}
+                  icon={<SettingsIcon className="h-3.5 w-3.5" />}
+                  label="Configurações"
+                />
+              )}
             </div>
 
             <div className="ml-auto flex items-center gap-2">
