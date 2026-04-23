@@ -130,6 +130,7 @@ export const ClsconfigEditor = ({ entry, allEntries = [], mode = "template", onS
   const [checklistResult, setChecklistResult] = useState<SaveChecklistResult | null>(null);
   const [presetsOpen, setPresetsOpen] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkClearInvOpen, setBulkClearInvOpen] = useState(false);
   const [compareOpen, setCompareOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [kitsOpen, setKitsOpen] = useState(false);
