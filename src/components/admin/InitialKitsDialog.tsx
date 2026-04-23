@@ -370,6 +370,10 @@ export const InitialKitsDialog = ({
                   setSelectedKit(k);
                   setView("bulk_apply");
                 }}
+                onEdit={(k) => {
+                  setSelectedKit(k);
+                  setView("edit");
+                }}
                 onDuplicate={(k) => void handleDuplicate(k)}
                 onRemove={(k) => void handleRemove(k)}
                 onExport={handleExport}
@@ -378,6 +382,8 @@ export const InitialKitsDialog = ({
                 bulkAvailable={bulkAvailable}
                 canBulkApply={canBulkApply}
                 bulkDeniedTitle={bulkDeniedTitle}
+                canEditCloudKit={canEditCloudKit}
+                canEditLocalKit={canEditLocalKit}
               />
             </TabsContent>
 
