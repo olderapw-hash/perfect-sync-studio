@@ -56,6 +56,7 @@ import {
 } from "@/lib/initialKits";
 import { useInitialKits } from "@/hooks/useInitialKits";
 import { useServerPermissions } from "@/hooks/useServerPermissions";
+import { useAuth } from "@/hooks/useAuth";
 import { logAuditEvent } from "@/lib/auditLog";
 import type { ClsEntry, ClsTemplate } from "@/types/clsconfig";
 import { summarizeIssues, validateAllItems } from "@/lib/validateItem";
@@ -64,6 +65,8 @@ import { getClassInfo } from "@/lib/pwClasses";
 import { invokeClsconfigProxy } from "@/lib/clsconfigInvoke";
 import { saveHistory } from "@/lib/saveHistory";
 import { seenBackups } from "@/lib/seenBackups";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PresetsTabView } from "./PresetsTabView";
 
 export type KitsDialogMode = "template" | "role";
 
