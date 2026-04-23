@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   AlertCircle,
-  Database,
   Image as ImageIcon,
   Loader2,
   LogOut,
@@ -15,7 +14,6 @@ import {
   Users as UsersIcon,
   Settings as SettingsIcon,
   ShieldCheck,
-  UserPlus,
 } from "lucide-react";
 import { useClsconfig } from "@/hooks/useClsconfig";
 import { useAuth } from "@/hooks/useAuth";
