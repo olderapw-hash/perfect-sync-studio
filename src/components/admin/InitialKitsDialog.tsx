@@ -126,7 +126,12 @@ export const InitialKitsDialog = ({
   const isTemplateMode = mode === "template";
   const bulkAvailable = isTemplateMode && allEntries.length > 0;
   const { tenantId, can } = useServerPermissions();
+  const { session } = useAuth();
   const canManageCloud = can("save_templates");
+  // Preset → kit no servidor exige save_templates OU manage_kits.
+  const canDuplicatePresetServer = can("save_templates") || can("manage_kits");
+  // Preset → kit privado exige usuário autenticado + tenant ativo.
+  const canDuplicatePresetPrivate = !!session?.user && !!tenantId;
   const {
     cloudKits,
     localKits,
@@ -141,6 +146,7 @@ export const InitialKitsDialog = ({
   } = useInitialKits({ tenantId });
 
   const [view, setView] = useState<View>("list");
+  const [listTab, setListTab] = useState<"my_kits" | "presets">("my_kits");
   const [selectedKit, setSelectedKit] = useState<InitialKit | null>(null);
   const [migrating, setMigrating] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
