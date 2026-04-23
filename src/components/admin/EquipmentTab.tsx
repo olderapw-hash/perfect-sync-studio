@@ -479,12 +479,19 @@ export const EquipmentTab = ({ template, onChange }: Props) => {
                   </div>
                 </div>
 
-                {/* Linha inferior */}
-                <div className="mt-3 flex items-start justify-center gap-6">
-                  {NORMAL_BOTTOM_ROW.map((s) => (
-                    <LabeledSlot key={s.pos} pos={s.pos} label={s.label} />
-                  ))}
-                </div>
+                {/* Linha inferior — slots especiais (26, 29, 32, 33). */}
+                {SPECIAL_BOTTOM_ROW.length > 0 && (
+                  <div className="mt-3 border-t border-amber-700/30 pt-3">
+                    <div className="mb-1.5 text-center text-[9px] font-bold uppercase tracking-[0.2em] text-amber-200/70">
+                      Slots especiais
+                    </div>
+                    <div className="flex items-start justify-center gap-3">
+                      {SPECIAL_BOTTOM_ROW.map((s) => (
+                        <LabeledSlot key={s.pos} pos={s.pos} label={s.label} />
+                      ))}
+                    </div>
+                  </div>
+                )}
               </>
             ) : (
               /* Aba Roupas / Provador — grid 4×3 de cada lado do retrato */
