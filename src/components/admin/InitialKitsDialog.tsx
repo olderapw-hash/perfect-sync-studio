@@ -797,3 +797,444 @@ const KitApplyView = ({
     </div>
   );
 };
+
+// ────────────────────────────────────────────────────────────
+// BULK APPLY view — aplica em todos os CLS carregados
+// ────────────────────────────────────────────────────────────
+
+interface BulkApplyViewProps {
+  kit: InitialKit;
+  allEntries: ClsEntry[];
+  canBulkApply: boolean;
+  bulkDeniedTitle?: string;
+  onCancel: () => void;
+  onFinished: () => void;
+}
+
+type BulkRowStatus = "pending" | "running" | "success" | "error" | "ignored";
+
+interface BulkRowResult {
+  roleid: number;
+  className: string;
+  cls: number;
+  status: BulkRowStatus;
+  message?: string;
+  backupRoleJson?: string;
+  backupClsconfigFile?: string;
+  exportLogFile?: string;
+}
+
+const CONFIRM_PHRASE = "APLICAR KIT EM TODOS";
+
+const extractAny = (obj: unknown, path: string[]): unknown => {
+  let cur: unknown = obj;
+  for (const key of path) {
+    if (cur && typeof cur === "object" && key in (cur as Record<string, unknown>)) {
+      cur = (cur as Record<string, unknown>)[key];
+    } else {
+      return undefined;
+    }
+  }
+  return cur;
+};
+const extractStr = (obj: unknown, path: string[]): string | undefined => {
+  const v = extractAny(obj, path);
+  return typeof v === "string" ? v : undefined;
+};
+
+const KitBulkApplyView = ({
+  kit,
+  allEntries,
+  canBulkApply,
+  bulkDeniedTitle,
+  onCancel,
+  onFinished,
+}: BulkApplyViewProps) => {
+  const [mode, setMode] = useState<ApplyMode>("merge_empty");
+  const [confirmText, setConfirmText] = useState("");
+  const [running, setRunning] = useState(false);
+  const [results, setResults] = useState<Record<number, BulkRowResult>>({});
+  const [done, setDone] = useState(false);
+
+  const targets = useMemo(
+    () =>
+      allEntries
+        .filter((e) => Number.isFinite(e.template.roleid) && e.template.roleid > 0)
+        .map((e) => ({
+          entry: e,
+          roleid: e.template.roleid,
+          className:
+            e.template.summary.class_name ?? `cls ${e.template.summary.cls}`,
+          cls: e.template.summary.cls,
+          name: e.template.summary.name,
+          mismatch: kit.target_cls !== null && kit.target_cls !== e.template.summary.cls,
+        })),
+    [allEntries, kit],
+  );
+
+  const mismatchCount = targets.filter((t) => t.mismatch).length;
+  const phraseOk = confirmText.trim().toUpperCase() === CONFIRM_PHRASE;
+  const canRun = canBulkApply && !running && !done && targets.length > 0 && phraseOk;
+
+  const counters = useMemo(() => {
+    let ok = 0,
+      err = 0,
+      ignored = 0;
+    for (const r of Object.values(results)) {
+      if (r.status === "success") ok++;
+      else if (r.status === "error") err++;
+      else if (r.status === "ignored") ignored++;
+    }
+    return { ok, err, ignored };
+  }, [results]);
+
+  const run = async () => {
+    setRunning(true);
+    setDone(false);
+
+    // Inicializa o relatório com pending para todos os alvos.
+    const init: Record<number, BulkRowResult> = {};
+    for (const t of targets) {
+      init[t.roleid] = {
+        roleid: t.roleid,
+        className: t.className,
+        cls: t.cls,
+        status: "pending",
+      };
+    }
+    setResults(init);
+
+    let okCount = 0;
+    let errCount = 0;
+    let ignoredCount = 0;
+
+    for (const t of targets) {
+      const rid = t.roleid;
+      setResults((prev) => ({ ...prev, [rid]: { ...prev[rid], status: "running" } }));
+
+      try {
+        // 1. cópia do template + aplicação do kit
+        const applied = applyKitToTemplate(t.entry.template, kit, { mode });
+
+        // 2. validador avançado — bloqueia só em critical/error
+        const summary = summarizeIssues(validateAllItems(applied));
+        if (summary.hasBlocking) {
+          ignoredCount++;
+          const head = summary.criticals[0]?.message ?? summary.errors[0]?.message ?? "validação falhou";
+          setResults((prev) => ({
+            ...prev,
+            [rid]: {
+              ...prev[rid],
+              status: "ignored",
+              message: `Validação: ${head}`,
+            },
+          }));
+          saveHistory.pushDiff({
+            roleid: rid,
+            className: t.className,
+            field: `kit:${kit.name}`,
+            oldValue: "(antes)",
+            newValue: "(ignorado por validação)",
+            status: "error",
+            error: head,
+          });
+          continue;
+        }
+
+        // 3. payload mínimo
+        const payload = buildKitBulkPayload(rid, applied, kit);
+
+        // 4. POST clsconfig-proxy/clsconfig
+        const { data, error, rawBody } = await invokeClsconfigProxy(
+          "clsconfig-proxy/clsconfig",
+          { method: "POST", body: payload },
+        );
+        if (error) {
+          throw new Error(rawBody ? `${error.message}\n\n${rawBody}` : error.message);
+        }
+        if (data && typeof data === "object" && (data as { success?: boolean }).success === false) {
+          throw new Error((data as { error?: string }).error || "save falhou");
+        }
+
+        // 5. extrai backups/export pra relatório
+        const backupRoleJson =
+          extractStr(data, ["saved", "backup", "file"]) ??
+          extractStr(data, ["saved", "backups", "role_json", "file"]);
+        const backupClsconfigFile =
+          extractStr(data, ["saved", "clsconfig_file_backup", "file"]) ??
+          extractStr(data, ["saved", "backups", "clsconfig_file", "file"]);
+        const exportLogFile = extractStr(data, ["saved", "export", "log_file"]);
+
+        if (backupRoleJson) seenBackups.add(rid, "role_json", backupRoleJson);
+        if (backupClsconfigFile) seenBackups.add(rid, "clsconfig_file", backupClsconfigFile);
+
+        okCount++;
+        setResults((prev) => ({
+          ...prev,
+          [rid]: {
+            ...prev[rid],
+            status: "success",
+            message: "Salvo",
+            backupRoleJson,
+            backupClsconfigFile,
+            exportLogFile,
+          },
+        }));
+        saveHistory.pushDiff({
+          roleid: rid,
+          className: t.className,
+          field: `kit:${kit.name}`,
+          oldValue: "(antes)",
+          newValue: `(kit aplicado · modo ${mode})`,
+          status: "ok",
+        });
+      } catch (e) {
+        errCount++;
+        const msg = e instanceof Error ? e.message : "erro";
+        setResults((prev) => ({
+          ...prev,
+          [rid]: { ...prev[rid], status: "error", message: msg },
+        }));
+        saveHistory.pushDiff({
+          roleid: rid,
+          className: t.className,
+          field: `kit:${kit.name}`,
+          oldValue: "(antes)",
+          newValue: "(falha)",
+          status: "error",
+          error: msg,
+        });
+        // Continua mesmo com erro — não para no primeiro.
+      }
+    }
+
+    setRunning(false);
+    setDone(true);
+
+    if (errCount === 0 && ignoredCount === 0) {
+      toast.success(`Kit aplicado em ${okCount} CLS`);
+    } else {
+      toast.warning(
+        `Concluído: ${okCount} ok · ${errCount} erro(s) · ${ignoredCount} ignorado(s)`,
+      );
+    }
+    // Recarrega o getClsconfig para refletir as mudanças.
+    onFinished();
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-md border border-border bg-background/40 p-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <Package className="h-4 w-4 text-primary" />
+          <span className="font-semibold text-foreground">{kit.name}</span>
+          <KitTargetBadge cls={kit.target_cls} />
+          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-mono text-primary">
+            {countKitItems(kit)} itens
+          </span>
+        </div>
+        {kit.description && (
+          <p className="mt-1 text-xs text-muted-foreground">{kit.description}</p>
+        )}
+      </div>
+
+      <div>
+        <Label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Modo de aplicação
+        </Label>
+        <RadioGroup value={mode} onValueChange={(v) => setMode(v as ApplyMode)}>
+          {(Object.keys(APPLY_MODE_LABEL) as ApplyMode[]).map((m) => (
+            <label
+              key={m}
+              className="flex items-start gap-2 rounded-md border border-border bg-background/40 p-2 text-sm hover:border-primary/50"
+            >
+              <RadioGroupItem value={m} id={`bulk-mode-${m}`} className="mt-0.5" disabled={running || done} />
+              <div className="flex-1">
+                <div className="font-medium text-foreground">{APPLY_MODE_LABEL[m].title}</div>
+                <div className="text-xs text-muted-foreground">{APPLY_MODE_LABEL[m].desc}</div>
+              </div>
+            </label>
+          ))}
+        </RadioGroup>
+      </div>
+
+      <div>
+        <div className="mb-2 flex items-center justify-between">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            CLS alvo ({targets.length})
+          </span>
+          {mismatchCount > 0 && (
+            <span className="inline-flex items-center gap-1 text-[11px] text-warning">
+              <AlertTriangle className="h-3.5 w-3.5" />
+              {mismatchCount} CLS com classe diferente do kit
+            </span>
+          )}
+        </div>
+        <ScrollArea className="max-h-[35vh] rounded-md border border-border bg-background/30">
+          <ul className="divide-y divide-border/60 p-1">
+            {targets.map((t) => {
+              const r = results[t.roleid];
+              return (
+                <li
+                  key={t.roleid}
+                  className="flex items-center gap-2 rounded px-2 py-1.5 text-xs hover:bg-card/40"
+                >
+                  <span className="flex-1 truncate">
+                    <span className="font-semibold text-foreground">{t.className}</span>
+                    {t.name && (
+                      <span className="ml-1 text-muted-foreground">· {t.name}</span>
+                    )}{" "}
+                    <span className="font-mono text-muted-foreground">
+                      (roleid {t.roleid} · cls {t.cls})
+                    </span>
+                    {t.mismatch && (
+                      <AlertTriangle
+                        className="ml-1 inline h-3 w-3 text-warning"
+                        aria-label="Classe diferente do kit"
+                      />
+                    )}
+                  </span>
+                  {r?.status === "running" && (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+                  )}
+                  {r?.status === "success" && (
+                    <CheckCircle2 className="h-3.5 w-3.5 text-success" />
+                  )}
+                  {r?.status === "ignored" && (
+                    <span
+                      title={r.message}
+                      className="flex items-center gap-1 text-warning"
+                    >
+                      <AlertTriangle className="h-3.5 w-3.5" />
+                      <span className="max-w-[220px] truncate text-[10px]">{r.message}</span>
+                    </span>
+                  )}
+                  {r?.status === "error" && (
+                    <span
+                      title={r.message}
+                      className="flex items-center gap-1 text-destructive"
+                    >
+                      <XCircle className="h-3.5 w-3.5" />
+                      <span className="max-w-[220px] truncate text-[10px]">{r.message}</span>
+                    </span>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </ScrollArea>
+      </div>
+
+      {done && (
+        <div className="rounded-md border border-border bg-background/40 p-3 text-xs">
+          <div className="mb-2 flex flex-wrap items-center gap-3 font-semibold text-foreground">
+            <span>Relatório final</span>
+            <span className="rounded bg-success/10 px-2 py-0.5 text-success">
+              {counters.ok} sucesso
+            </span>
+            <span className="rounded bg-warning/10 px-2 py-0.5 text-warning">
+              {counters.ignored} ignorado(s)
+            </span>
+            <span className="rounded bg-destructive/10 px-2 py-0.5 text-destructive">
+              {counters.err} erro(s)
+            </span>
+          </div>
+          <ScrollArea className="max-h-[20vh]">
+            <ul className="space-y-1">
+              {Object.values(results).map((r) => (
+                <li key={r.roleid} className="rounded bg-card/40 px-2 py-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="truncate">
+                      <span className="font-semibold text-foreground">{r.className}</span>{" "}
+                      <span className="font-mono text-muted-foreground">
+                        (roleid {r.roleid})
+                      </span>
+                    </span>
+                    <span
+                      className={
+                        r.status === "success"
+                          ? "text-success"
+                          : r.status === "ignored"
+                            ? "text-warning"
+                            : r.status === "error"
+                              ? "text-destructive"
+                              : "text-muted-foreground"
+                      }
+                    >
+                      {r.status}
+                    </span>
+                  </div>
+                  {r.message && (
+                    <div className="mt-0.5 truncate text-[10px] text-muted-foreground">
+                      {r.message}
+                    </div>
+                  )}
+                  {(r.backupRoleJson || r.backupClsconfigFile || r.exportLogFile) && (
+                    <div className="mt-0.5 flex flex-wrap gap-2 text-[10px] text-muted-foreground">
+                      {r.backupRoleJson && (
+                        <span className="font-mono">role_json: {r.backupRoleJson}</span>
+                      )}
+                      {r.backupClsconfigFile && (
+                        <span className="font-mono">cls_file: {r.backupClsconfigFile}</span>
+                      )}
+                      {r.exportLogFile && (
+                        <span className="font-mono">export_log: {r.exportLogFile}</span>
+                      )}
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </ScrollArea>
+        </div>
+      )}
+
+      <Separator />
+
+      <div className="space-y-2">
+        <Label htmlFor="bulk-confirm" className="text-xs text-muted-foreground">
+          Para liberar o botão, digite exatamente:{" "}
+          <span className="font-mono font-bold text-foreground">{CONFIRM_PHRASE}</span>
+        </Label>
+        <Input
+          id="bulk-confirm"
+          value={confirmText}
+          onChange={(e) => setConfirmText(e.target.value)}
+          disabled={running || done}
+          placeholder={CONFIRM_PHRASE}
+          className="font-mono"
+        />
+      </div>
+
+      <DialogFooter className="gap-2 border-t border-border pt-3">
+        <Button variant="outline" onClick={onCancel} disabled={running}>
+          <X className="h-4 w-4" />
+          {done ? "Fechar" : "Voltar"}
+        </Button>
+        {!done && (
+          <Button
+            onClick={run}
+            disabled={!canRun}
+            title={
+              !canBulkApply
+                ? bulkDeniedTitle
+                : targets.length === 0
+                  ? "Nenhum CLS carregado para aplicar"
+                  : !phraseOk
+                    ? `Digite "${CONFIRM_PHRASE}" para confirmar`
+                    : undefined
+            }
+            className="gap-2"
+          >
+            {running ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
+            {running ? "Aplicando..." : `Aplicar em ${targets.length} CLS`}
+          </Button>
+        )}
+      </DialogFooter>
+    </div>
+  );
+};
