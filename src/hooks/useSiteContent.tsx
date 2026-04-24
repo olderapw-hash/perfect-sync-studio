@@ -25,9 +25,14 @@ export interface SiteFaqItem {
 export interface SiteContent {
   hero: {
     badge: string;
-    title_prefix: string;
-    title_highlight: string;
-    title_suffix: string;
+    /** Título completo. Use **texto** para marcar a parte com destaque dourado. */
+    title: string;
+    /** @deprecated mantido para retrocompatibilidade com conteúdos salvos antes. */
+    title_prefix?: string;
+    /** @deprecated */
+    title_highlight?: string;
+    /** @deprecated */
+    title_suffix?: string;
     subtitle: string;
     primary_cta: string;
     secondary_cta: string;
