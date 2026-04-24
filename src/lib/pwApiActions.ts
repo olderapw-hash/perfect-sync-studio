@@ -283,7 +283,57 @@ export const pwApi = {
       body: { type, name },
     });
   },
+  /**
+   * Envia um correio com item anexado para o personagem alvo.
+   * Contrato em docs/api-contract.md §4. Se 404 → EndpointMissingError.
+   */
+  sendMailItem(body: SendMailItemPayload) {
+    return callAction<SendMailResponse>("sendMailItem", { method: "POST", body });
+  },
+  /**
+   * Envia um correio com moedas/gold anexadas. Contrato em §5.
+   */
+  sendMailGold(body: SendMailGoldPayload) {
+    return callAction<SendMailResponse>("sendMailGold", { method: "POST", body });
+  },
 };
+
+/* ─────────── Correio (Fase 2) ─────────── */
+
+export interface MailItemAttachment {
+  item_id: number;
+  count: number;
+  max_count?: number;
+  proctype?: number;
+  expire_date?: number;
+  mask?: number;
+  guid1?: number;
+  guid2?: number;
+  data?: string;
+}
+
+export interface SendMailItemPayload {
+  roleid: number;
+  subject?: string;
+  body?: string;
+  item: MailItemAttachment;
+}
+
+export interface SendMailGoldPayload {
+  roleid: number;
+  subject?: string;
+  body?: string;
+  /** Inteiro > 0, no menor denominador (PW armazena em "moedas de cobre"). */
+  amount: number;
+}
+
+export interface SendMailResponse {
+  success: boolean;
+  roleid?: number;
+  mail_id?: number;
+  delivered?: boolean;
+  error?: string;
+}
 
 /**
  * Resposta de `getBackupContent` — devolve o template completo do role
