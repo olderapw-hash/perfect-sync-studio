@@ -80,9 +80,7 @@ export interface SiteContent {
 export const SITE_CONTENT_DEFAULTS: SiteContent = {
   hero: {
     badge: "Pra donos de servidor privado de PW",
-    title_prefix: "Administre seu servidor de",
-    title_highlight: "Perfect World",
-    title_suffix: "sem tocar no banco",
+    title: "Administre seu servidor de **Perfect World** sem tocar no banco",
     subtitle:
       "Edite personagens, itens, equipamentos, status e inventário direto pelo navegador. Backup automático, histórico de alterações e zero risco de quebrar dados com SQL manual.",
     primary_cta: "Começar por R$ 47/mês",
