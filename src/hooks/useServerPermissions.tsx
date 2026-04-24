@@ -181,9 +181,6 @@ export const ServerPermissionsProvider = ({ children }: { children: ReactNode })
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 };
 
-  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
-};
-
 export const useServerPermissions = () => useContext(Ctx);
 
 /** Componente helper: renderiza children só se a permissão for true. */
