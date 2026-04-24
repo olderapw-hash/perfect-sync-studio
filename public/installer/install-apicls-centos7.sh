@@ -405,6 +405,7 @@ fi
 cat > "$SUDOERS_FILE" <<EOF
 $WEB_USER ALL=(root) NOPASSWD: /usr/local/sbin/exportclsconfig-api.sh
 $WEB_USER ALL=(root) NOPASSWD: /usr/local/sbin/backupgamedbd-api.sh
+$WEB_USER ALL=(root) NOPASSWD: /usr/local/sbin/sendreward-api.sh
 EOF
 chmod 440 "$SUDOERS_FILE"
 visudo -cf "$SUDOERS_FILE" >/dev/null || die "sudoers invalido em $SUDOERS_FILE"
