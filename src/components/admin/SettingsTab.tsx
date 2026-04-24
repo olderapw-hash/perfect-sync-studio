@@ -51,7 +51,7 @@ export const SettingsTab = () => {
       if (isSuperadmin) {
         const { data, error } = await supabase
           .from("app_settings")
-          .select("server_name, logo_url, primary_color")
+          .select("server_name, logo_url, primary_color, background_url, favicon_url")
           .eq("id", 1)
           .maybeSingle();
         if (error) {
@@ -64,6 +64,8 @@ export const SettingsTab = () => {
             server_name: data.server_name ?? "",
             logo_url: data.logo_url ?? "",
             primary_color: data.primary_color ?? "",
+            background_url: data.background_url ?? "",
+            favicon_url: data.favicon_url ?? "",
           });
         }
         setLoading(false);
@@ -78,6 +80,8 @@ export const SettingsTab = () => {
         server_name: tenant?.server_name ?? "",
         logo_url: tenant?.logo_url ?? "",
         primary_color: tenant?.primary_color ?? "",
+        background_url: "",
+        favicon_url: "",
       });
       setLoading(false);
     })();
@@ -118,12 +122,14 @@ export const SettingsTab = () => {
       return;
     }
 
-    // Superadmin → app_settings (somente branding global)
+    // Superadmin → app_settings (branding global + assets)
     const payload = {
       id: 1,
-      server_name: form.server_name.trim() || "Perfect World Admin",
+      server_name: form.server_name.trim() || "Orphea Core",
       logo_url: form.logo_url.trim() || null,
       primary_color: form.primary_color.trim() || null,
+      background_url: form.background_url.trim() || null,
+      favicon_url: form.favicon_url.trim() || null,
       updated_by: user?.id ?? null,
       updated_at: new Date().toISOString(),
     };
