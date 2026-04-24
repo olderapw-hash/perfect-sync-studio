@@ -692,6 +692,20 @@ export type Database = {
         Args: { _tenant_id: string; _user_id: string }
         Returns: boolean
       }
+      list_server_invites_redacted: {
+        Args: { _tenant_id: string }
+        Returns: {
+          email_masked: string
+          expires_at: string
+          id: string
+          invited_at: string
+          invited_by: string
+          is_inviter: boolean
+          role: Database["public"]["Enums"]["server_role"]
+          status: Database["public"]["Enums"]["invite_status"]
+          tenant_id: string
+        }[]
+      }
       log_audit_event: {
         Args: {
           _action: string

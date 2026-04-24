@@ -78,8 +78,44 @@ Deno.serve(async (req: Request) => {
   if (!url || !secret) {
     return jsonResponse({ success: false, error: "URL e secret são obrigatórios" }, 400);
   }
-  if (!/^https?:\/\//i.test(url)) {
+
+  // SSRF protection: parse URL, enforce http(s), and block private/loopback/link-local hosts.
+  let parsedUrl: URL;
+  try {
+    parsedUrl = new URL(url);
+  } catch {
+    return jsonResponse({ success: false, error: "URL inválida" }, 400);
+  }
+  if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
     return jsonResponse({ success: false, error: "URL precisa começar com http:// ou https://" }, 400);
+  }
+  const hostname = parsedUrl.hostname.toLowerCase();
+  const isBlockedHost = (h: string): boolean => {
+    if (!h) return true;
+    // Hostnames
+    if (h === "localhost" || h.endsWith(".localhost") || h.endsWith(".local") || h.endsWith(".internal")) return true;
+    // IPv6 loopback / link-local / unique-local
+    if (h === "::1" || h === "[::1]") return true;
+    if (h.startsWith("fe80:") || h.startsWith("fc") || h.startsWith("fd")) return true;
+    // IPv4 numeric ranges
+    const m = h.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+    if (m) {
+      const [a, b] = [parseInt(m[1], 10), parseInt(m[2], 10)];
+      if (a === 10) return true;                          // 10.0.0.0/8
+      if (a === 127) return true;                         // loopback
+      if (a === 0) return true;                           // 0.0.0.0/8
+      if (a === 169 && b === 254) return true;            // link-local / metadata
+      if (a === 172 && b >= 16 && b <= 31) return true;   // 172.16.0.0/12
+      if (a === 192 && b === 168) return true;            // 192.168.0.0/16
+      if (a >= 224) return true;                          // multicast / reserved
+    }
+    return false;
+  };
+  if (isBlockedHost(hostname)) {
+    return jsonResponse(
+      { success: false, error: "Host não permitido (endereço interno/privado)" },
+      400,
+    );
   }
 
   const endpoint = url.endsWith(".php") ? url : `${url}/apicls/api_cls.php`;
@@ -107,7 +143,7 @@ Deno.serve(async (req: Request) => {
     try {
       parsed = JSON.parse(text);
     } catch {
-      upstreamMessage = `Resposta não-JSON (${text.slice(0, 200)})`;
+      upstreamMessage = "Resposta não-JSON do servidor";
     }
     if (parsed && typeof parsed === "object") {
       const p = parsed as Record<string, unknown>;
