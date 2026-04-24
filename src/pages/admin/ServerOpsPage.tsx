@@ -197,26 +197,28 @@ function ServerStatusTab() {
 
   // Mescla a lista conhecida com o que veio da VPS (preserva ordem amigável).
   const merged = useMemo<ServiceInfo[]>(() => {
-    const byName = new Map<string, ServiceInfo>();
+    const byKey = new Map<string, ServiceInfo>();
     for (const s of services ?? []) {
-      if (!s?.name) continue;
-      byName.set(s.name.toLowerCase(), s);
+      // VPS responde com `key`; mantém compat se algum dia vier `name`.
+      const k = s?.key ?? (s as unknown as { name?: string })?.name;
+      if (!k) continue;
+      byKey.set(k.toLowerCase(), { ...s, key: k });
     }
     const result: ServiceInfo[] = [];
-    for (const k of KNOWN_SERVICES) {
-      const found = byName.get(k.name);
+    for (const known of KNOWN_SERVICES) {
+      const found = byKey.get(known.key);
       result.push(
         found ?? {
-          name: k.name,
-          label: k.label,
+          key: known.key,
+          label: known.label,
           state: "unknown",
-          port: k.port ?? null,
+          port: known.port ?? null,
         },
       );
-      byName.delete(k.name);
+      byKey.delete(known.key);
     }
     // Quaisquer extras que a VPS reportar e não estão na lista padrão.
-    for (const extra of byName.values()) result.push(extra);
+    for (const extra of byKey.values()) result.push(extra);
     return result;
   }, [services]);
 
