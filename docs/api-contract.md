@@ -211,11 +211,114 @@ Aceitar os mesmos sub-payloads de `saveClsconfigTemplate` (`status`,
 
 ---
 
+## 4. `POST ?action=sendMailItem` — Correio: enviar item
+
+Envia um correio com um item anexado para o personagem alvo.
+
+**Request body:**
+
+```json
+{
+  "roleid": 1024,
+  "subject": "Recompensa do evento",
+  "body": "Obrigado por participar!",
+  "item": {
+    "item_id": 11530,
+    "count": 5,
+    "max_count": 999,
+    "proctype": 0,
+    "expire_date": 0,
+    "mask": 0,
+    "guid1": 0,
+    "guid2": 0,
+    "data": ""
+  }
+}
+```
+
+`subject` e `body` são opcionais (default no PHP). `item.count` é
+obrigatório e > 0. Os demais campos do item são opcionais (defaults).
+
+**Response 200:**
+
+```json
+{
+  "success": true,
+  "roleid": 1024,
+  "mail_id": 998877,
+  "delivered": true
+}
+```
+
+`delivered` é `true` se a mailbox aceitou o item imediatamente; `false`
+indica enfileiramento (personagem offline / mailbox cheia / etc).
+
+**Response 4xx:** `{ "success": false, "error": "..." }`.
+
+---
+
+## 5. `POST ?action=sendMailGold` — Correio: enviar moedas/gold
+
+Envia um correio com moedas anexadas. PW armazena dinheiro em "moedas
+de cobre" (1 gold = 10000 silver). O PHP recebe o valor cru.
+
+**Request body:**
+
+```json
+{
+  "roleid": 1024,
+  "subject": "Reembolso",
+  "body": "Compensação pelo downtime.",
+  "amount": 1000000
+}
+```
+
+`amount` é obrigatório, inteiro > 0.
+
+**Response 200:** mesmo shape de `sendMailItem` (`success`, `roleid`,
+`mail_id`, `delivered`).
+
+---
+
+## 6. `GET ?action=listMailHistory` — Correio: histórico server-side (opcional)
+
+Quando a VPS mantiver um log próprio dos envios feitos via API, este
+endpoint pode espelhar para o painel. Enquanto não existir, o painel
+usa apenas a tabela `mail_send_log` no Supabase.
+
+**Query params opcionais:** `roleid`, `since` (epoch), `limit`, `offset`.
+
+**Response 200:**
+
+```json
+{
+  "success": true,
+  "count": 42,
+  "entries": [
+    {
+      "mail_id": 998877,
+      "roleid": 1024,
+      "kind": "item",
+      "subject": "Recompensa do evento",
+      "sent_at": 1761091289,
+      "delivered": true,
+      "payload": { "item_id": 11530, "count": 5 }
+    }
+  ]
+}
+```
+
+---
+
 ## Resumo de prioridade de implementação
 
 1. `getItemCatalog` — destrava o "Buscar Item" no frontend (item 4).
 2. `saveRoleEditable` — destrava a aba "Personagem Existente" (item 10).
 3. `restoreBackup` — destrava o botão "Restaurar" da tela de Backups (item 5).
+4. `sendMailItem` / `sendMailGold` — destravam o módulo Correio
+   (Fase 2 do painel admin). Enquanto ausentes, cada envio é registrado
+   em `mail_send_log` com status `endpoint_missing`.
+5. `listMailHistory` — espelho opcional do log da VPS (não bloqueante).
 
 Enquanto não estiverem prontos, o frontend mostra o estado vazio /
 botão desabilitado com a mensagem **"endpoint ainda não implementado"**.
