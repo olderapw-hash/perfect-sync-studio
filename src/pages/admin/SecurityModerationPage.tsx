@@ -109,6 +109,7 @@ const SecurityModerationPage = () => {
 
   const [roleidStr, setRoleidStr] = useState("");
   const [account, setAccount] = useState("");
+  const [useridStr, setUseridStr] = useState("");
   const [pendingAction, setPendingAction] = useState<ActionConfig | null>(null);
   const [reason, setReason] = useState("");
   const [durationHours, setDurationHours] = useState<string>("24");
