@@ -225,8 +225,74 @@ fi
 mkdir -p "$INSTALL_DIR/backups/clsconfig/export-logs"
 mkdir -p "$INSTALL_DIR/backups/clsconfig/files"
 mkdir -p "$INSTALL_DIR/backups/gamedbd"
+mkdir -p "$INSTALL_DIR/backups/mail-logs"
+mkdir -p "$INSTALL_DIR/backups/mail-queue"
 
 cp -f "$TMP_API" "$INSTALL_DIR/api_cls.php"
+
+# ===== Handler PHP do correio (pw_send_mail.php) =====
+# Procura ao lado do instalador. Se nao achar, escreve um stub minimo para
+# que api_cls.php nao quebre (o stub sempre devolve queued=true).
+TMP_MAIL="$TMP_DIR/pw_send_mail.php"
+MAIL_SRC="$SCRIPT_DIR/pw_send_mail.php"
+if [ -f "$MAIL_SRC" ]; then
+  cp -f "$MAIL_SRC" "$TMP_MAIL"
+  sed -i 's/\r$//' "$TMP_MAIL"
+  php -l "$TMP_MAIL" >/dev/null || die "pw_send_mail.php tem erro de sintaxe."
+  log "Usando pw_send_mail.php encontrado em $MAIL_SRC"
+else
+  warn "pw_send_mail.php nao encontrado ao lado do instalador. Escrevendo stub queue-only."
+  cat > "$TMP_MAIL" <<'PHPEOF'
+<?php
+// Stub instalado quando pw_send_mail.php real nao foi enviado.
+// Sempre devolve queued=true para o painel saber que o mail nao foi entregue.
+$raw = stream_get_contents(STDIN);
+$dec = json_decode((string) $raw, true) ?: [];
+echo json_encode([
+  'success'   => true,
+  'roleid'    => (int) ($dec['roleid'] ?? 0),
+  'mail_id'   => null,
+  'delivered' => false,
+  'queued'    => true,
+  'method'    => 'stub',
+  'note'      => 'pw_send_mail.php real nao instalado — mail enfileirado',
+], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+PHPEOF
+fi
+install -m 0755 -o root -g root "$TMP_MAIL" /usr/local/bin/pw_send_mail.php
+log "pw_send_mail.php instalado em /usr/local/bin/pw_send_mail.php"
+
+# ===== Wrapper sudo do correio (sendreward-api.sh) =====
+TMP_REWARD="$TMP_DIR/sendreward-api.sh"
+REWARD_SRC="$SCRIPT_DIR/sendreward-api.sh"
+if [ -f "$REWARD_SRC" ]; then
+  cp -f "$REWARD_SRC" "$TMP_REWARD"
+else
+  cat > "$TMP_REWARD" <<'SHEOF'
+#!/bin/bash
+# Wrapper sudo gerado automaticamente. Le JSON via STDIN e delega para
+# /usr/local/bin/pw_send_mail.php (executado como root).
+set -euo pipefail
+PHP_BIN="${PHP_BIN:-/usr/bin/php}"
+HANDLER="${PW_SEND_MAIL_HANDLER:-/usr/local/bin/pw_send_mail.php}"
+if [ ! -x "$PHP_BIN" ] && command -v php >/dev/null 2>&1; then
+  PHP_BIN="$(command -v php)"
+fi
+if [ ! -f "$HANDLER" ]; then
+  echo "Handler nao encontrado: $HANDLER" >&2
+  exit 11
+fi
+if [ "$(id -u)" != "0" ]; then
+  echo "sendreward-api.sh precisa rodar como root (via sudo)" >&2
+  exit 12
+fi
+exec "$PHP_BIN" "$HANDLER"
+SHEOF
+fi
+sed -i 's/\r$//' "$TMP_REWARD"
+install -m 0750 -o root -g root "$TMP_REWARD" /usr/local/sbin/sendreward-api.sh
+log "sendreward-api.sh instalado em /usr/local/sbin/sendreward-api.sh"
+
 
 cat > /usr/local/sbin/exportclsconfig-api.sh <<'EOF'
 #!/bin/sh
@@ -339,6 +405,7 @@ fi
 cat > "$SUDOERS_FILE" <<EOF
 $WEB_USER ALL=(root) NOPASSWD: /usr/local/sbin/exportclsconfig-api.sh
 $WEB_USER ALL=(root) NOPASSWD: /usr/local/sbin/backupgamedbd-api.sh
+$WEB_USER ALL=(root) NOPASSWD: /usr/local/sbin/sendreward-api.sh
 EOF
 chmod 440 "$SUDOERS_FILE"
 visudo -cf "$SUDOERS_FILE" >/dev/null || die "sudoers invalido em $SUDOERS_FILE"
@@ -401,6 +468,16 @@ if [ -d /home/gamedbd ]; then
   fi
 fi
 
+# Teste do correio em modo dry_run — valida rota mas nao envia mail real.
+MAIL_OUT="$(curl -s -X POST -H "x-sync-secret: $SECRET" -H "Content-Type: application/json" \
+  -d '{"roleid":1,"dry_run":true,"item":{"item_id":11530,"count":1}}' \
+  "$BASE_URL?action=sendMailItem" 2>/dev/null || true)"
+if echo "$MAIL_OUT" | grep -q '"success":true'; then
+  log "Teste sendMailItem (dry_run) OK."
+else
+  warn "Teste sendMailItem (dry_run) falhou. Saida: $MAIL_OUT"
+fi
+
 PUBLIC_IP="$(curl -fsS --max-time 3 https://api.ipify.org 2>/dev/null || hostname -I 2>/dev/null | awk '{print $1}' || true)"
 
 cat <<EOF
@@ -419,5 +496,14 @@ Comandos de validacao:
   php -l $INSTALL_DIR/api_cls.php
   curl -s -H "x-sync-secret: $SECRET" "$BASE_URL?action=getClasses"
   curl -s -X POST -H "x-sync-secret: $SECRET" -H "Content-Type: application/json" -d '{"reason":"manual-test","force":true}' "$BASE_URL?action=backupGamedbd"
+  curl -s -X POST -H "x-sync-secret: $SECRET" -H "Content-Type: application/json" -d '{"roleid":1,"dry_run":true,"item":{"item_id":11530,"count":1}}' "$BASE_URL?action=sendMailItem"
+
+Correio (sendMailItem / sendMailGold):
+  Handler: /usr/local/bin/pw_send_mail.php
+  Wrapper: /usr/local/sbin/sendreward-api.sh (sudo NOPASSWD)
+  Logs:    $INSTALL_DIR/backups/mail-logs/
+  Queue:   $INSTALL_DIR/backups/mail-queue/
+  Para entrega imediata edite /etc/pw_send_mail.conf apontando seu
+  send_mail.lua / deliveryd_console.
 ============================================================
 EOF

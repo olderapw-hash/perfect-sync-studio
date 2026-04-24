@@ -40,6 +40,18 @@ $CONFIG = [
         '/home/gamedbd/valuables_list.txt',
         '/home/gamedbd/visibleid.txt',
     ],
+    // === Correio (sendMailItem / sendMailGold) ===
+    // O handler do PHP delega ao script externo, que usa gdeliveryd para
+    // entregar a mail+anexo. Com isso o api_cls.php nao precisa abrir
+    // nenhum socket de jogo direto — quem fala com gdeliveryd e o script.
+    'mail_send_enabled'        => true,
+    'mail_send_command'        => '/usr/bin/sudo -n /usr/local/sbin/sendreward-api.sh',
+    'mail_send_workdir'        => __DIR__,
+    'mail_send_default_subject' => 'PW Admin',
+    'mail_send_default_body'    => 'Mensagem do administrador.',
+    'mail_send_max_count'       => 9999,
+    'mail_send_max_amount'      => 2000000000,
+    'mail_send_log_dir'         => __DIR__ . '/backups/mail-logs',
 ];
 
 $CULTIVATION_MAP = [
@@ -3885,6 +3897,186 @@ function getRoleJsonBackupContent(array $config, array $request)
     return $backup;
 }
 
+/**
+ * Handler comum para sendMailItem / sendMailGold.
+ *
+ * Valida payload, chama o wrapper sudo (sendreward-api.sh) que executa
+ * /usr/local/bin/pw_send_mail.php no contexto do usuario gamedbd e retorna
+ * a resposta normalizada para o painel.
+ *
+ * Suporta { "dry_run": true } — nesse caso a validacao roda mas nao chama
+ * o gdeliveryd; util para o "Testar conexao" do painel.
+ */
+function handleSendMailRequest(array $config, $action, array $request)
+{
+    if (!truthyValue(array_value($config, 'mail_send_enabled', true))) {
+        throw new Exception('Envio de correio desabilitado nesta VPS');
+    }
+
+    $roleid = extractRoleIdFromRequest($request);
+    if ($roleid <= 0) {
+        throw new Exception('roleid invalido');
+    }
+
+    $subject = trim((string) array_value($request, 'subject', ''));
+    if ($subject === '') {
+        $subject = (string) array_value($config, 'mail_send_default_subject', 'PW Admin');
+    }
+
+    $body = trim((string) array_value($request, 'body', ''));
+    if ($body === '') {
+        $body = (string) array_value($config, 'mail_send_default_body', '');
+    }
+
+    $dryRun = truthyValue(array_value($request, 'dry_run', false));
+
+    if ($action === 'sendMailItem') {
+        $item = array_value($request, 'item', null);
+        if (!is_array($item)) {
+            throw new Exception('campo item ausente ou invalido');
+        }
+        $itemId = intval(array_value($item, 'item_id', 0));
+        $count  = intval(array_value($item, 'count', 0));
+        if ($itemId <= 0) {
+            throw new Exception('item.item_id invalido');
+        }
+        if ($count <= 0) {
+            throw new Exception('item.count deve ser > 0');
+        }
+        $maxCount = intval(array_value($config, 'mail_send_max_count', 9999));
+        if ($maxCount > 0 && $count > $maxCount) {
+            throw new Exception('item.count acima do limite (' . $maxCount . ')');
+        }
+
+        $kind = 'item';
+        $payload = [
+            'roleid'    => $roleid,
+            'subject'   => $subject,
+            'body'      => $body,
+            'kind'      => 'item',
+            'item_id'   => $itemId,
+            'count'     => $count,
+            'max_count' => intval(array_value($item, 'max_count', $count)),
+            'proctype'  => intval(array_value($item, 'proctype', 0)),
+            'expire_date' => intval(array_value($item, 'expire_date', 0)),
+            'mask'      => intval(array_value($item, 'mask', 0)),
+            'guid1'     => intval(array_value($item, 'guid1', 0)),
+            'guid2'     => intval(array_value($item, 'guid2', 0)),
+            'data'      => (string) array_value($item, 'data', ''),
+        ];
+    } else {
+        $amount = intval(array_value($request, 'amount', 0));
+        if ($amount <= 0) {
+            throw new Exception('amount deve ser > 0');
+        }
+        $maxAmount = intval(array_value($config, 'mail_send_max_amount', 2000000000));
+        if ($maxAmount > 0 && $amount > $maxAmount) {
+            throw new Exception('amount acima do limite (' . $maxAmount . ')');
+        }
+
+        $kind = 'gold';
+        $payload = [
+            'roleid'  => $roleid,
+            'subject' => $subject,
+            'body'    => $body,
+            'kind'    => 'gold',
+            'amount'  => $amount,
+        ];
+    }
+
+    if ($dryRun) {
+        return [
+            'success'   => true,
+            'dry_run'   => true,
+            'roleid'    => $roleid,
+            'kind'      => $kind,
+            'validated' => true,
+            'payload'   => $payload,
+        ];
+    }
+
+    $logDir = trim((string) array_value($config, 'mail_send_log_dir', ''));
+    if ($logDir !== '' && !is_dir($logDir)) {
+        @mkdir($logDir, 0750, true);
+    }
+
+    $command = trim((string) array_value($config, 'mail_send_command', ''));
+    if ($command === '') {
+        throw new Exception('Comando de envio de correio nao configurado');
+    }
+
+    $json = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    if ($json === false) {
+        throw new Exception('Falha ao serializar payload do correio');
+    }
+
+    // O wrapper sh recebe o JSON via stdin para evitar quoting fragil.
+    $descriptors = [
+        0 => ['pipe', 'r'],
+        1 => ['pipe', 'w'],
+        2 => ['pipe', 'w'],
+    ];
+    $cwd = (string) array_value($config, 'mail_send_workdir', __DIR__);
+    $process = @proc_open($command, $descriptors, $pipes, $cwd);
+    if (!is_resource($process)) {
+        throw new Exception('Nao foi possivel iniciar comando de envio de correio');
+    }
+
+    fwrite($pipes[0], $json);
+    fclose($pipes[0]);
+    $stdout = stream_get_contents($pipes[1]);
+    fclose($pipes[1]);
+    $stderr = stream_get_contents($pipes[2]);
+    fclose($pipes[2]);
+    $exitCode = proc_close($process);
+
+    if ($logDir !== '' && is_dir($logDir) && is_writable($logDir)) {
+        $logName = $logDir . '/' . gmdate('Ymd-His') . '-' . $kind . '-' . $roleid . '.json';
+        @file_put_contents($logName, json_encode([
+            'sent_at_utc' => gmdate('c'),
+            'action'      => $action,
+            'request'     => $payload,
+            'exit_code'   => $exitCode,
+            'stdout'      => $stdout,
+            'stderr'      => $stderr,
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT));
+    }
+
+    if ($exitCode !== 0) {
+        $msg = trim((string) $stderr);
+        if ($msg === '') {
+            $msg = trim((string) $stdout);
+        }
+        if ($msg === '') {
+            $msg = 'Falha ao enviar correio (exit ' . $exitCode . ')';
+        }
+        throw new Exception($msg);
+    }
+
+    $decoded = json_decode((string) $stdout, true);
+    if (!is_array($decoded)) {
+        return [
+            'success'   => true,
+            'roleid'    => $roleid,
+            'mail_id'   => null,
+            'delivered' => true,
+            'raw'       => trim((string) $stdout),
+        ];
+    }
+
+    if (!array_key_exists('success', $decoded)) {
+        $decoded['success'] = true;
+    }
+    if (!array_key_exists('roleid', $decoded)) {
+        $decoded['roleid'] = $roleid;
+    }
+    if (!array_key_exists('delivered', $decoded)) {
+        $decoded['delivered'] = (bool) $decoded['success'];
+    }
+
+    return $decoded;
+}
+
 function respondJson($payload, $status = 200)
 {
     http_response_code($status);
@@ -4220,11 +4412,34 @@ if (php_sapi_name() !== 'cli' || isset($_GET['action'])) {
             } catch (Exception $e) {
                 respondJson(['error' => $e->getMessage()], 500);
             }
+
+        case 'sendMailItem':
+        case 'sendMailGold':
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                respondJson(['error' => 'Use POST para ' . $action], 405);
+                exit;
+            }
+
+            $request = readRequestPayload();
+            if (isset($request['__json_error'])) {
+                respondJson(['error' => 'JSON invalido: ' . $request['__json_error']], 400);
+                exit;
+            }
+
+            try {
+                $result = handleSendMailRequest($CONFIG, $action, $request);
+                respondJson($result, 200);
+            } catch (Exception $e) {
+                respondJson([
+                    'success' => false,
+                    'error'   => $e->getMessage(),
+                ], 400);
+            }
             break;
 
         default:
             respondJson([
-                'error' => 'Acao invalida. Use: getRole, getRoles, getRoleEditable, getRolesEditable, getClasses, getClsconfig, getClsconfigDebug, getItemCatalog, listBackups, backupGamedbd, getBackupContent, restoreBackup, exportClsconfig, saveRoleEditable, saveClsconfigTemplate',
+                'error' => 'Acao invalida. Use: getRole, getRoles, getRoleEditable, getRolesEditable, getClasses, getClsconfig, getClsconfigDebug, getItemCatalog, listBackups, backupGamedbd, getBackupContent, restoreBackup, exportClsconfig, saveRoleEditable, saveClsconfigTemplate, sendMailItem, sendMailGold',
             ], 400);
             break;
     }

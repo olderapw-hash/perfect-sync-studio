@@ -57,7 +57,7 @@ const FILES: InstallerFile[] = [
   {
     name: "api_cls.php",
     description:
-      "Bridge HTTP completa (gamedbd, templates CLS, backups, restore, item catalog).",
+      "Bridge HTTP completa: gamedbd, templates CLS, backups, restore, item catalog e correio (sendMailItem/sendMailGold).",
     path: "/installer/api_cls.php",
     icon: FileCode,
     language: "php",
@@ -66,19 +66,46 @@ const FILES: InstallerFile[] = [
   {
     name: "install-apicls-centos7.sh",
     description:
-      "Instalador automático para CentOS 7. Configura Apache, sudoers, scripts e backups.",
+      "Instalador automático para CentOS 7. Configura Apache, sudoers, scripts de correio/backup e testa o ambiente.",
     path: "/installer/install-apicls-centos7.sh",
     icon: Terminal,
     language: "bash",
     primary: true,
   },
   {
+    name: "pw_send_mail.php",
+    description:
+      "Handler do correio real (item/gold). Conversa com o gdeliveryd via send_mail.lua. Sem ele o correio fica em modo queue-only.",
+    path: "/installer/pw_send_mail.php",
+    icon: FileCode,
+    language: "php",
+    primary: true,
+  },
+  {
+    name: "sendreward-api.sh",
+    description:
+      "Wrapper sudo chamado pelo Apache para executar o pw_send_mail.php como root (acesso ao console do gdeliveryd).",
+    path: "/installer/sendreward-api.sh",
+    icon: Terminal,
+    language: "bash",
+  },
+  {
     name: "README.md",
-    description: "Tutorial completo atualizado (instalação, testes, troubleshooting).",
+    description: "Tutorial completo: instalação, testes, dry_run do correio, troubleshooting.",
     path: "/installer/README.md",
     icon: FileText,
     language: "markdown",
   },
+];
+
+/** Features que a versão atual da API já suporta. Aparece na UI como
+ *  "o que você ganha instalando este pacote". */
+const API_FEATURES: { label: string; detail: string }[] = [
+  { label: "Templates CLS", detail: "getClsconfig, saveClsconfigTemplate, exportClsconfig" },
+  { label: "Personagem real", detail: "getRoleEditable, saveRoleEditable, getRolesEditable" },
+  { label: "Backups", detail: "backupGamedbd, listBackups, getBackupContent, restoreBackup" },
+  { label: "Item catalog", detail: "getItemCatalog (webtradeid, auctionid, valuables, visibleid)" },
+  { label: "Correio real via gdeliveryd", detail: "sendMailItem, sendMailGold (com fallback queue + dry_run)" },
 ];
 
 /** Tenta inferir uma URL "esperada" do api_cls.php a partir da URL cadastrada. */
@@ -158,6 +185,8 @@ const Install = () => {
   const installCommand = [
     `scp api_cls.php root@${ipDisplay}:/root/api_cls.php`,
     `scp install-apicls-centos7.sh root@${ipDisplay}:/root/install-apicls-centos7.sh`,
+    `scp pw_send_mail.php root@${ipDisplay}:/root/pw_send_mail.php`,
+    `scp sendreward-api.sh root@${ipDisplay}:/root/sendreward-api.sh`,
     `ssh root@${ipDisplay} "bash /root/install-apicls-centos7.sh --secret ${secretDisplay} --api-src /root/api_cls.php"`,
   ].join("\n");
 
@@ -472,6 +501,27 @@ const Install = () => {
               </span>
             </p>
           )}
+        </section>
+
+        {/* Features que esta versão da API entrega */}
+        <section className="mb-8 rounded-2xl border border-border bg-card/30 p-6">
+          <h2 className="mb-3 text-sm font-extrabold uppercase tracking-wider">
+            O que esta versão suporta
+          </h2>
+          <ul className="grid gap-2 sm:grid-cols-2">
+            {API_FEATURES.map((f) => (
+              <li
+                key={f.label}
+                className="flex items-start gap-2 rounded-md border border-border bg-background/50 p-3"
+              >
+                <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-500" />
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-foreground">{f.label}</p>
+                  <p className="font-mono text-[10px] text-muted-foreground">{f.detail}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
         </section>
 
         {/* Arquivos */}
