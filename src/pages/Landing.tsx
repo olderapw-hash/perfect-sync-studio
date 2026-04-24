@@ -16,11 +16,14 @@ import {
   Zap,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useAppSettings } from "@/hooks/useAppSettings";
 import heroImg from "@/assets/landing-hero.jpg";
 
 const Landing = () => {
   const navigate = useNavigate();
   const { session, isAdmin } = useAuth();
+  const { settings } = useAppSettings();
+  const bgImage = settings.background_url || heroImg;
 
   // SEO dinâmico (mantém index.html limpo, atualiza title em runtime)
   useEffect(() => {
@@ -35,8 +38,10 @@ const Landing = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      {/* NAV */}
+    <div
+      className="min-h-screen bg-background bg-fixed bg-cover bg-center text-foreground"
+      style={{ backgroundImage: `linear-gradient(hsl(var(--background) / 0.92), hsl(var(--background) / 0.96)), url(${bgImage})` }}
+    >
       <header className="sticky top-0 z-40 border-b border-border/60 bg-background/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
           <Link to="/" className="flex items-center gap-2">
