@@ -153,13 +153,20 @@ export function useMailTemplates({ tenantId }: UseMailTemplatesArgs) {
       },
     ): Promise<boolean> => {
       if (!tenantId) return false;
-      const updates: Record<string, unknown> = {};
+      const updates: {
+        name?: string;
+        description?: string | null;
+        visibility?: MailVisibility;
+        subject?: string | null;
+        body?: string | null;
+        payload?: never;
+      } = {};
       if (patch.name !== undefined) updates.name = patch.name;
       if (patch.description !== undefined) updates.description = patch.description;
       if (patch.visibility !== undefined) updates.visibility = patch.visibility;
       if (patch.subject !== undefined) updates.subject = patch.subject;
       if (patch.body !== undefined) updates.body = patch.body;
-      if (patch.payload !== undefined) updates.payload = patch.payload;
+      if (patch.payload !== undefined) updates.payload = patch.payload as never;
 
       const { error: err } = await supabase
         .from("mail_templates")
