@@ -89,10 +89,21 @@ const SitePage = () => {
         {/* HERO */}
         <Section icon={<Sparkles className="h-4 w-4 text-primary" />} title="Hero (topo da página)">
           <Field label="Badge" value={form.hero.badge} onChange={(v) => setForm({ ...form, hero: { ...form.hero, badge: v } })} />
-          <div className="grid gap-3 sm:grid-cols-3">
-            <Field label="Título — antes do destaque" value={form.hero.title_prefix} onChange={(v) => setForm({ ...form, hero: { ...form.hero, title_prefix: v } })} />
-            <Field label="Título — destaque (dourado)" value={form.hero.title_highlight} onChange={(v) => setForm({ ...form, hero: { ...form.hero, title_highlight: v } })} />
-            <Field label="Título — depois do destaque" value={form.hero.title_suffix} onChange={(v) => setForm({ ...form, hero: { ...form.hero, title_suffix: v } })} />
+          <div>
+            <Label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Título principal
+            </Label>
+            <Textarea
+              value={form.hero.title}
+              onChange={(e) => setForm({ ...form, hero: { ...form.hero, title: e.target.value } })}
+              rows={2}
+              className="text-sm"
+              placeholder="Ex.: Administre seu servidor de **Perfect World** sem tocar no banco"
+            />
+            <p className="mt-1.5 text-[11px] text-muted-foreground">
+              Use <code className="rounded bg-muted/40 px-1 py-0.5 font-mono">**texto**</code> para
+              destacar parte do título em dourado. Ex.: <em>Administre seu servidor de **Perfect World** sem tocar no banco</em>.
+            </p>
           </div>
           <FieldArea label="Subtítulo" value={form.hero.subtitle} onChange={(v) => setForm({ ...form, hero: { ...form.hero, subtitle: v } })} />
           <div className="grid gap-3 sm:grid-cols-2">

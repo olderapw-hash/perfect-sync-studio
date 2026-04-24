@@ -118,11 +118,15 @@ const Landing = () => {
             </div>
 
             <h1 className="mx-auto max-w-3xl text-balance text-4xl font-extrabold leading-tight tracking-tight text-foreground sm:text-6xl">
-              {content.hero.title_prefix}{" "}
-              <span className="bg-gradient-gold bg-clip-text text-transparent">
-                {content.hero.title_highlight}
-              </span>{" "}
-              {content.hero.title_suffix}
+              {content.hero.title.split(/(\*\*[^*]+\*\*)/g).map((part, i) =>
+                part.startsWith("**") && part.endsWith("**") ? (
+                  <span key={i} className="bg-gradient-gold bg-clip-text text-transparent">
+                    {part.slice(2, -2)}
+                  </span>
+                ) : (
+                  <span key={i}>{part}</span>
+                ),
+              )}
             </h1>
 
             <p className="mx-auto mt-6 max-w-2xl text-pretty text-base text-muted-foreground sm:text-lg">
