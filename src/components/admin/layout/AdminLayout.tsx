@@ -126,9 +126,11 @@ const SECTIONS: NavSection[] = [
     label: "Eventos",
     icon: CalendarDays,
     basePath: "/admin/events",
-    comingSoon: true,
     proInTrial: true,
-    children: [{ to: "/admin/events", label: "Visão geral", end: true }],
+    children: [
+      { to: "/admin/events", label: "Visão geral", end: true },
+      { to: "/admin/events/presenca", label: "Presença" },
+    ],
   },
   {
     id: "server",
