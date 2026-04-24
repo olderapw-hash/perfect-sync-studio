@@ -298,39 +298,42 @@ const MailPage = () => {
   }
 
   return (
-    <div className="h-full overflow-y-auto">
-      <div className="mx-auto max-w-5xl space-y-6 p-6">
-        {/* Header */}
-        <header className="flex flex-wrap items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-primary/30 bg-primary/10 text-primary">
-            <Mail className="h-5 w-5" />
+    <div className="h-full overflow-y-auto p-6">
+      <div className="space-y-4">
+        {/* Aviso/contexto — mesmo padrão do RolePersonagemTab */}
+        <div className="rounded-xl border-2 border-primary/40 bg-primary/5 p-4">
+          <div className="flex items-start gap-3">
+            <Mail className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+            <div className="flex-1 space-y-1 text-sm">
+              <p className="font-bold uppercase tracking-wider text-primary">
+                Enviar recompensa
+              </p>
+              <p className="text-foreground">
+                Item ou moedas via correio do jogo · servidor{" "}
+                <span className="font-semibold">{active?.server_name}</span>
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Toda tentativa fica registrada no histórico, mesmo em caso de erro.
+              </p>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <Link
+                to="/admin/mail/templates"
+                className="inline-flex items-center gap-2 rounded-md border border-border bg-card/60 px-3 py-1.5 text-xs transition-smooth hover:border-primary/50"
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                Templates
+              </Link>
+              <Link
+                to="/admin/mail/history"
+                className="inline-flex items-center gap-2 rounded-md border border-border bg-card/60 px-3 py-1.5 text-xs transition-smooth hover:border-primary/50"
+              >
+                <History className="h-3.5 w-3.5" />
+                Histórico
+              </Link>
+            </div>
           </div>
-          <div className="flex-1">
-            <h1 className="text-lg font-extrabold tracking-tight text-foreground">
-              Enviar recompensa
-            </h1>
-            <p className="text-xs text-muted-foreground">
-              Item ou moedas via correio do jogo · servidor{" "}
-              <span className="font-semibold text-foreground">{active?.server_name}</span>
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Link
-              to="/admin/mail/templates"
-              className="inline-flex items-center gap-2 rounded-md border border-border bg-card/60 px-3 py-1.5 text-xs transition-smooth hover:border-primary/50"
-            >
-              <Sparkles className="h-3.5 w-3.5" />
-              Templates
-            </Link>
-            <Link
-              to="/admin/mail/history"
-              className="inline-flex items-center gap-2 rounded-md border border-border bg-card/60 px-3 py-1.5 text-xs transition-smooth hover:border-primary/50"
-            >
-              <History className="h-3.5 w-3.5" />
-              Histórico
-            </Link>
-          </div>
-        </header>
+        </div>
 
         {lastResult && (
           <div
@@ -350,9 +353,9 @@ const MailPage = () => {
           </div>
         )}
 
-        <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
-          {/* Form principal */}
-          <section className="rounded-2xl border border-border bg-card/40 p-5">
+        <div className="grid gap-4 lg:grid-cols-[1fr_280px]">
+          {/* Form principal — mesmo card style do RolePersonagemTab */}
+          <section className="rounded-xl border border-border bg-card/40 p-4">
             <Tabs value={tab} onValueChange={(v) => setTab(v as "item" | "gold")}>
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="item" className="gap-2">
