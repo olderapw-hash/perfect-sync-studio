@@ -140,6 +140,8 @@ const SECTIONS: NavSection[] = [
     basePath: "/admin/security",
     children: [
       { to: "/admin/security", label: "Visão geral", end: true },
+      { to: "/admin/security/moderation", label: "Moderação" },
+      { to: "/admin/security/history", label: "Histórico" },
       { to: "/admin/members", label: "Membros & permissões" },
       { to: "/admin/audit", label: "Auditoria" },
       { to: "/admin/security/settings", label: "Configurações" },

@@ -39,6 +39,8 @@ import ServerOpsPage from "./pages/admin/ServerOpsPage.tsx";
 import ServerLogsPage from "./pages/admin/ServerLogsPage.tsx";
 import ServerActionsPage from "./pages/admin/ServerActionsPage.tsx";
 import SecurityOverviewPage from "./pages/admin/SecurityOverviewPage.tsx";
+import SecurityModerationPage from "./pages/admin/SecurityModerationPage.tsx";
+import SecurityHistoryPage from "./pages/admin/SecurityHistoryPage.tsx";
 import SecuritySettingsPage from "./pages/admin/SecuritySettingsPage.tsx";
 
 const queryClient = new QueryClient();
@@ -105,9 +107,12 @@ const App = () => (
                       <Route path="actions" element={<ServerActionsPage />} />
                     </Route>
 
-                    {/* Segurança */}
-                    <Route path="security" element={<SecurityOverviewPage />} />
-                    <Route path="security/settings" element={<SecuritySettingsPage />} />
+                    {/* Segurança v1 — layout com tabs e Outlet. */}
+                    <Route path="security" element={<SecurityOverviewPage />}>
+                      <Route path="moderation" element={<SecurityModerationPage />} />
+                      <Route path="history" element={<SecurityHistoryPage />} />
+                      <Route path="settings" element={<SecuritySettingsPage />} />
+                    </Route>
                   </Route>
 
                   {/* Members e Audit têm header próprio com botão "voltar".
