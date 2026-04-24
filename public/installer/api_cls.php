@@ -4112,9 +4112,74 @@ function serverOpsKnownServices()
         ['glink',       'Game Link',          29200],
         ['authd',       'Auth Daemon',        29300],
         ['uniquenamed', 'Unique Name',        29500],
-        ['mysqld',      'MySQL/MariaDB',      3306],
+        ['mysql',       'MySQL/MariaDB',      3306],
         ['httpd',       'Web (Apache/httpd)', 80],
     ];
+}
+
+/** Aliases por serviço — múltiplos nomes de processo aceitáveis. */
+function serverOpsProcessAliases($name)
+{
+    $map = [
+        'mysql' => ['mariadbd', 'mysqld', 'mysqld_safe', 'mysql'],
+        'httpd' => ['httpd', 'apache2'],
+    ];
+    return isset($map[$name]) ? $map[$name] : [$name];
+}
+
+/** Lista PIDs vivos para um nome de processo (pgrep -x). */
+function serverOpsPidsByName($procName, &$exit = 0)
+{
+    $output = [];
+    $exit = 0;
+    @exec('pgrep -x ' . escapeshellarg($procName) . ' 2>/dev/null', $output, $exit);
+    $pids = [];
+    foreach ($output as $line) {
+        $pid = intval(trim($line));
+        if ($pid > 0) $pids[] = $pid;
+    }
+    return $pids;
+}
+
+/** Verifica se uma porta TCP está em LISTEN (ss → netstat fallback). */
+function serverOpsPortListening($port)
+{
+    if ($port <= 0) return false;
+    $port = intval($port);
+
+    // ss -lnt (mais rápido e moderno).
+    $out = [];
+    $exit = 127;
+    @exec('ss -lnt 2>/dev/null', $out, $exit);
+    if ($exit === 0 && !empty($out)) {
+        foreach ($out as $line) {
+            if (preg_match('/[:.]' . $port . '\s/', $line)) return true;
+        }
+        return false;
+    }
+
+    // Fallback: netstat -lnt.
+    $out = [];
+    @exec('netstat -lnt 2>/dev/null', $out, $exit);
+    if ($exit === 0 && !empty($out)) {
+        foreach ($out as $line) {
+            if (preg_match('/[:.]' . $port . '\s/', $line)) return true;
+        }
+    }
+    return false;
+}
+
+/** systemctl is-active <unit> — retorna true/false/null (indisponível). */
+function serverOpsSystemctlActive($unit)
+{
+    $out = [];
+    $exit = 127;
+    @exec('systemctl is-active ' . escapeshellarg($unit) . ' 2>/dev/null', $out, $exit);
+    if ($exit === 127) return null; // systemctl ausente
+    $val = trim(implode('', $out));
+    if ($val === 'active') return true;
+    if ($val === '' || $val === 'unknown') return null;
+    return false;
 }
 
 function serverOpsCollectService($name, $label, $port)
@@ -4130,32 +4195,87 @@ function serverOpsCollectService($name, $label, $port)
     ];
 
     $needsFullMatch = in_array($name, ['gamedbd', 'gdeliveryd', 'gacd', 'glink', 'authd', 'uniquenamed'], true);
-    $cmd = $needsFullMatch
-        ? 'pgrep -f ' . escapeshellarg($name) . ' 2>/dev/null'
-        : 'pgrep -x ' . escapeshellarg($name) . ' 2>/dev/null';
 
-    $output = [];
-    $exit = 0;
-    @exec($cmd, $output, $exit);
-
-    $pids = [];
-    foreach ($output as $line) {
-        $pid = intval(trim($line));
-        if ($pid > 0) $pids[] = $pid;
-    }
-
-    if (!empty($pids)) {
-        $service['state']         = 'online';
-        $service['pid']           = $pids[0];
-        $service['process_count'] = count($pids);
-    } else {
-        if ($exit > 1) {
+    if ($needsFullMatch) {
+        $output = [];
+        $exit = 0;
+        @exec('pgrep -f ' . escapeshellarg($name) . ' 2>/dev/null', $output, $exit);
+        $pids = [];
+        foreach ($output as $line) {
+            $pid = intval(trim($line));
+            if ($pid > 0) $pids[] = $pid;
+        }
+        if (!empty($pids)) {
+            $service['state']         = 'online';
+            $service['pid']           = $pids[0];
+            $service['process_count'] = count($pids);
+        } elseif ($exit > 1) {
             $service['message'] = 'pgrep falhou (exit ' . $exit . ')';
         } else {
             $service['state'] = 'offline';
         }
+        return $service;
     }
 
+    // Detecção multi-estratégia para serviços de sistema (mysql/httpd).
+    $aliases = serverOpsProcessAliases($name);
+    $allPids = [];
+    $matchedAlias = null;
+    $pgrepFailed = false;
+    foreach ($aliases as $alias) {
+        $exit = 0;
+        $pids = serverOpsPidsByName($alias, $exit);
+        if ($exit > 1) { $pgrepFailed = true; continue; }
+        if (!empty($pids)) {
+            if ($matchedAlias === null) $matchedAlias = $alias;
+            foreach ($pids as $p) $allPids[] = $p;
+        }
+    }
+
+    if (!empty($allPids)) {
+        $allPids = array_values(array_unique($allPids));
+        $service['state']         = 'online';
+        $service['pid']           = $allPids[0];
+        $service['process_count'] = count($allPids);
+        if ($matchedAlias && $matchedAlias !== $name) {
+            $service['message'] = 'Detectado via ' . $matchedAlias;
+        }
+        return $service;
+    }
+
+    // Fallback 1: porta escutando.
+    if (serverOpsPortListening($port)) {
+        $service['state']   = 'online';
+        $service['message'] = 'Detectado via porta :' . $port;
+        return $service;
+    }
+
+    // Fallback 2: systemctl is-active (mysql/mariadb/httpd/apache2).
+    if ($name === 'mysql') {
+        foreach (['mariadb', 'mysql', 'mysqld'] as $unit) {
+            $active = serverOpsSystemctlActive($unit);
+            if ($active === true) {
+                $service['state']   = 'online';
+                $service['message'] = 'Detectado via systemctl ' . $unit;
+                return $service;
+            }
+        }
+    } elseif ($name === 'httpd') {
+        foreach (['httpd', 'apache2'] as $unit) {
+            $active = serverOpsSystemctlActive($unit);
+            if ($active === true) {
+                $service['state']   = 'online';
+                $service['message'] = 'Detectado via systemctl ' . $unit;
+                return $service;
+            }
+        }
+    }
+
+    if ($pgrepFailed) {
+        $service['message'] = 'pgrep falhou em todos os aliases';
+    } else {
+        $service['state'] = 'offline';
+    }
     return $service;
 }
 
