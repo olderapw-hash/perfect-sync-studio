@@ -374,25 +374,33 @@ export const pwApi = {
 export type ServiceState = "online" | "offline" | "unknown";
 
 export interface ServiceInfo {
-  /** Identificador curto (gamedbd, gdeliveryd, gacd, glink, authd, uniquenamed, mysql, httpd...). */
-  name: string;
+  /** Identificador curto vindo da VPS (gamedbd, gdeliveryd, mysql, httpd...). */
+  key: string;
   /** Rótulo amigável para exibir na UI. */
   label?: string;
+  /** Nome real do processo no sistema (ex.: "gamedbd", "mysqld"). */
+  process_name?: string;
   state: ServiceState;
   /** PID principal quando aplicável. */
   pid?: number | null;
   /** Quantidade total de processos vivos com esse nome. */
   process_count?: number;
+  /** Lista completa de PIDs (quando há múltiplos). */
+  pids?: number[];
   /** Porta TCP/UDP principal quando faz sentido. */
   port?: number | null;
+  /** Estado reportado pelo systemd (active/inactive/unknown). */
+  systemd_state?: string;
+  /** True quando a porta está em LISTEN. */
+  listening?: boolean;
   /** Mensagem livre (ex.: "PID file ausente"). */
   message?: string;
 }
 
 export interface ServiceStatusResponse {
   success: boolean;
-  /** epoch seconds da coleta no PHP. */
-  collected_at?: number;
+  /** ISO string OU epoch seconds da coleta no PHP. */
+  collected_at?: string | number;
   services: ServiceInfo[];
   error?: string;
 }

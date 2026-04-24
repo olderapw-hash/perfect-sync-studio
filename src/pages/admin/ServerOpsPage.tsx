@@ -138,22 +138,22 @@ import { pwApi, EndpointMissingError, type ServiceInfo } from "@/lib/pwApiAction
 import { logAuditEvent } from "@/lib/auditLog";
 import { toast } from "sonner";
 
-const KNOWN_SERVICES: { name: string; label: string; port?: number }[] = [
-  { name: "gamedbd", label: "Game DB Daemon", port: 29400 },
-  { name: "gdeliveryd", label: "Delivery Daemon", port: 29100 },
-  { name: "gacd", label: "Account Daemon", port: 29000 },
-  { name: "glink", label: "Game Link", port: 29200 },
-  { name: "authd", label: "Auth Daemon", port: 29300 },
-  { name: "uniquenamed", label: "Unique Name", port: 29500 },
-  { name: "mysql", label: "MySQL/MariaDB", port: 3306 },
-  { name: "httpd", label: "Web (Apache/httpd)", port: 80 },
+const KNOWN_SERVICES: { key: string; label: string; port?: number }[] = [
+  { key: "gamedbd", label: "Game DB Daemon", port: 29400 },
+  { key: "gdeliveryd", label: "Delivery Daemon", port: 29100 },
+  { key: "gacd", label: "Account Daemon", port: 29000 },
+  { key: "glink", label: "Game Link", port: 29200 },
+  { key: "authd", label: "Auth Daemon", port: 29300 },
+  { key: "uniquenamed", label: "Unique Name", port: 29500 },
+  { key: "mysql", label: "MySQL/MariaDB", port: 3306 },
+  { key: "httpd", label: "Web (Apache/httpd)", port: 80 },
 ];
 
 function ServerStatusTab() {
   const { active } = useServers();
   const [services, setServices] = useState<ServiceInfo[] | null>(null);
   const [loading, setLoading] = useState(false);
-  const [collectedAt, setCollectedAt] = useState<number | null>(null);
+  const [collectedAt, setCollectedAt] = useState<string | number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [endpointMissing, setEndpointMissing] = useState(false);
 
@@ -164,7 +164,7 @@ function ServerStatusTab() {
     try {
       const res = await pwApi.getServiceStatus();
       setServices(res.services ?? []);
-      setCollectedAt(res.collected_at ?? Math.floor(Date.now() / 1000));
+      setCollectedAt(res.collected_at ?? Date.now());
       void logAuditEvent({
         action: "server_ops.status_view",
         tenantId: active?.id ?? null,
@@ -197,26 +197,28 @@ function ServerStatusTab() {
 
   // Mescla a lista conhecida com o que veio da VPS (preserva ordem amigável).
   const merged = useMemo<ServiceInfo[]>(() => {
-    const byName = new Map<string, ServiceInfo>();
+    const byKey = new Map<string, ServiceInfo>();
     for (const s of services ?? []) {
-      if (!s?.name) continue;
-      byName.set(s.name.toLowerCase(), s);
+      // VPS responde com `key`; mantém compat se algum dia vier `name`.
+      const k = s?.key ?? (s as unknown as { name?: string })?.name;
+      if (!k) continue;
+      byKey.set(k.toLowerCase(), { ...s, key: k });
     }
     const result: ServiceInfo[] = [];
-    for (const k of KNOWN_SERVICES) {
-      const found = byName.get(k.name);
+    for (const known of KNOWN_SERVICES) {
+      const found = byKey.get(known.key);
       result.push(
         found ?? {
-          name: k.name,
-          label: k.label,
+          key: known.key,
+          label: known.label,
           state: "unknown",
-          port: k.port ?? null,
+          port: known.port ?? null,
         },
       );
-      byName.delete(k.name);
+      byKey.delete(known.key);
     }
     // Quaisquer extras que a VPS reportar e não estão na lista padrão.
-    for (const extra of byName.values()) result.push(extra);
+    for (const extra of byKey.values()) result.push(extra);
     return result;
   }, [services]);
 
@@ -229,7 +231,7 @@ function ServerStatusTab() {
           </h2>
           <p className="text-xs text-muted-foreground">
             {collectedAt
-              ? `Última coleta: ${new Date(collectedAt * 1000).toLocaleTimeString()}`
+              ? `Última coleta: ${formatCollectedAt(collectedAt)}`
               : loading
                 ? "Coletando..."
                 : "Nenhuma coleta ainda."}
@@ -251,7 +253,7 @@ function ServerStatusTab() {
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {merged.map((svc) => (
-          <ServiceCard key={svc.name} service={svc} loading={loading && !services} />
+          <ServiceCard key={svc.key} service={svc} loading={loading && !services} />
         ))}
       </div>
     </div>
@@ -290,11 +292,11 @@ function ServiceCard({
           <div className="flex items-center gap-2">
             <span className={cn("h-2 w-2 rounded-full", dot, loading && "animate-pulse")} />
             <h3 className="truncate text-sm font-bold text-foreground">
-              {service.label || service.name}
+              {service.label || service.key}
             </h3>
           </div>
           <p className="mt-0.5 truncate font-mono text-[11px] text-muted-foreground">
-            {service.name}
+            {service.process_name ?? service.key}
             {service.port != null && <span> · :{service.port}</span>}
           </p>
         </div>
@@ -325,6 +327,16 @@ function ServiceCard({
         </div>
       </dl>
 
+      {(service.systemd_state || service.listening != null) && (
+        <p className="mt-2 text-[10px] text-muted-foreground">
+          {service.systemd_state && <>systemd: <span className="font-mono">{service.systemd_state}</span></>}
+          {service.systemd_state && service.listening != null && " · "}
+          {service.listening != null && (
+            <>porta: <span className="font-mono">{service.listening ? "LISTEN" : "fechada"}</span></>
+          )}
+        </p>
+      )}
+
       {service.message && (
         <p className="mt-3 rounded-md border border-border/60 bg-background/40 px-2 py-1 text-[10px] text-muted-foreground">
           {service.message}
@@ -332,6 +344,17 @@ function ServiceCard({
       )}
     </div>
   );
+}
+
+/** Aceita ISO string OU epoch (segundos/ms). */
+function formatCollectedAt(v: string | number): string {
+  if (typeof v === "string") {
+    const d = new Date(v);
+    return isNaN(d.getTime()) ? v : d.toLocaleTimeString();
+  }
+  // epoch: <1e12 = segundos, senão milissegundos.
+  const ms = v < 1e12 ? v * 1000 : v;
+  return new Date(ms).toLocaleTimeString();
 }
 
 /* -------------------------------------------------------------------------- */
