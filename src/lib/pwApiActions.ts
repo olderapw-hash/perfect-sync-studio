@@ -226,6 +226,12 @@ async function callAction<T>(
     if (status === 400 && /acao\s+invalida|a[cç][aã]o\s+inv[aá]lida|unknown\s+action/i.test(rawBody)) {
       throw new EndpointMissingError(action);
     }
+    // VPS antiga responde 500 com body vazio para actions novas →
+    // proxy converte para 502 "Upstream returned non-JSON". Tratamos
+    // como endpoint ausente para a UI mostrar a notice amigável.
+    if ((status === 502 || status === 500) && /upstream\s+returned\s+non-json|endpoint\s+not\s+implemented/i.test(rawBody)) {
+      throw new EndpointMissingError(action);
+    }
     throw new Error(rawBody ? `${error.message}\n\n${rawBody}` : error.message);
   }
   // Resposta 2xx mas com {error:"..."} no corpo (sem success:false).
