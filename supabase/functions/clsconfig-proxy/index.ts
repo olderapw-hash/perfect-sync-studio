@@ -479,12 +479,35 @@ Deno.serve(async (req: Request) => {
   }
 });
 
-async function relay(upstream: Response): Promise<Response> {
+// Actions adicionadas em fases mais novas. Quando o api_cls.php da VPS
+// é antigo, ele costuma responder 500 com body vazio (ou HTML do Apache)
+// em vez do JSON {error:"Acao invalida"}. Tratamos esse caso como
+// endpoint_missing para o frontend mostrar a notice amigável.
+const NEW_ACTIONS_FALLBACK_MISSING = new Set([
+  "getServiceStatus",
+  "getServerLogs",
+  "exportClsconfig",
+  "sendMailItem",
+  "sendMailGold",
+  "getBackupContent",
+]);
+
+async function relay(upstream: Response, action?: string): Promise<Response> {
   const text = await upstream.text();
   let json: unknown;
   try {
     json = JSON.parse(text);
   } catch {
+    if (action && NEW_ACTIONS_FALLBACK_MISSING.has(action)) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: `Acao ${action} nao disponivel nesta VPS (resposta nao-JSON, status ${upstream.status})`,
+          endpoint_missing: true,
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
     return new Response(
       JSON.stringify({
         success: false,
