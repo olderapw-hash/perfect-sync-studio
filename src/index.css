@@ -8,37 +8,37 @@
 
 @layer base {
   :root {
-    /* Dark palette inspired by PHP profile (#0a0a0a bg, #c5a059 gold) */
-    --background: 0 0% 4%;
-    --foreground: 0 0% 96%;
+    /* Dark blue palette — Orphea Core */
+    --background: 220 40% 5%;
+    --foreground: 210 30% 96%;
 
-    --card: 0 0% 6%;
-    --card-foreground: 0 0% 96%;
+    --card: 220 35% 8%;
+    --card-foreground: 210 30% 96%;
 
-    --popover: 0 0% 8%;
-    --popover-foreground: 0 0% 96%;
+    --popover: 220 38% 9%;
+    --popover-foreground: 210 30% 96%;
 
-    /* Gold primary — #c5a059 */
-    --primary: 38 47% 53%;
-    --primary-rgb: 197, 160, 89;
-    --primary-foreground: 0 0% 100%;
-    --primary-dark: 38 51% 37%;
+    /* Blue primary — #4a90e2-ish */
+    --primary: 210 85% 60%;
+    --primary-rgb: 64, 150, 235;
+    --primary-foreground: 220 40% 8%;
+    --primary-dark: 215 75% 42%;
 
-    --secondary: 0 0% 10%;
-    --secondary-foreground: 0 0% 92%;
+    --secondary: 220 30% 12%;
+    --secondary-foreground: 210 25% 92%;
 
-    --muted: 0 0% 8%;
-    --muted-foreground: 0 0% 55%;
+    --muted: 220 30% 11%;
+    --muted-foreground: 215 20% 60%;
 
     /* Accent uses primary tone for cohesion */
-    --accent: 38 47% 53%;
-    --accent-foreground: 0 0% 4%;
+    --accent: 210 85% 60%;
+    --accent-foreground: 220 40% 8%;
 
     --destructive: 1 71% 64%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 145 39% 56%;
-    --success-foreground: 0 0% 4%;
+    --success: 160 55% 50%;
+    --success-foreground: 220 40% 8%;
 
     --warning: 38 80% 58%;
     --warning-rgb: 232, 168, 56;
@@ -46,14 +46,14 @@
     --error: 1 71% 64%;
     --error-rgb: 229, 115, 115;
 
-    --border: 0 0% 12%;
-    --border-light: 0 0% 8%;
-    --input: 0 0% 9%;
-    --ring: 38 47% 53%;
+    --border: 218 30% 16%;
+    --border-light: 218 30% 12%;
+    --input: 220 30% 12%;
+    --ring: 210 85% 60%;
 
-    --text-primary: 0 0% 96%;
-    --text-secondary: 0 0% 75%;
-    --text-muted: 0 0% 50%;
+    --text-primary: 210 30% 96%;
+    --text-secondary: 215 22% 78%;
+    --text-muted: 215 18% 55%;
 
     --radius: 0.75rem;
     --radius-lg: 16px;
@@ -64,22 +64,22 @@
     --class-archer: 140 60% 50%;
     --class-priest: 45 95% 60%;
     --class-assassin: 280 50% 45%;
-    --class-default: 38 47% 53%;
+    --class-default: 210 85% 60%;
 
     /* Gradients */
-    --gradient-hero: linear-gradient(180deg, hsl(0 0% 5%) 0%, hsl(0 0% 3%) 100%);
-    --gradient-card: linear-gradient(135deg, hsl(0 0% 6% / 0.6) 0%, hsl(0 0% 4% / 0.6) 100%);
-    --gradient-gold: linear-gradient(135deg, hsl(38 47% 58%) 0%, hsl(38 51% 37%) 100%);
-    --gradient-border: linear-gradient(135deg, hsl(38 47% 53% / 0.5), hsl(38 47% 53% / 0.2));
-    /* Bronze panel — quente, com leve âmbar profundo */
-    --gradient-bronze: linear-gradient(160deg, hsl(28 38% 14%) 0%, hsl(22 35% 9%) 45%, hsl(20 40% 6%) 100%);
-    --gradient-bronze-soft: linear-gradient(160deg, hsl(28 35% 10% / 0.85) 0%, hsl(20 35% 5% / 0.85) 100%);
-    --gradient-hero-profile: radial-gradient(ellipse 80% 60% at 20% 0%, hsl(38 60% 30% / 0.25), transparent 60%), linear-gradient(135deg, hsl(28 35% 10%) 0%, hsl(0 0% 5%) 70%);
+    --gradient-hero: linear-gradient(180deg, hsl(220 40% 7%) 0%, hsl(220 45% 4%) 100%);
+    --gradient-card: linear-gradient(135deg, hsl(220 35% 9% / 0.6) 0%, hsl(220 40% 6% / 0.6) 100%);
+    --gradient-gold: linear-gradient(135deg, hsl(210 90% 65%) 0%, hsl(215 75% 42%) 100%);
+    --gradient-border: linear-gradient(135deg, hsl(210 85% 60% / 0.5), hsl(210 85% 60% / 0.2));
+    /* Blue panel — frio, profundo */
+    --gradient-bronze: linear-gradient(160deg, hsl(215 50% 14%) 0%, hsl(220 55% 9%) 45%, hsl(222 60% 6%) 100%);
+    --gradient-bronze-soft: linear-gradient(160deg, hsl(215 45% 10% / 0.85) 0%, hsl(220 50% 5% / 0.85) 100%);
+    --gradient-hero-profile: radial-gradient(ellipse 80% 60% at 20% 0%, hsl(210 80% 35% / 0.28), transparent 60%), linear-gradient(135deg, hsl(215 45% 11%) 0%, hsl(220 45% 5%) 70%);
 
     /* Shadows & glow */
-    --shadow-elegant: 0 15px 40px -12px hsl(0 0% 0% / 0.5);
-    --shadow-glow: 0 6px 20px hsl(38 47% 53% / 0.35);
-    --shadow-accent-glow: 0 4px 15px hsl(38 47% 53% / 0.3);
+    --shadow-elegant: 0 15px 40px -12px hsl(220 80% 2% / 0.6);
+    --shadow-glow: 0 6px 20px hsl(210 85% 60% / 0.4);
+    --shadow-accent-glow: 0 4px 15px hsl(210 85% 60% / 0.35);
 
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
@@ -152,8 +152,8 @@
     @apply bg-background text-foreground antialiased;
     font-family: 'Inter', system-ui, sans-serif;
     background-image:
-      radial-gradient(ellipse 60% 40% at 50% -5%, hsl(38 47% 53% / 0.06), transparent),
-      radial-gradient(ellipse 50% 40% at 100% 100%, hsl(38 47% 53% / 0.04), transparent);
+      radial-gradient(ellipse 60% 40% at 50% -5%, hsl(210 85% 60% / 0.08), transparent),
+      radial-gradient(ellipse 50% 40% at 100% 100%, hsl(215 80% 55% / 0.06), transparent);
     background-attachment: fixed;
   }
 }
@@ -177,14 +177,14 @@
   }
 
   .glass-card {
-    background: rgba(15, 15, 15, 0.6);
+    background: hsl(220 40% 7% / 0.6);
     backdrop-filter: blur(15px);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    border: 1px solid hsl(210 50% 70% / 0.06);
   }
 
   .glass-card-hover:hover {
     border-color: hsl(var(--border));
-    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 15px 40px hsl(220 80% 2% / 0.5);
     transform: translateY(-4px);
   }
 
@@ -217,20 +217,20 @@
   .bg-hero-profile { background: var(--gradient-hero-profile); }
 
   .border-bronze {
-    border: 1px solid hsl(38 45% 35% / 0.4);
+    border: 1px solid hsl(210 55% 40% / 0.4);
     box-shadow:
-      inset 0 1px 0 hsl(38 60% 55% / 0.15),
-      0 0 0 1px hsl(20 30% 5% / 0.6),
-      0 20px 50px -20px hsl(0 0% 0% / 0.7);
+      inset 0 1px 0 hsl(210 70% 65% / 0.15),
+      0 0 0 1px hsl(220 60% 4% / 0.6),
+      0 20px 50px -20px hsl(220 80% 2% / 0.7);
   }
 
   .border-bronze-soft {
-    border: 1px solid hsl(38 40% 30% / 0.35);
-    box-shadow: inset 0 1px 0 hsl(38 50% 50% / 0.08);
+    border: 1px solid hsl(210 50% 35% / 0.35);
+    box-shadow: inset 0 1px 0 hsl(210 60% 60% / 0.08);
   }
 
-  .text-bronze { color: hsl(38 55% 65%); }
-  .text-bronze-muted { color: hsl(35 25% 60%); }
+  .text-bronze { color: hsl(210 75% 70%); }
+  .text-bronze-muted { color: hsl(215 30% 65%); }
 
   .nav-card {
     position: relative;
@@ -239,9 +239,9 @@
     gap: 0.875rem;
     padding: 1rem 1.125rem;
     border-radius: 14px;
-    background: linear-gradient(135deg, hsl(28 25% 9% / 0.85), hsl(20 25% 5% / 0.85));
-    border: 1px solid hsl(38 30% 25% / 0.4);
-    color: hsl(35 20% 75%);
+    background: linear-gradient(135deg, hsl(220 35% 10% / 0.85), hsl(222 40% 6% / 0.85));
+    border: 1px solid hsl(210 40% 30% / 0.4);
+    color: hsl(215 25% 75%);
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     text-align: left;
     overflow: hidden;
@@ -250,25 +250,25 @@
     content: "";
     position: absolute;
     inset: 0;
-    background: linear-gradient(135deg, hsl(38 60% 50% / 0.08), transparent 60%);
+    background: linear-gradient(135deg, hsl(210 80% 55% / 0.1), transparent 60%);
     opacity: 0;
     transition: opacity 0.25s;
     pointer-events: none;
   }
   .nav-card:hover {
-    border-color: hsl(38 55% 45% / 0.55);
-    color: hsl(38 60% 80%);
+    border-color: hsl(210 75% 55% / 0.55);
+    color: hsl(210 80% 80%);
     transform: translateY(-1px);
   }
   .nav-card:hover::before { opacity: 1; }
   .nav-card[data-active="true"] {
-    border-color: hsl(38 65% 50% / 0.7);
-    color: hsl(38 80% 75%);
-    background: linear-gradient(135deg, hsl(38 50% 18% / 0.9), hsl(28 35% 10% / 0.9));
+    border-color: hsl(210 80% 55% / 0.7);
+    color: hsl(210 90% 80%);
+    background: linear-gradient(135deg, hsl(215 65% 22% / 0.9), hsl(220 55% 12% / 0.9));
     box-shadow:
-      0 0 0 1px hsl(38 60% 45% / 0.3),
-      0 0 25px hsl(38 60% 45% / 0.25),
-      inset 0 1px 0 hsl(38 70% 60% / 0.25);
+      0 0 0 1px hsl(210 75% 50% / 0.3),
+      0 0 25px hsl(210 75% 50% / 0.25),
+      inset 0 1px 0 hsl(210 85% 65% / 0.25);
   }
 
   .pill-gold {
@@ -281,10 +281,10 @@
     font-weight: 700;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    background: linear-gradient(135deg, hsl(38 55% 22%), hsl(28 50% 14%));
-    border: 1px solid hsl(38 55% 40% / 0.5);
-    color: hsl(38 75% 75%);
-    box-shadow: inset 0 1px 0 hsl(38 70% 55% / 0.2);
+    background: linear-gradient(135deg, hsl(215 70% 25%), hsl(220 65% 16%));
+    border: 1px solid hsl(210 70% 50% / 0.5);
+    color: hsl(210 90% 80%);
+    box-shadow: inset 0 1px 0 hsl(210 85% 65% / 0.2);
   }
 
   .pill-tab {
@@ -295,31 +295,31 @@
     border-radius: 999px;
     font-size: 0.75rem;
     font-weight: 600;
-    color: hsl(35 20% 65%);
-    background: hsl(20 20% 8% / 0.6);
-    border: 1px solid hsl(38 25% 22% / 0.5);
+    color: hsl(215 25% 65%);
+    background: hsl(220 30% 10% / 0.6);
+    border: 1px solid hsl(210 35% 25% / 0.5);
     transition: all 0.2s;
     cursor: pointer;
   }
   .pill-tab:hover {
-    color: hsl(38 60% 75%);
-    border-color: hsl(38 50% 40% / 0.6);
+    color: hsl(210 75% 75%);
+    border-color: hsl(210 65% 45% / 0.6);
   }
   .pill-tab[data-active="true"] {
-    color: hsl(28 30% 12%);
-    background: linear-gradient(135deg, hsl(38 70% 65%), hsl(35 60% 50%));
-    border-color: hsl(38 70% 55%);
-    box-shadow: 0 4px 14px hsl(38 60% 40% / 0.35);
+    color: hsl(220 50% 10%);
+    background: linear-gradient(135deg, hsl(210 85% 70%), hsl(215 75% 55%));
+    border-color: hsl(210 85% 60%);
+    box-shadow: 0 4px 14px hsl(210 75% 45% / 0.4);
   }
 
   .frame-bronze {
     position: relative;
     border-radius: 20px;
     background: var(--gradient-bronze);
-    border: 1px solid hsl(38 45% 32% / 0.5);
+    border: 1px solid hsl(210 55% 35% / 0.5);
     box-shadow:
-      inset 0 1px 0 hsl(38 60% 55% / 0.18),
-      0 30px 70px -30px hsl(0 0% 0% / 0.8);
+      inset 0 1px 0 hsl(210 70% 65% / 0.18),
+      0 30px 70px -30px hsl(220 80% 2% / 0.8);
   }
   .frame-bronze::before,
   .frame-bronze::after {
@@ -328,7 +328,7 @@
     left: 1.25rem;
     right: 1.25rem;
     height: 1px;
-    background: linear-gradient(90deg, transparent, hsl(38 55% 50% / 0.5), transparent);
+    background: linear-gradient(90deg, transparent, hsl(210 70% 60% / 0.5), transparent);
     pointer-events: none;
   }
   .frame-bronze::before { top: 0.65rem; }
@@ -338,14 +338,14 @@
     position: relative;
     border-radius: 18px;
     padding: 4px;
-    background: linear-gradient(135deg, hsl(38 65% 55%), hsl(28 50% 25%) 60%, hsl(38 60% 45%));
+    background: linear-gradient(135deg, hsl(210 85% 65%), hsl(220 60% 25%) 60%, hsl(210 80% 50%));
     box-shadow:
-      0 0 0 1px hsl(20 30% 5%),
-      0 0 30px hsl(38 55% 40% / 0.35);
+      0 0 0 1px hsl(220 60% 4%),
+      0 0 30px hsl(210 75% 45% / 0.4);
   }
   .avatar-frame > * {
     border-radius: 14px;
-    background: hsl(20 25% 6%);
+    background: hsl(220 35% 7%);
     overflow: hidden;
   }
 }
