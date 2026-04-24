@@ -527,11 +527,15 @@ export interface BanAccountPayload {
   /** Identificador da conta. Pode ser nome de login OU userid. */
   account?: string;
   userid?: number;
-  /** Quando informado, a VPS pode resolver a conta a partir do roleid. */
+  /** Quando informado, a VPS resolve a conta a partir do roleid. */
   roleid?: number;
-  /** Duração em segundos. 0/ausente = ban permanente. */
+  /** Duração em segundos. Obrigatório para ban temporário. */
   duration_seconds?: number;
+  /** true = ban permanente (não envia duration_seconds). */
+  permanent?: boolean;
   reason: string;
+  /** Quando true, a VPS valida sem aplicar. */
+  dry_run?: boolean;
 }
 
 export interface UnbanAccountPayload {
@@ -540,19 +544,30 @@ export interface UnbanAccountPayload {
   roleid?: number;
   /** Recomendado mas não obrigatório (auditoria). */
   reason?: string;
+  dry_run?: boolean;
 }
 
 export interface SecurityActionResponse {
   success: boolean;
+  /** Eco da action executada (kick/ban/unban). */
+  action?: string;
   /** roleid envolvido (kickRole sempre devolve). */
   roleid?: number;
   /** Conta envolvida quando aplicável. */
   account?: string;
   userid?: number;
+  /** Duração efetiva do ban em segundos (ban temporário). */
+  seconds?: number;
+  /** Eco do motivo enviado. */
+  reason?: string;
+  /** Caminho do log gerado pelo script da VPS. */
+  log_file?: string;
   /** epoch seconds em que o ban expira (ban temporário). */
   ban_until?: number | null;
-  /** Estado pós-ação (online/offline/banned/unbanned). */
+  /** Estado pós-ação. */
   state?: "online" | "offline" | "banned" | "unbanned";
+  /** Echo de dry_run quando aplicável. */
+  dry_run?: boolean;
   message?: string;
   error?: string;
 }
