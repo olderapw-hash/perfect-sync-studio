@@ -23,6 +23,7 @@ import {
   Boxes,
   CalendarDays,
   ChevronDown,
+  Globe,
   LogOut,
   Mail,
   Server,
