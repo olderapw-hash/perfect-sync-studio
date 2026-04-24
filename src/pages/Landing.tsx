@@ -17,12 +17,21 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useAppSettings } from "@/hooks/useAppSettings";
+import { useSiteContent } from "@/hooks/useSiteContent";
 import heroImg from "@/assets/landing-hero.jpg";
+
+// Ícones rotativos pra cada bloco — o conteúdo dos textos vem do banco
+// (editável em /admin/site), mas mantemos os ícones em código pra preservar
+// a identidade visual.
+const PROBLEM_ICONS = [Database, UserCog, Lock, RefreshCw];
+const FEATURE_ICONS = [UserCog, Database, ImageIcon, History, Users, Server];
+const STEP_ICONS = [UserCog, Server, Zap];
 
 const Landing = () => {
   const navigate = useNavigate();
   const { session, isAdmin } = useAuth();
   const { settings } = useAppSettings();
+  const { content } = useSiteContent();
   const bgImage = settings.background_url || heroImg;
 
   // SEO dinâmico (mantém index.html limpo, atualiza title em runtime)
