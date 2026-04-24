@@ -146,86 +146,57 @@ const Pricing = () => {
         </div>
       </header>
 
-      <main className="mx-auto max-w-3xl px-4 py-16">
+      <main className="mx-auto max-w-5xl px-4 py-16">
         <div className="mb-10 text-center">
-          <p className="text-xs font-bold uppercase tracking-wider text-primary">Assinar</p>
+          <p className="text-xs font-bold uppercase tracking-wider text-primary">Escolha seu plano</p>
           <h1 className="mt-2 text-3xl font-extrabold tracking-tight sm:text-4xl">
             Pare de editar SQL na unha
           </h1>
           <p className="mx-auto mt-3 max-w-xl text-sm text-muted-foreground">
             Painel completo pra administrar seu servidor Perfect World.
-            <strong className="text-foreground"> 7 dias grátis</strong> · cancele quando quiser ·
+            <strong className="text-foreground"> Comece grátis</strong> · cancele quando quiser ·
             sem fidelidade.
           </p>
         </div>
 
-        <div className="relative overflow-hidden rounded-2xl border-2 border-primary/40 bg-gradient-to-br from-card via-card/80 to-card p-8 shadow-glow sm:p-10">
-          <div className="absolute -right-12 -top-12 h-40 w-40 rounded-full bg-primary/20 blur-3xl" />
-          <div className="relative">
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-primary/15 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-primary">
-              Plano único · tudo incluso
+        <div className="grid gap-6 md:grid-cols-2">
+          {/* Free Trial */}
+          <div className="relative flex flex-col overflow-hidden rounded-2xl border border-border bg-card/40 p-8">
+            <div className="mb-4 inline-flex w-fit items-center gap-2 rounded-full bg-primary/15 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-primary">
+              <Sparkles className="h-3 w-3" />
+              Free Trial
             </div>
 
             <div className="mb-2 flex items-baseline gap-2">
-              <span className="text-5xl font-extrabold tracking-tight">R$ 47</span>
-              <span className="text-base text-muted-foreground">/mês</span>
+              <span className="text-5xl font-extrabold tracking-tight">R$ 0</span>
+              <span className="text-base text-muted-foreground">/sempre</span>
             </div>
             <p className="mb-6 text-sm text-muted-foreground">
-              Por servidor. Sem limite de personagens, edições ou administradores.
+              Sem cartão. Visualize tudo, edite só templates iniciais (CLS).
             </p>
 
             <ul className="mb-8 space-y-3">
-              {PLAN_FEATURES.map((f) => (
+              {[
+                "Visualizar todo o painel",
+                "Editar slots de equipamento (CLS) manualmente",
+                "Editar inventário item por item (CLS)",
+                "Editar status básico (HP/MP/level inicial)",
+                "Salvar templates iniciais",
+                "Recursos Pro bloqueados (bulk, mail, segurança)",
+              ].map((f) => (
                 <li key={f} className="flex items-start gap-3 text-sm">
-                  <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/20 text-primary">
+                  <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
                     <Check className="h-3 w-3" strokeWidth={3} />
                   </div>
-                  <span className="text-foreground/90">{f}</span>
+                  <span className="text-foreground/80">{f}</span>
                 </li>
               ))}
             </ul>
 
             <button
-              onClick={handleCheckout}
-              disabled={loading}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-primary px-6 py-3.5 text-sm font-bold text-primary-foreground shadow-glow transition-smooth hover:brightness-110 disabled:opacity-60"
-            >
-              {loading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <>
-                  {isActive && !isTrial ? "Você já é assinante" : "Começar 7 dias grátis"}
-                  <ArrowRight className="h-4 w-4" />
-                </>
-              )}
-            </button>
-
-            <p className="mt-4 text-center text-xs text-muted-foreground">
-              Sem cobrança nos 7 primeiros dias · Pagamento seguro via Paddle
-            </p>
-          </div>
-        </div>
-
-        {/* Free Trial — sem cartão, edição limitada */}
-        {!isActive || isTrial ? (
-          <div className="mt-6 rounded-2xl border border-border bg-card/40 p-6 sm:p-8">
-            <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-primary/15 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-primary">
-              <Sparkles className="h-3 w-3" />
-              Free Trial · sem cartão
-            </div>
-            <h3 className="text-lg font-extrabold tracking-tight">
-              Quer ver o painel antes?
-            </h3>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Ative o modo gratuito e visualize <strong>tudo</strong> que o plano pago oferece.
-              No trial você consegue editar manualmente os <strong>templates iniciais (CLS)</strong>{" "}
-              dos personagens. Recursos avançados como bulk apply, kits, mail, segurança e edição
-              de personagens reais ficam bloqueados até a assinatura.
-            </p>
-            <button
               onClick={handleStartTrial}
               disabled={trialLoading || isTrial}
-              className="mt-5 inline-flex items-center justify-center gap-2 rounded-md border border-primary/40 bg-primary/10 px-5 py-2.5 text-sm font-bold text-primary transition-smooth hover:bg-primary/20 disabled:opacity-60"
+              className="mt-auto inline-flex w-full items-center justify-center gap-2 rounded-md border border-primary/40 bg-primary/10 px-6 py-3.5 text-sm font-bold text-primary transition-smooth hover:bg-primary/20 disabled:opacity-60"
             >
               {trialLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -233,13 +204,70 @@ const Pricing = () => {
                 "Trial já ativo"
               ) : (
                 <>
-                  Iniciar trial gratuito
+                  Começar grátis
                   <ArrowRight className="h-4 w-4" />
                 </>
               )}
             </button>
+
+            <p className="mt-4 text-center text-xs text-muted-foreground">
+              Sem cartão · sem prazo · upgrade quando quiser
+            </p>
           </div>
-        ) : null}
+
+          {/* Paid plan */}
+          <div className="relative flex flex-col overflow-hidden rounded-2xl border-2 border-primary/40 bg-gradient-to-br from-card via-card/80 to-card p-8 shadow-glow">
+            <div className="absolute -right-12 -top-12 h-40 w-40 rounded-full bg-primary/20 blur-3xl" />
+            <div className="relative flex flex-1 flex-col">
+              <div className="mb-4 flex flex-wrap items-center gap-2">
+                <div className="inline-flex items-center gap-2 rounded-full bg-primary/15 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-primary">
+                  Plano Pro · tudo incluso
+                </div>
+                <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary-foreground">
+                  Recomendado
+                </span>
+              </div>
+
+              <div className="mb-2 flex items-baseline gap-2">
+                <span className="text-5xl font-extrabold tracking-tight">R$ 47</span>
+                <span className="text-base text-muted-foreground">/mês</span>
+              </div>
+              <p className="mb-6 text-sm text-muted-foreground">
+                Por servidor. Sem limite de personagens, edições ou administradores.
+              </p>
+
+              <ul className="mb-8 space-y-3">
+                {PLAN_FEATURES.map((f) => (
+                  <li key={f} className="flex items-start gap-3 text-sm">
+                    <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/20 text-primary">
+                      <Check className="h-3 w-3" strokeWidth={3} />
+                    </div>
+                    <span className="text-foreground/90">{f}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <button
+                onClick={handleCheckout}
+                disabled={loading}
+                className="mt-auto inline-flex w-full items-center justify-center gap-2 rounded-md bg-primary px-6 py-3.5 text-sm font-bold text-primary-foreground shadow-glow transition-smooth hover:brightness-110 disabled:opacity-60"
+              >
+                {loading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <>
+                    {isActive && !isTrial ? "Você já é assinante" : "Começar 7 dias grátis"}
+                    <ArrowRight className="h-4 w-4" />
+                  </>
+                )}
+              </button>
+
+              <p className="mt-4 text-center text-xs text-muted-foreground">
+                Sem cobrança nos 7 primeiros dias · Pagamento seguro via Paddle
+              </p>
+            </div>
+          </div>
+        </div>
 
         {/* FAQ */}
         <section className="mt-16">
