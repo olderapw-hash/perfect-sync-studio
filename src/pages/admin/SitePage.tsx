@@ -31,12 +31,14 @@ const SitePage = () => {
     if (!user) return;
     setSaving(true);
     const { error } = await supabase.from("site_content").upsert(
-      {
-        id: 1,
-        content: form as unknown as Record<string, unknown>,
-        updated_by: user.id,
-        updated_at: new Date().toISOString(),
-      },
+      [
+        {
+          id: 1,
+          content: form as unknown as Record<string, unknown>,
+          updated_by: user.id,
+          updated_at: new Date().toISOString(),
+        },
+      ],
       { onConflict: "id" },
     );
     setSaving(false);
