@@ -10,9 +10,10 @@ export interface Subscription {
   cancel_at_period_end: boolean;
   product_id: string;
   price_id: string;
-  paddle_subscription_id: string;
-  paddle_customer_id: string;
+  paddle_subscription_id: string | null;
+  paddle_customer_id: string | null;
   environment: string;
+  is_trial: boolean;
 }
 
 export function useSubscription() {
@@ -74,5 +75,12 @@ export function useSubscription() {
     (!subscription.current_period_end ||
       new Date(subscription.current_period_end) > new Date());
 
-  return { subscription, loading, isActive, refetch: fetchSubscription };
+  // Trial = row marcada is_trial=true e status trialing. Trial NÃO tem
+  // paddle_subscription_id (insert via RPC start_free_trial).
+  const isTrial =
+    !!subscription &&
+    subscription.is_trial === true &&
+    subscription.status === "trialing";
+
+  return { subscription, loading, isActive, isTrial, refetch: fetchSubscription };
 }

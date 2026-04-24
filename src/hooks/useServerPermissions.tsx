@@ -8,6 +8,7 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useServers } from "@/hooks/useServers";
+import { useSubscription } from "@/hooks/useSubscription";
 
 export type ServerPermissionKey =
   | "view"
@@ -52,6 +53,23 @@ const TRUE_MAP: PermissionMap = ALL_PERMISSION_KEYS.reduce((acc, k) => {
   return acc;
 }, {} as PermissionMap);
 
+/**
+ * Mapa efetivo no modo TRIAL: apenas leitura ampla + edição manual de
+ * templates iniciais. Tudo que automatiza ou afeta personagens reais
+ * fica bloqueado, mesmo que o role no servidor (ou owner) liberasse.
+ *
+ * Permitido: view, save_templates (clsconfig manual).
+ * Bloqueado: bulk_apply, clear_sections, restore_backup, save_real_roles,
+ *            manage_security, manage_kits, manage_members, manage_servers, etc.
+ */
+const TRIAL_MAP: PermissionMap = {
+  ...FALSE_MAP,
+  view: true,
+  save_templates: true,
+  // compare_backup é só leitura → seguro liberar.
+  compare_backup: true,
+};
+
 function normalize(input: unknown): PermissionMap {
   if (!input || typeof input !== "object") return { ...FALSE_MAP };
   const src = input as Record<string, unknown>;
@@ -69,6 +87,8 @@ interface CtxValue {
   permissions: PermissionMap;
   /** Atalho prático: `can("save_templates")`. */
   can: (perm: ServerPermissionKey) => boolean;
+  /** True quando o usuário está no modo Free Trial. */
+  isTrial: boolean;
   refetch: () => Promise<void>;
 }
 
@@ -78,12 +98,14 @@ const Ctx = createContext<CtxValue>({
   role: null,
   permissions: { ...FALSE_MAP },
   can: () => false,
+  isTrial: false,
   refetch: async () => {},
 });
 
 export const ServerPermissionsProvider = ({ children }: { children: ReactNode }) => {
   const { session, isSuperadmin } = useAuth();
   const { active, loading: serversLoading } = useServers();
+  const { isTrial, loading: subLoading } = useSubscription();
   const [permissions, setPermissions] = useState<PermissionMap>({ ...FALSE_MAP });
   const [role, setRole] = useState<ServerRole | null>(null);
   const [loading, setLoading] = useState(true);
@@ -134,17 +156,26 @@ export const ServerPermissionsProvider = ({ children }: { children: ReactNode })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.user?.id, tenantId, isSuperadmin, serversLoading]);
 
+  // No modo trial substituímos o mapa efetivo pelo TRIAL_MAP — independente
+  // do role no servidor (owner inclusive). Superadmin escapa do clamp para
+  // continuar testando o painel completo.
+  const effectivePermissions = useMemo<PermissionMap>(() => {
+    if (isTrial && !isSuperadmin) return { ...TRIAL_MAP };
+    return permissions;
+  }, [isTrial, isSuperadmin, permissions]);
+
   const value = useMemo<CtxValue>(
     () => ({
-      loading,
+      loading: loading || subLoading,
       tenantId,
       role,
-      permissions,
-      can: (perm) => permissions[perm] === true,
+      permissions: effectivePermissions,
+      can: (perm) => effectivePermissions[perm] === true,
+      isTrial: isTrial && !isSuperadmin,
       refetch: fetchPermissions,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [loading, tenantId, role, permissions],
+    [loading, subLoading, tenantId, role, effectivePermissions, isTrial, isSuperadmin],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

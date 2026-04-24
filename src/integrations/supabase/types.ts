@@ -476,8 +476,9 @@ export type Database = {
           current_period_start: string | null
           environment: string
           id: string
-          paddle_customer_id: string
-          paddle_subscription_id: string
+          is_trial: boolean
+          paddle_customer_id: string | null
+          paddle_subscription_id: string | null
           price_id: string
           product_id: string
           status: string
@@ -491,8 +492,9 @@ export type Database = {
           current_period_start?: string | null
           environment?: string
           id?: string
-          paddle_customer_id: string
-          paddle_subscription_id: string
+          is_trial?: boolean
+          paddle_customer_id?: string | null
+          paddle_subscription_id?: string | null
           price_id: string
           product_id: string
           status?: string
@@ -506,8 +508,9 @@ export type Database = {
           current_period_start?: string | null
           environment?: string
           id?: string
-          paddle_customer_id?: string
-          paddle_subscription_id?: string
+          is_trial?: boolean
+          paddle_customer_id?: string | null
+          paddle_subscription_id?: string | null
           price_id?: string
           product_id?: string
           status?: string
@@ -676,6 +679,7 @@ export type Database = {
         Args: { target_tenant_id: string }
         Returns: undefined
       }
+      start_free_trial: { Args: { _environment: string }; Returns: string }
     }
     Enums: {
       app_role: "admin" | "user" | "superadmin"

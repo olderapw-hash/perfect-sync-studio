@@ -1,12 +1,14 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowRight, Check, Loader2, Shield } from "lucide-react";
+import { ArrowRight, Check, Loader2, Shield, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { usePaddleCheckout } from "@/hooks/usePaddleCheckout";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useServers } from "@/hooks/useServers";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
+import { supabase } from "@/integrations/supabase/client";
+import { getPaymentEnvironment } from "@/lib/paddle";
 
 const PLAN_FEATURES = [
   "Editor completo de personagens (status, equip, inventário, storehouse)",
@@ -41,9 +43,10 @@ const FAQ = [
 const Pricing = () => {
   const navigate = useNavigate();
   const { session, user, isAdmin, isSuperadmin, loading: authLoading } = useAuth();
-  const { isActive, loading: subLoading } = useSubscription();
+  const { isActive, isTrial, loading: subLoading, refetch: refetchSub } = useSubscription();
   const { active, loading: serversLoading } = useServers();
   const { openCheckout, loading } = usePaddleCheckout();
+  const [trialLoading, setTrialLoading] = useState(false);
 
   // Se o usuário já tem acesso (assinatura ativa OU é admin/superadmin)
   // e tem servidor configurado, mandamos direto pro painel — não faz sentido
@@ -72,7 +75,7 @@ const Pricing = () => {
       navigate("/auth?next=/pricing");
       return;
     }
-    if (isActive) {
+    if (isActive && !isTrial) {
       navigate("/admin");
       return;
     }
@@ -86,6 +89,28 @@ const Pricing = () => {
     } catch (e) {
       console.error(e);
       toast.error("Erro ao abrir checkout. Tenta de novo.");
+    }
+  };
+
+  const handleStartTrial = async () => {
+    if (!session) {
+      navigate("/auth?next=/pricing");
+      return;
+    }
+    setTrialLoading(true);
+    try {
+      const { error } = await supabase.rpc("start_free_trial", {
+        _environment: getPaymentEnvironment(),
+      });
+      if (error) throw error;
+      toast.success("Trial gratuito ativado!");
+      await refetchSub();
+      navigate("/admin");
+    } catch (e) {
+      console.error(e);
+      toast.error("Não foi possível iniciar o trial. Tenta de novo.");
+    } finally {
+      setTrialLoading(false);
     }
   };
 
@@ -169,7 +194,7 @@ const Pricing = () => {
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <>
-                  {isActive ? "Você já é assinante" : "Começar 7 dias grátis"}
+                  {isActive && !isTrial ? "Você já é assinante" : "Começar 7 dias grátis"}
                   <ArrowRight className="h-4 w-4" />
                 </>
               )}
@@ -180,6 +205,41 @@ const Pricing = () => {
             </p>
           </div>
         </div>
+
+        {/* Free Trial — sem cartão, edição limitada */}
+        {!isActive || isTrial ? (
+          <div className="mt-6 rounded-2xl border border-border bg-card/40 p-6 sm:p-8">
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-primary/15 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-primary">
+              <Sparkles className="h-3 w-3" />
+              Free Trial · sem cartão
+            </div>
+            <h3 className="text-lg font-extrabold tracking-tight">
+              Quer ver o painel antes?
+            </h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Ative o modo gratuito e visualize <strong>tudo</strong> que o plano pago oferece.
+              No trial você consegue editar manualmente os <strong>templates iniciais (CLS)</strong>{" "}
+              dos personagens. Recursos avançados como bulk apply, kits, mail, segurança e edição
+              de personagens reais ficam bloqueados até a assinatura.
+            </p>
+            <button
+              onClick={handleStartTrial}
+              disabled={trialLoading || isTrial}
+              className="mt-5 inline-flex items-center justify-center gap-2 rounded-md border border-primary/40 bg-primary/10 px-5 py-2.5 text-sm font-bold text-primary transition-smooth hover:bg-primary/20 disabled:opacity-60"
+            >
+              {trialLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : isTrial ? (
+                "Trial já ativo"
+              ) : (
+                <>
+                  Iniciar trial gratuito
+                  <ArrowRight className="h-4 w-4" />
+                </>
+              )}
+            </button>
+          </div>
+        ) : null}
 
         {/* FAQ */}
         <section className="mt-16">

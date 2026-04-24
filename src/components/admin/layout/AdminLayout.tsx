@@ -36,6 +36,8 @@ import { useAppSettings } from "@/hooks/useAppSettings";
 import { useServers } from "@/hooks/useServers";
 import { useServerPermissions } from "@/hooks/useServerPermissions";
 import { PendingInvitesBanner } from "@/components/PendingInvitesBanner";
+import { TrialBanner } from "@/components/TrialBanner";
+import { ProBadge } from "@/components/ProBadge";
 import {
   Sidebar,
   SidebarContent,
@@ -76,6 +78,8 @@ interface NavSection {
     | "manage_servers";
   /** Marca como "em breve" — visual diferente. */
   comingSoon?: boolean;
+  /** Marca como recurso pago — exibe badge PRO no modo trial. */
+  proInTrial?: boolean;
 }
 
 const SECTIONS: NavSection[] = [
@@ -96,6 +100,7 @@ const SECTIONS: NavSection[] = [
     label: "Personagens Reais",
     icon: UserCog,
     basePath: "/admin/roles",
+    proInTrial: true,
     children: [
       { to: "/admin/roles", label: "Buscar / editar", end: true },
       { to: "/admin/roles/historico", label: "Histórico" },
@@ -108,6 +113,7 @@ const SECTIONS: NavSection[] = [
     icon: Mail,
     basePath: "/admin/mail",
     comingSoon: true,
+    proInTrial: true,
     children: [
       { to: "/admin/mail", label: "Visão geral", end: true },
       { to: "/admin/mail/templates", label: "Templates" },
@@ -120,6 +126,7 @@ const SECTIONS: NavSection[] = [
     icon: CalendarDays,
     basePath: "/admin/events",
     comingSoon: true,
+    proInTrial: true,
     children: [{ to: "/admin/events", label: "Visão geral", end: true }],
   },
   {
@@ -138,6 +145,7 @@ const SECTIONS: NavSection[] = [
     label: "Segurança",
     icon: Shield,
     basePath: "/admin/security",
+    proInTrial: true,
     children: [
       { to: "/admin/security", label: "Visão geral", end: true },
       { to: "/admin/security/moderation", label: "Moderação" },
@@ -156,6 +164,7 @@ export const AdminLayout = () => {
         <AdminNavSidebar />
         <div className="flex min-w-0 flex-1 flex-col">
           <PendingInvitesBanner />
+          <TrialBanner />
           <AdminTopBar />
           <main className="flex-1 overflow-hidden">
             <Outlet />
@@ -200,6 +209,8 @@ const NavSectionGroup = ({
   section: NavSection;
   collapsed: boolean;
 }) => {
+  const { isTrial } = useServerPermissions();
+  const showProBadge = isTrial && section.proInTrial === true;
   const location = useLocation();
   const isActiveSection = location.pathname.startsWith(section.basePath);
   const [open, setOpen] = useState(isActiveSection);
@@ -245,6 +256,7 @@ const NavSectionGroup = ({
                 EM BREVE
               </span>
             )}
+            {showProBadge && <ProBadge />}
             <ChevronDown
               className={cn(
                 "h-3.5 w-3.5 text-muted-foreground transition-transform",
