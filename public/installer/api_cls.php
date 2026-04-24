@@ -40,6 +40,18 @@ $CONFIG = [
         '/home/gamedbd/valuables_list.txt',
         '/home/gamedbd/visibleid.txt',
     ],
+    // === Correio (sendMailItem / sendMailGold) ===
+    // O handler do PHP delega ao script externo, que usa gdeliveryd para
+    // entregar a mail+anexo. Com isso o api_cls.php nao precisa abrir
+    // nenhum socket de jogo direto — quem fala com gdeliveryd e o script.
+    'mail_send_enabled'        => true,
+    'mail_send_command'        => '/usr/bin/sudo -n /usr/local/sbin/sendreward-api.sh',
+    'mail_send_workdir'        => __DIR__,
+    'mail_send_default_subject' => 'PW Admin',
+    'mail_send_default_body'    => 'Mensagem do administrador.',
+    'mail_send_max_count'       => 9999,
+    'mail_send_max_amount'      => 2000000000,
+    'mail_send_log_dir'         => __DIR__ . '/backups/mail-logs',
 ];
 
 $CULTIVATION_MAP = [
