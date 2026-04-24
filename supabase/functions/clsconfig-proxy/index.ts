@@ -360,7 +360,7 @@ Deno.serve(async (req: Request) => {
         method: "GET",
         headers: { Accept: "application/json", "x-sync-secret": PW_API_SECRET },
       });
-      const out = await relay(upstream);
+      const out = await relay(upstream, undefined, { softFail: true, context: "getClsconfig" });
       void logAction("getClsconfig", target, out.status === 200, upstream.status);
       return out;
     }
@@ -423,7 +423,7 @@ Deno.serve(async (req: Request) => {
       const cloned = upstream.clone();
       const preview = (await cloned.text()).slice(0, 500);
       console.log("[clsconfig-proxy] upstream status:", upstream.status, "body:", preview);
-      const out = await relay(upstream);
+      const out = await relay(upstream, undefined, { softFail: true, context: "saveClsconfigTemplate" });
       void logAction(
         hasFull ? "saveClsconfigTemplate" : hasStatus ? "saveStatus" : "saveInventory",
         `${target} roleid=${String(b.roleid)}`,
@@ -507,7 +507,11 @@ const NEW_ACTIONS_FALLBACK_MISSING = new Set([
   "listSecurityHistory",
 ]);
 
-async function relay(upstream: Response, action?: string): Promise<Response> {
+async function relay(
+  upstream: Response,
+  action?: string,
+  options?: { softFail?: boolean; context?: string },
+): Promise<Response> {
   const text = await upstream.text();
   let json: unknown;
   try {
@@ -527,10 +531,15 @@ async function relay(upstream: Response, action?: string): Promise<Response> {
       JSON.stringify({
         success: false,
         error: "Upstream returned non-JSON",
+        context: options?.context ?? action ?? null,
         status: upstream.status,
         body: text.slice(0, 2000),
+        fallback: options?.softFail === true,
       }),
-      { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      {
+        status: options?.softFail ? 200 : 502,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
     );
   }
 
@@ -550,6 +559,20 @@ async function relay(upstream: Response, action?: string): Promise<Response> {
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
+  }
+
+  if (!upstream.ok && options?.softFail) {
+    const base = json && typeof json === "object" ? (json as Record<string, unknown>) : {};
+    return new Response(
+      JSON.stringify({
+        ...base,
+        success: false,
+        context: options.context ?? action ?? null,
+        upstream_status: upstream.status,
+        fallback: true,
+      }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
   }
 
   return new Response(JSON.stringify(json), {
