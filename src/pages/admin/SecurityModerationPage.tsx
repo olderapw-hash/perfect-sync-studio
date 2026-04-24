@@ -359,9 +359,13 @@ const SecurityModerationPage = () => {
               <span className="block">
                 Alvo:{" "}
                 <span className="font-mono text-foreground">
-                  {hasRoleid && `roleid ${roleid}`}
-                  {hasRoleid && hasAccount && " · "}
-                  {hasAccount && `conta ${account.trim()}`}
+                  {[
+                    hasRoleid ? `roleid ${roleid}` : null,
+                    hasUserid ? `userid ${userid}` : null,
+                    hasAccount ? `conta ${account.trim()}` : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
                 </span>
               </span>
               {pendingAction?.tone === "destructive" && (
