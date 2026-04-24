@@ -204,7 +204,7 @@ const MailPage = () => {
   const handleOpenConfirm = () => {
     setLastResult(null);
     const v = validate();
-    if (!v.ok) {
+    if (v.ok === false) {
       toast.error(v.error);
       return;
     }
@@ -214,7 +214,7 @@ const MailPage = () => {
   const handleSend = async () => {
     if (!tenantId || !user?.id) return;
     const v = validate();
-    if (!v.ok) {
+    if (v.ok === false) {
       toast.error(v.error);
       setConfirmOpen(false);
       return;
