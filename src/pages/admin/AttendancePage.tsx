@@ -57,7 +57,6 @@ import { useItemCatalog } from "@/context/ItemCatalogContext";
 import { supabase } from "@/integrations/supabase/client";
 import {
   computeDateKey,
-  formatGoldShort,
   registerAttendance,
   TIMEZONE_OPTIONS,
   type AttendanceClaimRow,
@@ -67,6 +66,7 @@ import {
   type AttendanceRewardItem,
   type AttendanceRewardPayload,
 } from "@/lib/attendance";
+import { formatGold } from "@/lib/mailTemplates";
 import { NoActiveServerState } from "@/components/admin/NoActiveServerState";
 import { cn } from "@/lib/utils";
 
