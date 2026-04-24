@@ -174,8 +174,8 @@ const Pricing = () => {
             </div>
 
             <div className="mb-2 flex items-baseline gap-2">
-              <span className="text-5xl font-extrabold tracking-tight">R$ 0</span>
-              <span className="text-base text-muted-foreground">/sempre</span>
+              <span className="text-4xl font-extrabold tracking-tight sm:text-5xl">R$ 0</span>
+              <span className="text-sm text-muted-foreground sm:text-base">/sempre</span>
             </div>
             <p className="mb-6 text-sm text-muted-foreground">
               Sem cartão. Visualize tudo, edite só templates iniciais (CLS).
