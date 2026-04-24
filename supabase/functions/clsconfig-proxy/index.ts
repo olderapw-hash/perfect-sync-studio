@@ -501,6 +501,10 @@ const NEW_ACTIONS_FALLBACK_MISSING = new Set([
   "sendMailItem",
   "sendMailGold",
   "getBackupContent",
+  "kickRole",
+  "banAccount",
+  "unbanAccount",
+  "listSecurityHistory",
 ]);
 
 async function relay(upstream: Response, action?: string): Promise<Response> {
