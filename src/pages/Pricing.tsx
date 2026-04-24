@@ -13,6 +13,9 @@ import { getPaymentEnvironment } from "@/lib/paddle";
 const PLAN_FEATURES = [
   "Editor completo de personagens (status, equip, inventário, storehouse)",
   "Templates iniciais por classe (clsconfig)",
+  "Controle do servidor (start, stop, restart remoto)",
+  "Área de segurança: kick, ban e moderação de jogadores",
+  "Envio de itens e recompensas por correio in-game",
   "Backups automáticos + restauração 1-clique",
   "Histórico completo de alterações",
   "Múltiplos administradores com permissões granulares",
