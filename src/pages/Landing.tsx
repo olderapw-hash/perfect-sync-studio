@@ -94,7 +94,7 @@ const Landing = () => {
         {/* HERO */}
         <section className="relative overflow-hidden">
           <img
-            src={heroImg}
+            src={bgImage}
             alt=""
             width={1920}
             height={1080}
