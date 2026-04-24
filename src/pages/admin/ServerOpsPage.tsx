@@ -231,7 +231,7 @@ function ServerStatusTab() {
           </h2>
           <p className="text-xs text-muted-foreground">
             {collectedAt
-              ? `Última coleta: ${new Date(collectedAt * 1000).toLocaleTimeString()}`
+              ? `Última coleta: ${formatCollectedAt(collectedAt)}`
               : loading
                 ? "Coletando..."
                 : "Nenhuma coleta ainda."}
