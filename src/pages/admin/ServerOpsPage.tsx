@@ -164,7 +164,7 @@ function ServerStatusTab() {
     try {
       const res = await pwApi.getServiceStatus();
       setServices(res.services ?? []);
-      setCollectedAt(res.collected_at ?? Math.floor(Date.now() / 1000));
+      setCollectedAt(res.collected_at ?? Date.now());
       void logAuditEvent({
         action: "server_ops.status_view",
         tenantId: active?.id ?? null,
