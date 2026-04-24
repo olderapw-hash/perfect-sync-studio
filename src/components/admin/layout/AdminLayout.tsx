@@ -158,6 +158,20 @@ const SECTIONS: NavSection[] = [
   },
 ];
 
+/**
+ * Seções exclusivas do superadmin — configuração da plataforma/site,
+ * separadas das seções operacionais do servidor pra não misturar.
+ */
+const SUPERADMIN_SECTIONS: NavSection[] = [
+  {
+    id: "site",
+    label: "Site (Landing)",
+    icon: Globe,
+    basePath: "/admin/site",
+    children: [{ to: "/admin/site", label: "Editar conteúdo", end: true }],
+  },
+];
+
 export const AdminLayout = () => {
   const { settings } = useAppSettings();
   const bgStyle = settings.background_url
