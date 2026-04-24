@@ -277,10 +277,11 @@ const SecurityModerationPage = () => {
         </div>
         <p className="mb-4 text-xs text-muted-foreground">
           Informe ao menos um identificador. <strong>Kick</strong> requer
-          roleid. <strong>Ban/Unban</strong> aceita conta (login) ou roleid —
-          a VPS resolve a conta a partir do roleid quando possível.
+          roleid. <strong>Ban/Unban</strong> aceita conta (login),{" "}
+          <strong>userid</strong> ou roleid — a VPS resolve a conta a partir
+          do roleid quando possível.
         </p>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-3">
           <div>
             <Label htmlFor="roleid" className="text-xs">
               Roleid
@@ -292,6 +293,20 @@ const SecurityModerationPage = () => {
               placeholder="ex.: 31"
               value={roleidStr}
               onChange={(e) => setRoleidStr(e.target.value)}
+              className="mt-1 font-mono"
+            />
+          </div>
+          <div>
+            <Label htmlFor="userid" className="text-xs">
+              Userid
+            </Label>
+            <Input
+              id="userid"
+              type="number"
+              inputMode="numeric"
+              placeholder="ex.: 1024"
+              value={useridStr}
+              onChange={(e) => setUseridStr(e.target.value)}
               className="mt-1 font-mono"
             />
           </div>
