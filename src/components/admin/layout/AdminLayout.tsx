@@ -225,6 +225,19 @@ const AdminNavSidebar = () => {
         {sections.map((section) => (
           <NavSectionGroup key={section.id} section={section} collapsed={collapsed} />
         ))}
+
+        {isSuperadmin && (
+          <>
+            {!collapsed && (
+              <div className="mt-2 border-t border-border/60 px-3 pt-3 pb-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">
+                Plataforma
+              </div>
+            )}
+            {SUPERADMIN_SECTIONS.map((section) => (
+              <NavSectionGroup key={section.id} section={section} collapsed={collapsed} />
+            ))}
+          </>
+        )}
       </SidebarContent>
     </Sidebar>
   );
