@@ -45,6 +45,7 @@ import SecurityOverviewPage from "./pages/admin/SecurityOverviewPage.tsx";
 import SecurityModerationPage from "./pages/admin/SecurityModerationPage.tsx";
 import SecurityHistoryPage from "./pages/admin/SecurityHistoryPage.tsx";
 import SecuritySettingsPage from "./pages/admin/SecuritySettingsPage.tsx";
+import SitePage from "./pages/admin/SitePage.tsx";
 
 const queryClient = new QueryClient();
 
