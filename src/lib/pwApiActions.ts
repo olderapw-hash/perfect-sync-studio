@@ -230,7 +230,10 @@ async function callAction<T>(
   }
   // Resposta 2xx mas com {error:"..."} no corpo (sem success:false).
   if (data && typeof data === "object") {
-    const d = data as { success?: boolean; error?: string };
+    const d = data as { success?: boolean; error?: string; endpoint_missing?: boolean };
+    if (d.endpoint_missing === true) {
+      throw new EndpointMissingError(action);
+    }
     const err = d.error ?? "";
     const explicitFail = d.success === false;
     const looksMissing = /not\s+found|unknown\s+action|n[ãa]o\s+encontrad|acao\s+invalida|a[cç][aã]o\s+inv[aá]lida/i.test(err);
