@@ -152,10 +152,10 @@ const Pricing = () => {
         </div>
       </header>
 
-      <main className="mx-auto max-w-5xl px-4 py-16">
-        <div className="mb-10 text-center">
+      <main className="mx-auto max-w-5xl px-4 py-8 sm:py-16">
+        <div className="mb-8 text-center sm:mb-10">
           <p className="text-xs font-bold uppercase tracking-wider text-primary">Escolha seu plano</p>
-          <h1 className="mt-2 text-3xl font-extrabold tracking-tight sm:text-4xl">
+          <h1 className="mt-2 text-2xl font-extrabold tracking-tight sm:text-4xl">
             Pare de editar SQL na unha
           </h1>
           <p className="mx-auto mt-3 max-w-xl text-sm text-muted-foreground">
@@ -165,9 +165,9 @@ const Pricing = () => {
           </p>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
           {/* Free Trial */}
-          <div className="relative flex flex-col overflow-hidden rounded-2xl border border-border bg-card/40 p-8">
+          <div className="relative flex flex-col overflow-hidden rounded-2xl border border-border bg-card/40 p-5 sm:p-8">
             <div className="mb-4 inline-flex w-fit items-center gap-2 rounded-full bg-primary/15 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-primary">
               <Sparkles className="h-3 w-3" />
               Free Trial
