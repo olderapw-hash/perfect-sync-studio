@@ -35,6 +35,9 @@ const ALLOWED_ACTIONS = new Set([
   "getRoleEditable",
   "saveRoleEditable",
   "saveClsconfigTemplate",
+  "getBackupContent",
+  "sendMailItem",
+  "sendMailGold",
 ]);
 
 // Mapa Action → permissão exigida (deve refletir src/lib/serverPermissions.ts).
@@ -43,9 +46,12 @@ const ACTION_PERMISSION: Record<string, string> = {
   getItemCatalog: "view",
   listBackups: "view",
   getRoleEditable: "view",
+  getBackupContent: "view",
   saveClsconfigTemplate: "save_templates",
   saveRoleEditable: "save_real_roles",
   restoreBackup: "restore_backup",
+  sendMailItem: "save_real_roles",
+  sendMailGold: "save_real_roles",
 };
 
 function jsonError(message: string, status: number): Response {
