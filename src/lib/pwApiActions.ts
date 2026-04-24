@@ -299,7 +299,103 @@ export const pwApi = {
   sendMailGold(body: SendMailGoldPayload) {
     return callAction<SendMailResponse>("sendMailGold", { method: "POST", body });
   },
+  /* ─────────── Operação do Servidor v1 ─────────── */
+  /**
+   * Lê o status atual dos daemons do PW (gamedbd, gdeliveryd, etc).
+   * Se o endpoint ainda não existe na VPS, lança EndpointMissingError —
+   * a UI exibe "não implementado nesta VPS".
+   */
+  getServiceStatus() {
+    return callAction<ServiceStatusResponse>("getServiceStatus", { method: "GET" });
+  },
+  /**
+   * Lê últimas linhas dos logs principais do servidor. `source` filtra
+   * por origem; `lines` controla o tail (default 200).
+   */
+  getServerLogs(params: { source?: ServerLogSource; lines?: number; q?: string } = {}) {
+    const query: Record<string, string | number> = {};
+    if (params.source) query.source = params.source;
+    if (params.lines != null) query.lines = params.lines;
+    if (params.q) query.q = params.q;
+    return callAction<ServerLogsResponse>("getServerLogs", { method: "GET", query });
+  },
+  /**
+   * Dispara `exportclsconfig` na VPS. Operação NÃO destrutiva (apenas
+   * regrava o `clsconfig.data` a partir do gamedbd) — mas exige
+   * permissão `save_templates` por escrever em arquivo do servidor.
+   */
+  exportClsconfig() {
+    return callAction<ExportClsconfigResponse>("exportClsconfig", { method: "POST", body: {} });
+  },
 };
+
+/* ─────────── Operação do Servidor v1 ─────────── */
+
+export type ServiceState = "online" | "offline" | "unknown";
+
+export interface ServiceInfo {
+  /** Identificador curto (gamedbd, gdeliveryd, gacd, glink, authd, uniquenamed, mysql, httpd...). */
+  name: string;
+  /** Rótulo amigável para exibir na UI. */
+  label?: string;
+  state: ServiceState;
+  /** PID principal quando aplicável. */
+  pid?: number | null;
+  /** Quantidade total de processos vivos com esse nome. */
+  process_count?: number;
+  /** Porta TCP/UDP principal quando faz sentido. */
+  port?: number | null;
+  /** Mensagem livre (ex.: "PID file ausente"). */
+  message?: string;
+}
+
+export interface ServiceStatusResponse {
+  success: boolean;
+  /** epoch seconds da coleta no PHP. */
+  collected_at?: number;
+  services: ServiceInfo[];
+  error?: string;
+}
+
+export type ServerLogSource =
+  | "gamedbd"
+  | "exportclsconfig"
+  | "httpd"
+  | "mail"
+  | "apicls";
+
+export interface ServerLogEntry {
+  /** ISO 8601 ou epoch — depende da origem. */
+  ts?: string;
+  /** Linha bruta. */
+  line: string;
+  /** Severidade adivinhada (best-effort). */
+  level?: "info" | "warn" | "error" | "debug";
+}
+
+export interface ServerLogsResponse {
+  success: boolean;
+  source: ServerLogSource;
+  /** Caminho do arquivo lido (informativo). */
+  file?: string;
+  /** Quantas linhas vieram. */
+  count?: number;
+  entries: ServerLogEntry[];
+  /** Mensagem amigável quando o arquivo não existe / sem permissão. */
+  warning?: string;
+  error?: string;
+}
+
+export interface ExportClsconfigResponse {
+  success: boolean;
+  /** Caminho do log gerado pelo exportclsconfig.sh. */
+  log_file?: string;
+  /** Saída resumida do comando (best-effort). */
+  output?: string;
+  /** Backup do gamedbd gerado antes do export, quando aplicável. */
+  gamedbd_backup?: { file?: string; bytes?: number };
+  error?: string;
+}
 
 /* ─────────── Correio (Fase 2) ─────────── */
 

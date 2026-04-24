@@ -4098,8 +4098,243 @@ function respondJson($payload, $status = 200)
     echo $json;
 }
 
+/* ============================================================
+ * Operação do Servidor v1 — getServiceStatus / getServerLogs
+ * Apenas LEITURA: pgrep + tail. Sem start/stop/kill.
+ * ============================================================ */
+
+function serverOpsKnownServices()
+{
+    return [
+        ['gamedbd',     'Game DB Daemon',     29400],
+        ['gdeliveryd',  'Delivery Daemon',    29100],
+        ['gacd',        'Account Daemon',     29000],
+        ['glink',       'Game Link',          29200],
+        ['authd',       'Auth Daemon',        29300],
+        ['uniquenamed', 'Unique Name',        29500],
+        ['mysqld',      'MySQL/MariaDB',      3306],
+        ['httpd',       'Web (Apache/httpd)', 80],
+    ];
+}
+
+function serverOpsCollectService($name, $label, $port)
+{
+    $service = [
+        'name'          => $name,
+        'label'         => $label,
+        'state'         => 'unknown',
+        'pid'           => null,
+        'process_count' => 0,
+        'port'          => $port,
+        'message'       => null,
+    ];
+
+    $needsFullMatch = in_array($name, ['gamedbd', 'gdeliveryd', 'gacd', 'glink', 'authd', 'uniquenamed'], true);
+    $cmd = $needsFullMatch
+        ? 'pgrep -f ' . escapeshellarg($name) . ' 2>/dev/null'
+        : 'pgrep -x ' . escapeshellarg($name) . ' 2>/dev/null';
+
+    $output = [];
+    $exit = 0;
+    @exec($cmd, $output, $exit);
+
+    $pids = [];
+    foreach ($output as $line) {
+        $pid = intval(trim($line));
+        if ($pid > 0) $pids[] = $pid;
+    }
+
+    if (!empty($pids)) {
+        $service['state']         = 'online';
+        $service['pid']           = $pids[0];
+        $service['process_count'] = count($pids);
+    } else {
+        if ($exit > 1) {
+            $service['message'] = 'pgrep falhou (exit ' . $exit . ')';
+        } else {
+            $service['state'] = 'offline';
+        }
+    }
+
+    return $service;
+}
+
+function getServiceStatusSnapshot()
+{
+    $services = [];
+    foreach (serverOpsKnownServices() as $svc) {
+        list($name, $label, $port) = $svc;
+        $services[] = serverOpsCollectService($name, $label, $port);
+    }
+    return [
+        'success'      => true,
+        'collected_at' => time(),
+        'services'     => $services,
+    ];
+}
+
+function serverOpsLogSources($CONFIG)
+{
+    $apicls_dir = isset($CONFIG['clsconfig_export_log_dir'])
+        ? $CONFIG['clsconfig_export_log_dir']
+        : (__DIR__ . '/backups/clsconfig/export-logs');
+    $mail_dir = isset($CONFIG['mail_send_log_dir'])
+        ? $CONFIG['mail_send_log_dir']
+        : (__DIR__ . '/backups/mail-logs');
+
+    return [
+        'gamedbd' => [
+            '/home/gamedbd/logs/gamedbd.log',
+            '/home/gamedbd/gamedbd.log',
+            '/var/log/gamedbd.log',
+        ],
+        'exportclsconfig' => [
+            $apicls_dir,
+        ],
+        'httpd' => [
+            '/var/log/httpd/error_log',
+            '/var/log/apache2/error.log',
+            '/var/log/nginx/error.log',
+        ],
+        'mail' => [
+            $mail_dir,
+        ],
+        'apicls' => [
+            __DIR__ . '/backups/api_cls.log',
+            '/var/log/api_cls.log',
+        ],
+    ];
+}
+
+function serverOpsResolveLogFile($candidates)
+{
+    foreach ($candidates as $path) {
+        if (!is_string($path) || $path === '') continue;
+        if (is_dir($path)) {
+            $latest = null;
+            $latestTime = 0;
+            $dh = @opendir($path);
+            if ($dh) {
+                while (($entry = readdir($dh)) !== false) {
+                    if ($entry === '.' || $entry === '..') continue;
+                    $full = rtrim($path, '/') . '/' . $entry;
+                    if (!is_file($full)) continue;
+                    $mt = @filemtime($full);
+                    if ($mt !== false && $mt > $latestTime) {
+                        $latestTime = $mt;
+                        $latest = $full;
+                    }
+                }
+                closedir($dh);
+            }
+            if ($latest !== null) return $latest;
+        } else if (is_file($path)) {
+            return $path;
+        }
+    }
+    return null;
+}
+
+function serverOpsTailFile($path, $maxLines)
+{
+    if ($maxLines <= 0) $maxLines = 200;
+    if ($maxLines > 2000) $maxLines = 2000;
+
+    $size = @filesize($path);
+    if ($size !== false && $size > 5 * 1024 * 1024) {
+        $cmd = 'tail -n ' . intval($maxLines) . ' ' . escapeshellarg($path) . ' 2>/dev/null';
+        $out = [];
+        @exec($cmd, $out);
+        return $out;
+    }
+
+    $fh = @fopen($path, 'r');
+    if (!$fh) return null;
+    $lines = [];
+    while (!feof($fh)) {
+        $line = fgets($fh);
+        if ($line === false) break;
+        $lines[] = rtrim($line, "\r\n");
+    }
+    fclose($fh);
+    if (count($lines) > $maxLines) {
+        $lines = array_slice($lines, -$maxLines);
+    }
+    return $lines;
+}
+
+function serverOpsGuessLevel($line)
+{
+    $l = strtolower($line);
+    if (strpos($l, 'error') !== false || strpos($l, 'fatal') !== false || strpos($l, 'critical') !== false) return 'error';
+    if (strpos($l, 'warn') !== false) return 'warn';
+    if (strpos($l, 'debug') !== false || strpos($l, 'trace') !== false) return 'debug';
+    return 'info';
+}
+
+function getServerLogsSnapshot($CONFIG, $source, $lines, $query)
+{
+    $sources = serverOpsLogSources($CONFIG);
+    if (!isset($sources[$source])) {
+        return [
+            'success' => false,
+            'source'  => $source,
+            'entries' => [],
+            'error'   => 'Origem desconhecida: ' . $source,
+        ];
+    }
+
+    $file = serverOpsResolveLogFile($sources[$source]);
+    if ($file === null) {
+        return [
+            'success' => true,
+            'source'  => $source,
+            'entries' => [],
+            'count'   => 0,
+            'warning' => 'Nenhum arquivo de log encontrado para esta origem nesta VPS.',
+        ];
+    }
+    if (!is_readable($file)) {
+        return [
+            'success' => true,
+            'source'  => $source,
+            'file'    => $file,
+            'entries' => [],
+            'count'   => 0,
+            'warning' => 'Arquivo existe mas sem permissao de leitura para o usuario web.',
+        ];
+    }
+
+    $rawLines = serverOpsTailFile($file, $lines);
+    if ($rawLines === null) {
+        return [
+            'success' => true,
+            'source'  => $source,
+            'file'    => $file,
+            'entries' => [],
+            'warning' => 'Nao foi possivel abrir o arquivo (fopen falhou).',
+        ];
+    }
+
+    $entries = [];
+    foreach ($rawLines as $raw) {
+        if ($query !== '' && stripos($raw, $query) === false) continue;
+        $entries[] = [
+            'line'  => $raw,
+            'level' => serverOpsGuessLevel($raw),
+        ];
+    }
+
+    return [
+        'success' => true,
+        'source'  => $source,
+        'file'    => $file,
+        'count'   => count($entries),
+        'entries' => $entries,
+    ];
+}
+
 if (php_sapi_name() !== 'cli' || isset($_GET['action'])) {
-    header('Content-Type: application/json; charset=utf-8');
 
     $secret = isset($_SERVER['HTTP_X_SYNC_SECRET']) ? $_SERVER['HTTP_X_SYNC_SECRET'] : (isset($_GET['secret']) ? $_GET['secret'] : '');
     if ($secret !== $CONFIG['api_secret']) {
@@ -4437,9 +4672,29 @@ if (php_sapi_name() !== 'cli' || isset($_GET['action'])) {
             }
             break;
 
+        case 'getServiceStatus':
+            try {
+                respondJson(getServiceStatusSnapshot(), 200);
+            } catch (Exception $e) {
+                respondJson(['success' => false, 'error' => $e->getMessage()], 500);
+            }
+            break;
+
+        case 'getServerLogs':
+            $src   = isset($_GET['source']) ? trim((string)$_GET['source']) : 'gamedbd';
+            $lines = isset($_GET['lines']) ? intval($_GET['lines']) : 200;
+            $q     = isset($_GET['q']) ? trim((string)$_GET['q']) : '';
+            try {
+                $snap = getServerLogsSnapshot($CONFIG, $src, $lines, $q);
+                respondJson($snap, isset($snap['success']) && $snap['success'] === false ? 400 : 200);
+            } catch (Exception $e) {
+                respondJson(['success' => false, 'error' => $e->getMessage()], 500);
+            }
+            break;
+
         default:
             respondJson([
-                'error' => 'Acao invalida. Use: getRole, getRoles, getRoleEditable, getRolesEditable, getClasses, getClsconfig, getClsconfigDebug, getItemCatalog, listBackups, backupGamedbd, getBackupContent, restoreBackup, exportClsconfig, saveRoleEditable, saveClsconfigTemplate, sendMailItem, sendMailGold',
+                'error' => 'Acao invalida. Use: getRole, getRoles, getRoleEditable, getRolesEditable, getClasses, getClsconfig, getClsconfigDebug, getItemCatalog, listBackups, backupGamedbd, getBackupContent, restoreBackup, exportClsconfig, saveRoleEditable, saveClsconfigTemplate, sendMailItem, sendMailGold, getServiceStatus, getServerLogs',
             ], 400);
             break;
     }

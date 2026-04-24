@@ -38,6 +38,10 @@ const ALLOWED_ACTIONS = new Set([
   "getBackupContent",
   "sendMailItem",
   "sendMailGold",
+  // Operação do Servidor v1 — apenas leitura/export, sem ações destrutivas.
+  "getServiceStatus",
+  "getServerLogs",
+  "exportClsconfig",
 ]);
 
 // Mapa Action → permissão exigida (deve refletir src/lib/serverPermissions.ts).
@@ -52,6 +56,11 @@ const ACTION_PERMISSION: Record<string, string> = {
   restoreBackup: "restore_backup",
   sendMailItem: "save_real_roles",
   sendMailGold: "save_real_roles",
+  // Server Ops: leitura → "view"; exportClsconfig é gating-equivalente
+  // a salvar template (regrava clsconfig.data) → "save_templates".
+  getServiceStatus: "view",
+  getServerLogs: "view_audit",
+  exportClsconfig: "save_templates",
 };
 
 function jsonError(message: string, status: number): Response {

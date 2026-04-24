@@ -127,8 +127,11 @@ const SECTIONS: NavSection[] = [
     label: "Operação do Servidor",
     icon: Server,
     basePath: "/admin/server",
-    comingSoon: true,
-    children: [{ to: "/admin/server", label: "Visão geral", end: true }],
+    children: [
+      { to: "/admin/server", label: "Status", end: true },
+      { to: "/admin/server/logs", label: "Logs" },
+      { to: "/admin/server/actions", label: "Export & Reload" },
+    ],
   },
   {
     id: "security",

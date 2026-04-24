@@ -27,6 +27,11 @@ export const ACTION_PERMISSION: Record<string, ServerPermissionKey> = {
 
   // backups
   restoreBackup: "restore_backup",
+
+  // operação do servidor (v1: leitura + export)
+  getServiceStatus: "view",
+  getServerLogs: "view_audit",
+  exportClsconfig: "save_templates",
 };
 
 /** Operações UI que mapeiam pra mais de uma action. */

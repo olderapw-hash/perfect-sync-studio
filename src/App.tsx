@@ -36,6 +36,8 @@ import MailTemplatesPage from "./pages/admin/MailTemplatesPage.tsx";
 import MailHistoryPage from "./pages/admin/MailHistoryPage.tsx";
 import EventsPage from "./pages/admin/EventsPage.tsx";
 import ServerOpsPage from "./pages/admin/ServerOpsPage.tsx";
+import ServerLogsPage from "./pages/admin/ServerLogsPage.tsx";
+import ServerActionsPage from "./pages/admin/ServerActionsPage.tsx";
 import SecurityOverviewPage from "./pages/admin/SecurityOverviewPage.tsx";
 import SecuritySettingsPage from "./pages/admin/SecuritySettingsPage.tsx";
 
@@ -97,8 +99,11 @@ const App = () => (
                     {/* Eventos (Fase 2) */}
                     <Route path="events" element={<EventsPage />} />
 
-                    {/* Operação do Servidor (Fase 2) */}
-                    <Route path="server" element={<ServerOpsPage />} />
+                    {/* Operação do Servidor v1 (status / logs / export) */}
+                    <Route path="server" element={<ServerOpsPage />}>
+                      <Route path="logs" element={<ServerLogsPage />} />
+                      <Route path="actions" element={<ServerActionsPage />} />
+                    </Route>
 
                     {/* Segurança */}
                     <Route path="security" element={<SecurityOverviewPage />} />
