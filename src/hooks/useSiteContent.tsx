@@ -252,7 +252,18 @@ export const useSiteContent = () => {
       .eq("id", 1)
       .maybeSingle();
     if (data?.content && typeof data.content === "object") {
-      setContent(merge(SITE_CONTENT_DEFAULTS, data.content));
+      const merged = merge(SITE_CONTENT_DEFAULTS, data.content);
+      // Migração: se houver título antigo em 3 partes e nenhum `title` novo
+      // explícito, reconstrói com **destaque** para o usuário.
+      const raw = (data.content as { hero?: Record<string, unknown> })?.hero ?? {};
+      const hasNewTitle = typeof raw.title === "string" && raw.title.trim().length > 0;
+      if (!hasNewTitle && (raw.title_prefix || raw.title_highlight || raw.title_suffix)) {
+        const p = String(raw.title_prefix ?? "").trim();
+        const h = String(raw.title_highlight ?? "").trim();
+        const s = String(raw.title_suffix ?? "").trim();
+        merged.hero.title = [p, h ? `**${h}**` : "", s].filter(Boolean).join(" ");
+      }
+      setContent(merged);
     } else {
       setContent(SITE_CONTENT_DEFAULTS);
     }
