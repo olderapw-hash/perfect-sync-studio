@@ -468,6 +468,16 @@ if [ -d /home/gamedbd ]; then
   fi
 fi
 
+# Teste do correio em modo dry_run — valida rota mas nao envia mail real.
+MAIL_OUT="$(curl -s -X POST -H "x-sync-secret: $SECRET" -H "Content-Type: application/json" \
+  -d '{"roleid":1,"dry_run":true,"item":{"item_id":11530,"count":1}}' \
+  "$BASE_URL?action=sendMailItem" 2>/dev/null || true)"
+if echo "$MAIL_OUT" | grep -q '"success":true'; then
+  log "Teste sendMailItem (dry_run) OK."
+else
+  warn "Teste sendMailItem (dry_run) falhou. Saida: $MAIL_OUT"
+fi
+
 PUBLIC_IP="$(curl -fsS --max-time 3 https://api.ipify.org 2>/dev/null || hostname -I 2>/dev/null | awk '{print $1}' || true)"
 
 cat <<EOF
@@ -486,5 +496,14 @@ Comandos de validacao:
   php -l $INSTALL_DIR/api_cls.php
   curl -s -H "x-sync-secret: $SECRET" "$BASE_URL?action=getClasses"
   curl -s -X POST -H "x-sync-secret: $SECRET" -H "Content-Type: application/json" -d '{"reason":"manual-test","force":true}' "$BASE_URL?action=backupGamedbd"
+  curl -s -X POST -H "x-sync-secret: $SECRET" -H "Content-Type: application/json" -d '{"roleid":1,"dry_run":true,"item":{"item_id":11530,"count":1}}' "$BASE_URL?action=sendMailItem"
+
+Correio (sendMailItem / sendMailGold):
+  Handler: /usr/local/bin/pw_send_mail.php
+  Wrapper: /usr/local/sbin/sendreward-api.sh (sudo NOPASSWD)
+  Logs:    $INSTALL_DIR/backups/mail-logs/
+  Queue:   $INSTALL_DIR/backups/mail-queue/
+  Para entrega imediata edite /etc/pw_send_mail.conf apontando seu
+  send_mail.lua / deliveryd_console.
 ============================================================
 EOF
