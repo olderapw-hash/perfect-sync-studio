@@ -4672,9 +4672,29 @@ if (php_sapi_name() !== 'cli' || isset($_GET['action'])) {
             }
             break;
 
+        case 'getServiceStatus':
+            try {
+                respondJson(getServiceStatusSnapshot(), 200);
+            } catch (Exception $e) {
+                respondJson(['success' => false, 'error' => $e->getMessage()], 500);
+            }
+            break;
+
+        case 'getServerLogs':
+            $src   = isset($_GET['source']) ? trim((string)$_GET['source']) : 'gamedbd';
+            $lines = isset($_GET['lines']) ? intval($_GET['lines']) : 200;
+            $q     = isset($_GET['q']) ? trim((string)$_GET['q']) : '';
+            try {
+                $snap = getServerLogsSnapshot($CONFIG, $src, $lines, $q);
+                respondJson($snap, isset($snap['success']) && $snap['success'] === false ? 400 : 200);
+            } catch (Exception $e) {
+                respondJson(['success' => false, 'error' => $e->getMessage()], 500);
+            }
+            break;
+
         default:
             respondJson([
-                'error' => 'Acao invalida. Use: getRole, getRoles, getRoleEditable, getRolesEditable, getClasses, getClsconfig, getClsconfigDebug, getItemCatalog, listBackups, backupGamedbd, getBackupContent, restoreBackup, exportClsconfig, saveRoleEditable, saveClsconfigTemplate, sendMailItem, sendMailGold',
+                'error' => 'Acao invalida. Use: getRole, getRoles, getRoleEditable, getRolesEditable, getClasses, getClsconfig, getClsconfigDebug, getItemCatalog, listBackups, backupGamedbd, getBackupContent, restoreBackup, exportClsconfig, saveRoleEditable, saveClsconfigTemplate, sendMailItem, sendMailGold, getServiceStatus, getServerLogs',
             ], 400);
             break;
     }
