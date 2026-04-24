@@ -622,7 +622,7 @@ const RewardSummary = ({ reward }: { reward: AttendanceRewardPayload }) => {
       {gold > 0 && (
         <div className="flex items-center gap-1.5 rounded-md border border-border bg-background/40 px-2 py-1 text-xs">
           <Coins className="h-3.5 w-3.5 text-amber-500" />
-          <span className="font-mono">{formatGoldShort(gold)}</span>
+          <span className="font-mono">{formatGold(gold)}</span>
         </div>
       )}
     </div>
@@ -868,7 +868,7 @@ const EventEditorDialog = ({
       ...s,
       items: [
         ...s.items,
-        { item_id: id, count, item_name: meta?.name, icon_path: meta?.icon_path },
+        { item_id: id, count, item_name: meta?.name },
       ],
     }));
     setNewItemId("");
