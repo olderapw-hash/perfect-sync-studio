@@ -42,6 +42,11 @@ const ALLOWED_ACTIONS = new Set([
   "getServiceStatus",
   "getServerLogs",
   "exportClsconfig",
+  // Segurança v1 — moderação (kick/ban/unban + histórico).
+  "kickRole",
+  "banAccount",
+  "unbanAccount",
+  "listSecurityHistory",
 ]);
 
 // Mapa Action → permissão exigida (deve refletir src/lib/serverPermissions.ts).
@@ -61,6 +66,12 @@ const ACTION_PERMISSION: Record<string, string> = {
   getServiceStatus: "view",
   getServerLogs: "view_audit",
   exportClsconfig: "save_templates",
+  // Segurança v1: moderação exige manage_security; leitura do histórico
+  // segue view_audit (mesmo padrão de auditoria).
+  kickRole: "manage_security",
+  banAccount: "manage_security",
+  unbanAccount: "manage_security",
+  listSecurityHistory: "view_audit",
 };
 
 function jsonError(message: string, status: number): Response {
