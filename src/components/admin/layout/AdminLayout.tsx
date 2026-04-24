@@ -100,6 +100,7 @@ const SECTIONS: NavSection[] = [
     label: "Personagens Reais",
     icon: UserCog,
     basePath: "/admin/roles",
+    proInTrial: true,
     children: [
       { to: "/admin/roles", label: "Buscar / editar", end: true },
       { to: "/admin/roles/historico", label: "Histórico" },
@@ -112,6 +113,7 @@ const SECTIONS: NavSection[] = [
     icon: Mail,
     basePath: "/admin/mail",
     comingSoon: true,
+    proInTrial: true,
     children: [
       { to: "/admin/mail", label: "Visão geral", end: true },
       { to: "/admin/mail/templates", label: "Templates" },
@@ -124,6 +126,7 @@ const SECTIONS: NavSection[] = [
     icon: CalendarDays,
     basePath: "/admin/events",
     comingSoon: true,
+    proInTrial: true,
     children: [{ to: "/admin/events", label: "Visão geral", end: true }],
   },
   {
@@ -142,6 +145,7 @@ const SECTIONS: NavSection[] = [
     label: "Segurança",
     icon: Shield,
     basePath: "/admin/security",
+    proInTrial: true,
     children: [
       { to: "/admin/security", label: "Visão geral", end: true },
       { to: "/admin/security/moderation", label: "Moderação" },
