@@ -84,7 +84,7 @@ const SecurityLayoutPage = () => {
               const Icon = t.icon;
               return (
                 <TabsTrigger key={t.value} value={t.value} asChild>
-                  <NavLink to={t.path} end={t.end} className="gap-2">
+                  <NavLink to={t.path} end={"end" in t ? t.end : false} className="gap-2">
                     <Icon className="h-3.5 w-3.5" />
                     {t.label}
                   </NavLink>
