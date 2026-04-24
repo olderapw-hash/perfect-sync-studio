@@ -214,6 +214,44 @@ export const SettingsTab = () => {
         </div>
       </section>
 
+      {/* Uploads — somente superadmin */}
+      {isSuperadmin && (
+        <section className="rounded-xl border border-border bg-card/60 p-5">
+          <h3 className="mb-1 flex items-center gap-2 text-sm font-extrabold uppercase tracking-wider text-foreground">
+            <ImageIcon className="h-4 w-4 text-primary" /> Assets do Painel
+          </h3>
+          <p className="mb-4 text-xs text-muted-foreground">
+            Upload de logo, favicon e imagem de fundo. Aplicado globalmente.
+          </p>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <ImageUploader
+              label="Logo"
+              hint="PNG/SVG quadrado"
+              currentUrl={form.logo_url}
+              onUploaded={(url) => setForm((f) => ({ ...f, logo_url: url }))}
+              onClear={() => setForm((f) => ({ ...f, logo_url: "" }))}
+              folder="logos"
+            />
+            <ImageUploader
+              label="Favicon"
+              hint="PNG 32x32 ou .ico"
+              currentUrl={form.favicon_url}
+              onUploaded={(url) => setForm((f) => ({ ...f, favicon_url: url }))}
+              onClear={() => setForm((f) => ({ ...f, favicon_url: "" }))}
+              folder="favicons"
+            />
+            <ImageUploader
+              label="Background"
+              hint="Imagem de fundo do painel"
+              currentUrl={form.background_url}
+              onUploaded={(url) => setForm((f) => ({ ...f, background_url: url }))}
+              onClear={() => setForm((f) => ({ ...f, background_url: "" }))}
+              folder="backgrounds"
+            />
+          </div>
+        </section>
+      )}
+
       {/* Branding */}
       <section className="rounded-xl border border-border bg-card/60 p-5">
         <h3 className="mb-1 flex items-center gap-2 text-sm font-extrabold uppercase tracking-wider text-foreground">
@@ -229,11 +267,11 @@ export const SettingsTab = () => {
             value={form.server_name}
             onChange={(v) => setForm({ ...form, server_name: v })}
             disabled={!canEdit}
-            placeholder="Meu Servidor PW"
+            placeholder="Orphea Core"
           />
           <Field
             label="URL do logo (opcional)"
-            hint="Imagem PNG/SVG quadrada, exibida no header."
+            hint="Cole uma URL ou use o uploader acima."
             value={form.logo_url}
             onChange={(v) => setForm({ ...form, logo_url: v })}
             disabled={!canEdit}
