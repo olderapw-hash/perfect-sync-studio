@@ -261,15 +261,21 @@ Deno.serve(async (req: Request) => {
           .select("tenant_id, created_at, tenants:tenant_id(id, pw_api_base_url, pw_api_secret)")
           .eq("user_id", callerUserId)
           .order("created_at", { ascending: false });
-        const firstWithCreds = (memberships ?? []).find((m) => {
-          const t = (m as { tenants: { pw_api_base_url?: string; pw_api_secret?: string } | null }).tenants;
-          return t?.pw_api_base_url && t?.pw_api_secret;
-        });
+        type TenantCreds = { id: string; pw_api_base_url: string | null; pw_api_secret: string | null };
+        const pickTenant = (m: unknown): TenantCreds | null => {
+          const raw = (m as { tenants: TenantCreds | TenantCreds[] | null }).tenants;
+          if (!raw) return null;
+          return Array.isArray(raw) ? (raw[0] ?? null) : raw;
+        };
+        const firstWithCreds = (memberships ?? [])
+          .map(pickTenant)
+          .find((t): t is TenantCreds & { pw_api_base_url: string; pw_api_secret: string } =>
+            !!(t?.pw_api_base_url && t?.pw_api_secret),
+          );
         if (firstWithCreds) {
-          const t = (firstWithCreds as { tenants: { id: string; pw_api_base_url: string; pw_api_secret: string } }).tenants;
-          PW_API_BASE_URL = t.pw_api_base_url;
-          PW_API_SECRET = t.pw_api_secret;
-          resolvedTenantId = t.id;
+          PW_API_BASE_URL = firstWithCreds.pw_api_base_url;
+          PW_API_SECRET = firstWithCreds.pw_api_secret;
+          resolvedTenantId = firstWithCreds.id;
           credSource = "tenant_active";
         }
       }
