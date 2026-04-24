@@ -11,7 +11,7 @@ export const ProBadge = ({ className, title = "Disponível no plano pago" }: Pro
   <span
     title={title}
     className={cn(
-      "inline-flex items-center rounded-sm bg-amber-500/15 px-1.5 py-0.5 font-mono text-[9px] font-bold tracking-wider text-amber-500",
+      "inline-flex items-center rounded-sm bg-primary/15 px-1.5 py-0.5 font-mono text-[9px] font-bold tracking-wider text-primary",
       className,
     )}
   >
