@@ -1,9 +1,8 @@
 // /admin/events — Hub do módulo Eventos.
-// Mostra cards das submodalidades. Apenas "Presença" está funcional na
-// Fase 4A; as demais ficam como placeholders bonitos com badge "Em breve".
+// Todas as submodalidades aqui são placeholders ("em breve").
+// A funcionalidade de Presença foi movida para o painel PHP da VPS.
 import { Link } from "react-router-dom";
 import {
-  CalendarCheck,
   CalendarDays,
   Gift,
   HelpCircle,
@@ -23,19 +22,6 @@ interface EventModule {
 }
 
 const MODULES: EventModule[] = [
-  {
-    id: "presenca",
-    title: "Presença",
-    description:
-      "Recompensa diária por check-in com idempotência por dia e entrega automática via correio.",
-    icon: CalendarCheck,
-    to: "/admin/events/presenca",
-    bullets: [
-      "Check-in com bloqueio anti-duplicidade",
-      "Recompensa em itens + gold",
-      "Histórico completo de presenças e entregas",
-    ],
-  },
   {
     id: "sorteios",
     title: "Sorteios",
