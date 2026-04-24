@@ -152,10 +152,10 @@ const Pricing = () => {
         </div>
       </header>
 
-      <main className="mx-auto max-w-5xl px-4 py-16">
-        <div className="mb-10 text-center">
+      <main className="mx-auto max-w-5xl px-4 py-8 sm:py-16">
+        <div className="mb-8 text-center sm:mb-10">
           <p className="text-xs font-bold uppercase tracking-wider text-primary">Escolha seu plano</p>
-          <h1 className="mt-2 text-3xl font-extrabold tracking-tight sm:text-4xl">
+          <h1 className="mt-2 text-2xl font-extrabold tracking-tight sm:text-4xl">
             Pare de editar SQL na unha
           </h1>
           <p className="mx-auto mt-3 max-w-xl text-sm text-muted-foreground">
@@ -165,17 +165,17 @@ const Pricing = () => {
           </p>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
           {/* Free Trial */}
-          <div className="relative flex flex-col overflow-hidden rounded-2xl border border-border bg-card/40 p-8">
+          <div className="relative flex flex-col overflow-hidden rounded-2xl border border-border bg-card/40 p-5 sm:p-8">
             <div className="mb-4 inline-flex w-fit items-center gap-2 rounded-full bg-primary/15 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-primary">
               <Sparkles className="h-3 w-3" />
               Free Trial
             </div>
 
             <div className="mb-2 flex items-baseline gap-2">
-              <span className="text-5xl font-extrabold tracking-tight">R$ 0</span>
-              <span className="text-base text-muted-foreground">/sempre</span>
+              <span className="text-4xl font-extrabold tracking-tight sm:text-5xl">R$ 0</span>
+              <span className="text-sm text-muted-foreground sm:text-base">/sempre</span>
             </div>
             <p className="mb-6 text-sm text-muted-foreground">
               Sem cartão. Visualize tudo, edite só templates iniciais (CLS).
@@ -222,7 +222,7 @@ const Pricing = () => {
           </div>
 
           {/* Paid plan */}
-          <div className="relative flex flex-col overflow-hidden rounded-2xl border-2 border-primary/40 bg-gradient-to-br from-card via-card/80 to-card p-8 shadow-glow">
+          <div className="relative flex flex-col overflow-hidden rounded-2xl border-2 border-primary/40 bg-gradient-to-br from-card via-card/80 to-card p-5 shadow-glow sm:p-8">
             <div className="absolute -right-12 -top-12 h-40 w-40 rounded-full bg-primary/20 blur-3xl" />
             <div className="relative flex flex-1 flex-col">
               <div className="mb-4 flex flex-wrap items-center gap-2">
@@ -235,8 +235,8 @@ const Pricing = () => {
               </div>
 
               <div className="mb-2 flex items-baseline gap-2">
-                <span className="text-5xl font-extrabold tracking-tight">R$ 47</span>
-                <span className="text-base text-muted-foreground">/mês</span>
+                <span className="text-4xl font-extrabold tracking-tight sm:text-5xl">R$ 47</span>
+                <span className="text-sm text-muted-foreground sm:text-base">/mês</span>
               </div>
               <p className="mb-6 text-sm text-muted-foreground">
                 Por servidor. Sem limite de personagens, edições ou administradores.
