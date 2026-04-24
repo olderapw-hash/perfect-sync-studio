@@ -120,7 +120,7 @@ const Landing = () => {
             <h1 className="mx-auto max-w-3xl text-balance text-4xl font-extrabold leading-tight tracking-tight text-foreground sm:text-6xl">
               {content.hero.title.split(/(\*\*[^*]+\*\*)/g).map((part, i) =>
                 part.startsWith("**") && part.endsWith("**") ? (
-                  <span key={i} className="bg-gradient-gold bg-clip-text text-transparent">
+                  <span key={i} className="text-primary">
                     {part.slice(2, -2)}
                   </span>
                 ) : (
