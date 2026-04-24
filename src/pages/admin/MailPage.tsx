@@ -357,14 +357,53 @@ const MailPage = () => {
           {/* Form principal — mesmo card style do RolePersonagemTab */}
           <section className="rounded-xl border border-border bg-card/40 p-4">
             <Tabs value={tab} onValueChange={(v) => setTab(v as "item" | "gold")}>
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="item" className="gap-2">
-                  <Package className="h-3.5 w-3.5" />
-                  Item
+              {/* Tabs como cards visuais — mesmo padrão dos cards de seleção do app */}
+              <TabsList className="grid h-auto w-full grid-cols-2 gap-3 bg-transparent p-0">
+                <TabsTrigger
+                  value="item"
+                  className={cn(
+                    "group flex h-auto flex-col items-start gap-2 rounded-xl border-2 border-border bg-card/40 p-4 text-left transition-smooth",
+                    "hover:border-primary/40 hover:bg-card/60",
+                    "data-[state=active]:border-primary data-[state=active]:bg-primary/10 data-[state=active]:shadow-md",
+                    "data-[state=active]:text-foreground",
+                  )}
+                >
+                  <div className="flex w-full items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-primary/30 bg-primary/10 text-primary">
+                      <Package className="h-5 w-5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-extrabold uppercase tracking-wider">
+                        Item
+                      </div>
+                      <div className="text-[11px] font-normal normal-case text-muted-foreground">
+                        Anexar item do catálogo
+                      </div>
+                    </div>
+                  </div>
                 </TabsTrigger>
-                <TabsTrigger value="gold" className="gap-2">
-                  <Coins className="h-3.5 w-3.5" />
-                  Moedas / Gold
+                <TabsTrigger
+                  value="gold"
+                  className={cn(
+                    "group flex h-auto flex-col items-start gap-2 rounded-xl border-2 border-border bg-card/40 p-4 text-left transition-smooth",
+                    "hover:border-amber-500/40 hover:bg-card/60",
+                    "data-[state=active]:border-amber-500 data-[state=active]:bg-amber-500/10 data-[state=active]:shadow-md",
+                    "data-[state=active]:text-foreground",
+                  )}
+                >
+                  <div className="flex w-full items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-500">
+                      <Coins className="h-5 w-5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-extrabold uppercase tracking-wider">
+                        Moedas / Gold
+                      </div>
+                      <div className="text-[11px] font-normal normal-case text-muted-foreground">
+                        Enviar valor em copper
+                      </div>
+                    </div>
+                  </div>
                 </TabsTrigger>
               </TabsList>
 
