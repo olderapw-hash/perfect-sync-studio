@@ -322,3 +322,65 @@ usa apenas a tabela `mail_send_log` no Supabase.
 
 Enquanto não estiverem prontos, o frontend mostra o estado vazio /
 botão desabilitado com a mensagem **"endpoint ainda não implementado"**.
+
+---
+
+## 4. `POST ?action=registerIngameParticipation` — Eventos Ingame (Fase 1)
+
+Endpoint chamado pelo **NPC/script do servidor PW** para registrar a
+participação de um player em um evento ingame configurado no painel.
+
+A VPS valida o `x-sync-secret` do tenant e repassa para o Supabase via
+RPC `register_ingame_participation` usando o `SERVICE_ROLE` key.
+
+**Request:**
+
+```json
+{
+  "event_id": "uuid-do-evento",
+  "tenant_id": "uuid-do-servidor",
+  "roleid": 12345,
+  "role_name": "PlayerName",
+  "userid": 67890
+}
+```
+
+Campos obrigatórios: `event_id`, `tenant_id`, `roleid`.
+Campos opcionais: `role_name`, `userid`.
+
+**Response 200 (sucesso):**
+
+```json
+{ "success": true, "id": "uuid-da-participacao", "duplicate": false }
+```
+
+**Response 200 (duplicidade — silenciosa, não é erro):**
+
+```json
+{ "success": true, "id": "uuid-existente", "duplicate": true }
+```
+
+**Response 4xx (erro):**
+
+```json
+{ "success": false, "error": "Event is not active (status=draft)" }
+```
+
+Erros possíveis:
+- Event not found for tenant
+- Event is not active
+- Event has not started yet
+- Event already ended
+
+**Implementação no api_cls.php (pseudocódigo):**
+
+```php
+// recebe JSON, valida x-sync-secret do tenant (igual aos outros endpoints)
+// chama: POST {SUPABASE_URL}/rest/v1/rpc/register_ingame_participation
+// headers: apikey + Authorization: Bearer {SERVICE_ROLE_KEY}
+// body: { _event_id, _tenant_id, _roleid, _role_name, _userid, _metadata }
+```
+
+**Nota:** A função RPC já existe no Supabase. Só falta o endpoint
+PHP fazer a ponte. Enquanto não existir, o painel mostra o evento
+mas nenhuma participação chega ingame.

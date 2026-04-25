@@ -1,64 +1,67 @@
-// Tipos e helpers do módulo Sorteios (Eventos > Sorteios).
+// Tipos e helpers do módulo Eventos Ingame.
 //
-// Reaproveita o conceito de payload misto (itens + gold) já usado nos
-// kits/templates de mail. Mantém o nome `reward_payload_json` por
-// alinhamento com a especificação do produto (campo no banco).
+// Conceito: o admin configura/monitora pelo painel; a participação do
+// player acontece dentro do jogo (NPC chama a VPS, VPS chama o Supabase).
+// A entrega de prêmio reusa sendMailItem/sendMailGold via mail_send_log.
 import type { MailItemAttachment } from "@/lib/pwApiActions";
 
-export type RaffleStatus = "draft" | "active" | "closed";
-export type RaffleDeliveryStatus =
+export type IngameEventStatus = "draft" | "active" | "closed";
+export type IngameEventType = "ingame_generic";
+export type IngameRewardMode = "all_participants" | "raffle_winners";
+export type IngameParticipationSource = "npc" | "manual" | "import";
+export type IngameDeliveryStatus =
   | "pending"
   | "sent"
   | "error"
   | "duplicate_blocked";
-export type RaffleParticipantSource = "manual" | "import" | "auto";
 
 /** Item incluído no prêmio. Espelha o shape esperado por sendMailItem. */
-export interface RaffleRewardItem extends MailItemAttachment {
-  /** Nome do item (snapshot p/ exibir no preview/histórico). */
+export interface IngameRewardItem extends MailItemAttachment {
   item_name?: string;
   icon_path?: string;
 }
 
-export interface RaffleRewardPayload {
-  /** Lista de itens (pode ser vazia se for só gold). */
-  items: RaffleRewardItem[];
+export interface IngameRewardPayload {
+  items: IngameRewardItem[];
   /** Total em moedas de cobre. 0 = sem gold. */
   gold: number;
 }
 
-export interface RaffleEvent {
+export interface IngameEvent {
   id: string;
   tenant_id: string;
   name: string;
   description: string | null;
-  status: RaffleStatus;
+  event_type: IngameEventType;
+  status: IngameEventStatus;
   starts_at: string | null;
   ends_at: string | null;
+  reward_mode: IngameRewardMode;
   winners_count: number;
   reward_title: string | null;
   reward_message: string | null;
-  reward_payload_json: RaffleRewardPayload;
+  reward_payload_json: IngameRewardPayload;
   created_by: string;
   created_at: string;
   updated_at: string;
 }
 
-export interface RaffleParticipant {
+export interface IngameParticipation {
   id: string;
-  raffle_id: string;
+  event_id: string;
   tenant_id: string;
   roleid: number;
   role_name: string | null;
   userid: number | null;
-  source: RaffleParticipantSource;
-  added_by: string;
+  source: IngameParticipationSource;
+  added_by: string | null;
+  metadata: unknown;
   created_at: string;
 }
 
-export interface RaffleWinner {
+export interface IngameWinner {
   id: string;
-  raffle_id: string;
+  event_id: string;
   tenant_id: string;
   roleid: number;
   role_name: string | null;
@@ -67,16 +70,16 @@ export interface RaffleWinner {
   drawn_at: string;
 }
 
-export interface RaffleRewardDelivery {
+export interface IngameRewardDelivery {
   id: string;
-  raffle_id: string;
+  event_id: string;
   tenant_id: string;
   roleid: number;
   role_name: string | null;
   userid: number | null;
-  reward_payload_json: RaffleRewardPayload;
+  reward_payload_json: IngameRewardPayload;
   idempotency_key: string;
-  status: RaffleDeliveryStatus;
+  status: IngameDeliveryStatus;
   mail_log_ids: string[];
   response_json: unknown;
   error_message: string | null;
@@ -87,11 +90,10 @@ export interface RaffleRewardDelivery {
 }
 
 /* -------------------------------------------------------------------------- */
-/* Helpers de validação / formatação                                          */
+/* Labels PT-BR                                                                */
 /* -------------------------------------------------------------------------- */
 
-/** Mapeia o status para um rótulo PT-BR. */
-export function raffleStatusLabel(s: RaffleStatus): string {
+export function ingameStatusLabel(s: IngameEventStatus): string {
   switch (s) {
     case "draft":
       return "Rascunho";
@@ -102,7 +104,27 @@ export function raffleStatusLabel(s: RaffleStatus): string {
   }
 }
 
-export function deliveryStatusLabel(s: RaffleDeliveryStatus): string {
+export function ingameRewardModeLabel(m: IngameRewardMode): string {
+  switch (m) {
+    case "all_participants":
+      return "Todos os participantes";
+    case "raffle_winners":
+      return "Sortear vencedores";
+  }
+}
+
+export function ingameSourceLabel(s: IngameParticipationSource): string {
+  switch (s) {
+    case "npc":
+      return "NPC (ingame)";
+    case "manual":
+      return "Manual";
+    case "import":
+      return "Importação";
+  }
+}
+
+export function ingameDeliveryStatusLabel(s: IngameDeliveryStatus): string {
   switch (s) {
     case "pending":
       return "Pendente";
@@ -115,13 +137,16 @@ export function deliveryStatusLabel(s: RaffleDeliveryStatus): string {
   }
 }
 
-/** Normaliza um payload vindo do banco para o shape tipado. */
-export function normalizeRewardPayload(input: unknown): RaffleRewardPayload {
-  const fallback: RaffleRewardPayload = { items: [], gold: 0 };
+/* -------------------------------------------------------------------------- */
+/* Reward payload                                                              */
+/* -------------------------------------------------------------------------- */
+
+export function normalizeRewardPayload(input: unknown): IngameRewardPayload {
+  const fallback: IngameRewardPayload = { items: [], gold: 0 };
   if (!input || typeof input !== "object") return fallback;
   const o = input as Record<string, unknown>;
   const itemsRaw = Array.isArray(o.items) ? o.items : [];
-  const items: RaffleRewardItem[] = [];
+  const items: IngameRewardItem[] = [];
   for (const raw of itemsRaw) {
     if (!raw || typeof raw !== "object") continue;
     const r = raw as Record<string, unknown>;
@@ -143,23 +168,19 @@ export function normalizeRewardPayload(input: unknown): RaffleRewardPayload {
       icon_path: typeof r.icon_path === "string" ? r.icon_path : undefined,
     });
   }
-  const gold = typeof o.gold === "number" && Number.isFinite(o.gold) && o.gold > 0
-    ? Math.floor(o.gold)
-    : 0;
+  const gold =
+    typeof o.gold === "number" && Number.isFinite(o.gold) && o.gold > 0
+      ? Math.floor(o.gold)
+      : 0;
   return { items, gold };
 }
 
-/** Validação leve: precisa ter pelo menos 1 item OU gold > 0. */
-export function isRewardPayloadValid(p: RaffleRewardPayload): boolean {
+export function isRewardPayloadValid(p: IngameRewardPayload): boolean {
   return p.items.length > 0 || p.gold > 0;
 }
 
-/**
- * Hash determinístico do payload de prêmio. Usado como parte da
- * idempotency_key da entrega (raffle_id + roleid + reward_hash).
- * Não precisa ser criptográfico — só estável para o mesmo conteúdo.
- */
-export function rewardPayloadHash(p: RaffleRewardPayload): string {
+/** Hash determinístico e estável do payload (não criptográfico). */
+export function rewardPayloadHash(p: IngameRewardPayload): string {
   const items = [...p.items]
     .map((i) => ({
       item_id: i.item_id,
@@ -178,11 +199,11 @@ export function rewardPayloadHash(p: RaffleRewardPayload): string {
   return Math.abs(hash).toString(36);
 }
 
-/** Gera a idempotency_key padronizada. */
+/** Gera idempotency_key padronizada para a entrega de prêmio. */
 export function buildDeliveryKey(
-  raffleId: string,
+  eventId: string,
   roleid: number,
-  payload: RaffleRewardPayload,
+  payload: IngameRewardPayload,
 ): string {
-  return `${raffleId}:${roleid}:${rewardPayloadHash(payload)}`;
+  return `${eventId}:${roleid}:${rewardPayloadHash(payload)}`;
 }

@@ -23,15 +23,17 @@ interface EventModule {
 
 const MODULES: EventModule[] = [
   {
-    id: "sorteios",
-    title: "Sorteios",
-    description: "Sorteios pontuais com regras de elegibilidade e log público.",
+    id: "ingame",
+    title: "Eventos Ingame",
+    description:
+      "Eventos onde o player participa pelo NPC ingame. Admin configura, monitora e premia pelo painel.",
     icon: Gift,
-    to: "/admin/events/raffles",
+    to: "/admin/events/ingame",
     bullets: [
-      "Sorteio entre presentes ou entre todos",
-      "Janelas configuráveis",
-      "Auditoria do resultado",
+      "Player participa via NPC do servidor",
+      "Painel acompanha participantes",
+      "Premia todos ou sorteia vencedores",
+      "Entrega automática por correio",
     ],
   },
   {

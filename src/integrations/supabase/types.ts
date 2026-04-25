@@ -332,6 +332,245 @@ export type Database = {
         }
         Relationships: []
       }
+      ingame_events: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          ends_at: string | null
+          event_type: Database["public"]["Enums"]["ingame_event_type"]
+          id: string
+          name: string
+          reward_message: string | null
+          reward_mode: Database["public"]["Enums"]["ingame_reward_mode"]
+          reward_payload_json: Json
+          reward_title: string | null
+          starts_at: string | null
+          status: Database["public"]["Enums"]["ingame_event_status"]
+          tenant_id: string
+          updated_at: string
+          winners_count: number
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          ends_at?: string | null
+          event_type?: Database["public"]["Enums"]["ingame_event_type"]
+          id?: string
+          name: string
+          reward_message?: string | null
+          reward_mode?: Database["public"]["Enums"]["ingame_reward_mode"]
+          reward_payload_json?: Json
+          reward_title?: string | null
+          starts_at?: string | null
+          status?: Database["public"]["Enums"]["ingame_event_status"]
+          tenant_id: string
+          updated_at?: string
+          winners_count?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          ends_at?: string | null
+          event_type?: Database["public"]["Enums"]["ingame_event_type"]
+          id?: string
+          name?: string
+          reward_message?: string | null
+          reward_mode?: Database["public"]["Enums"]["ingame_reward_mode"]
+          reward_payload_json?: Json
+          reward_title?: string | null
+          starts_at?: string | null
+          status?: Database["public"]["Enums"]["ingame_event_status"]
+          tenant_id?: string
+          updated_at?: string
+          winners_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ingame_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ingame_participations: {
+        Row: {
+          added_by: string | null
+          created_at: string
+          event_id: string
+          id: string
+          metadata: Json | null
+          role_name: string | null
+          roleid: number
+          source: Database["public"]["Enums"]["ingame_participation_source"]
+          tenant_id: string
+          userid: number | null
+        }
+        Insert: {
+          added_by?: string | null
+          created_at?: string
+          event_id: string
+          id?: string
+          metadata?: Json | null
+          role_name?: string | null
+          roleid: number
+          source?: Database["public"]["Enums"]["ingame_participation_source"]
+          tenant_id: string
+          userid?: number | null
+        }
+        Update: {
+          added_by?: string | null
+          created_at?: string
+          event_id?: string
+          id?: string
+          metadata?: Json | null
+          role_name?: string | null
+          roleid?: number
+          source?: Database["public"]["Enums"]["ingame_participation_source"]
+          tenant_id?: string
+          userid?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ingame_participations_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "ingame_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ingame_participations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ingame_reward_deliveries: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          event_id: string
+          id: string
+          idempotency_key: string
+          mail_log_ids: string[]
+          response_json: Json | null
+          reward_payload_json: Json
+          role_name: string | null
+          roleid: number
+          sent_at: string | null
+          sent_by: string
+          status: Database["public"]["Enums"]["ingame_delivery_status"]
+          tenant_id: string
+          updated_at: string
+          userid: number | null
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          event_id: string
+          id?: string
+          idempotency_key: string
+          mail_log_ids?: string[]
+          response_json?: Json | null
+          reward_payload_json: Json
+          role_name?: string | null
+          roleid: number
+          sent_at?: string | null
+          sent_by: string
+          status?: Database["public"]["Enums"]["ingame_delivery_status"]
+          tenant_id: string
+          updated_at?: string
+          userid?: number | null
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          event_id?: string
+          id?: string
+          idempotency_key?: string
+          mail_log_ids?: string[]
+          response_json?: Json | null
+          reward_payload_json?: Json
+          role_name?: string | null
+          roleid?: number
+          sent_at?: string | null
+          sent_by?: string
+          status?: Database["public"]["Enums"]["ingame_delivery_status"]
+          tenant_id?: string
+          updated_at?: string
+          userid?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ingame_reward_deliveries_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "ingame_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ingame_reward_deliveries_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ingame_winners: {
+        Row: {
+          drawn_at: string
+          drawn_by: string
+          event_id: string
+          id: string
+          role_name: string | null
+          roleid: number
+          tenant_id: string
+          userid: number | null
+        }
+        Insert: {
+          drawn_at?: string
+          drawn_by: string
+          event_id: string
+          id?: string
+          role_name?: string | null
+          roleid: number
+          tenant_id: string
+          userid?: number | null
+        }
+        Update: {
+          drawn_at?: string
+          drawn_by?: string
+          event_id?: string
+          id?: string
+          role_name?: string | null
+          roleid?: number
+          tenant_id?: string
+          userid?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ingame_winners_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "ingame_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ingame_winners_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       initial_kits: {
         Row: {
           created_at: string
@@ -568,236 +807,6 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "mail_templates_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      raffle_events: {
-        Row: {
-          created_at: string
-          created_by: string
-          description: string | null
-          ends_at: string | null
-          id: string
-          name: string
-          reward_message: string | null
-          reward_payload_json: Json
-          reward_title: string | null
-          starts_at: string | null
-          status: Database["public"]["Enums"]["raffle_status"]
-          tenant_id: string
-          updated_at: string
-          winners_count: number
-        }
-        Insert: {
-          created_at?: string
-          created_by: string
-          description?: string | null
-          ends_at?: string | null
-          id?: string
-          name: string
-          reward_message?: string | null
-          reward_payload_json?: Json
-          reward_title?: string | null
-          starts_at?: string | null
-          status?: Database["public"]["Enums"]["raffle_status"]
-          tenant_id: string
-          updated_at?: string
-          winners_count?: number
-        }
-        Update: {
-          created_at?: string
-          created_by?: string
-          description?: string | null
-          ends_at?: string | null
-          id?: string
-          name?: string
-          reward_message?: string | null
-          reward_payload_json?: Json
-          reward_title?: string | null
-          starts_at?: string | null
-          status?: Database["public"]["Enums"]["raffle_status"]
-          tenant_id?: string
-          updated_at?: string
-          winners_count?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "raffle_events_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      raffle_participants: {
-        Row: {
-          added_by: string
-          created_at: string
-          id: string
-          raffle_id: string
-          role_name: string | null
-          roleid: number
-          source: Database["public"]["Enums"]["raffle_participant_source"]
-          tenant_id: string
-          userid: number | null
-        }
-        Insert: {
-          added_by: string
-          created_at?: string
-          id?: string
-          raffle_id: string
-          role_name?: string | null
-          roleid: number
-          source?: Database["public"]["Enums"]["raffle_participant_source"]
-          tenant_id: string
-          userid?: number | null
-        }
-        Update: {
-          added_by?: string
-          created_at?: string
-          id?: string
-          raffle_id?: string
-          role_name?: string | null
-          roleid?: number
-          source?: Database["public"]["Enums"]["raffle_participant_source"]
-          tenant_id?: string
-          userid?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "raffle_participants_raffle_id_fkey"
-            columns: ["raffle_id"]
-            isOneToOne: false
-            referencedRelation: "raffle_events"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "raffle_participants_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      raffle_reward_deliveries: {
-        Row: {
-          created_at: string
-          error_message: string | null
-          id: string
-          idempotency_key: string
-          mail_log_ids: string[]
-          raffle_id: string
-          response_json: Json | null
-          reward_payload_json: Json
-          role_name: string | null
-          roleid: number
-          sent_at: string | null
-          sent_by: string
-          status: Database["public"]["Enums"]["raffle_delivery_status"]
-          tenant_id: string
-          updated_at: string
-          userid: number | null
-        }
-        Insert: {
-          created_at?: string
-          error_message?: string | null
-          id?: string
-          idempotency_key: string
-          mail_log_ids?: string[]
-          raffle_id: string
-          response_json?: Json | null
-          reward_payload_json: Json
-          role_name?: string | null
-          roleid: number
-          sent_at?: string | null
-          sent_by: string
-          status?: Database["public"]["Enums"]["raffle_delivery_status"]
-          tenant_id: string
-          updated_at?: string
-          userid?: number | null
-        }
-        Update: {
-          created_at?: string
-          error_message?: string | null
-          id?: string
-          idempotency_key?: string
-          mail_log_ids?: string[]
-          raffle_id?: string
-          response_json?: Json | null
-          reward_payload_json?: Json
-          role_name?: string | null
-          roleid?: number
-          sent_at?: string | null
-          sent_by?: string
-          status?: Database["public"]["Enums"]["raffle_delivery_status"]
-          tenant_id?: string
-          updated_at?: string
-          userid?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "raffle_reward_deliveries_raffle_id_fkey"
-            columns: ["raffle_id"]
-            isOneToOne: false
-            referencedRelation: "raffle_events"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "raffle_reward_deliveries_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      raffle_winners: {
-        Row: {
-          drawn_at: string
-          drawn_by: string
-          id: string
-          raffle_id: string
-          role_name: string | null
-          roleid: number
-          tenant_id: string
-          userid: number | null
-        }
-        Insert: {
-          drawn_at?: string
-          drawn_by: string
-          id?: string
-          raffle_id: string
-          role_name?: string | null
-          roleid: number
-          tenant_id: string
-          userid?: number | null
-        }
-        Update: {
-          drawn_at?: string
-          drawn_by?: string
-          id?: string
-          raffle_id?: string
-          role_name?: string | null
-          roleid?: number
-          tenant_id?: string
-          userid?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "raffle_winners_raffle_id_fkey"
-            columns: ["raffle_id"]
-            isOneToOne: false
-            referencedRelation: "raffle_events"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "raffle_winners_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -1137,6 +1146,17 @@ export type Database = {
         }
         Returns: string
       }
+      register_ingame_participation: {
+        Args: {
+          _event_id: string
+          _metadata?: Json
+          _role_name?: string
+          _roleid: number
+          _tenant_id: string
+          _userid?: number
+        }
+        Returns: Json
+      }
       set_active_tenant: {
         Args: { target_tenant_id: string }
         Returns: undefined
@@ -1150,10 +1170,12 @@ export type Database = {
         | "sent"
         | "error"
         | "duplicate_blocked"
+      ingame_delivery_status: "pending" | "sent" | "error" | "duplicate_blocked"
+      ingame_event_status: "draft" | "active" | "closed"
+      ingame_event_type: "ingame_generic"
+      ingame_participation_source: "npc" | "manual" | "import"
+      ingame_reward_mode: "all_participants" | "raffle_winners"
       invite_status: "pending" | "accepted" | "revoked" | "expired"
-      raffle_delivery_status: "pending" | "sent" | "error" | "duplicate_blocked"
-      raffle_participant_source: "manual" | "import" | "auto"
-      raffle_status: "draft" | "active" | "closed"
       server_role: "owner" | "admin" | "editor" | "readonly"
     }
     CompositeTypes: {
@@ -1289,10 +1311,12 @@ export const Constants = {
         "error",
         "duplicate_blocked",
       ],
+      ingame_delivery_status: ["pending", "sent", "error", "duplicate_blocked"],
+      ingame_event_status: ["draft", "active", "closed"],
+      ingame_event_type: ["ingame_generic"],
+      ingame_participation_source: ["npc", "manual", "import"],
+      ingame_reward_mode: ["all_participants", "raffle_winners"],
       invite_status: ["pending", "accepted", "revoked", "expired"],
-      raffle_delivery_status: ["pending", "sent", "error", "duplicate_blocked"],
-      raffle_participant_source: ["manual", "import", "auto"],
-      raffle_status: ["draft", "active", "closed"],
       server_role: ["owner", "admin", "editor", "readonly"],
     },
   },
