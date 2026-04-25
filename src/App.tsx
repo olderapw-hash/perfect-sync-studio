@@ -38,7 +38,7 @@ import MailPage from "./pages/admin/MailPage.tsx";
 import MailTemplatesPage from "./pages/admin/MailTemplatesPage.tsx";
 import MailHistoryPage from "./pages/admin/MailHistoryPage.tsx";
 import EventsPage from "./pages/admin/EventsPage.tsx";
-import RafflesPage from "./pages/admin/RafflesPage.tsx";
+import IngameEventsPage from "./pages/admin/IngameEventsPage.tsx";
 import ServerOpsPage from "./pages/admin/ServerOpsPage.tsx";
 import ServerLogsPage from "./pages/admin/ServerLogsPage.tsx";
 import ServerActionsPage from "./pages/admin/ServerActionsPage.tsx";
@@ -105,7 +105,7 @@ const App = () => (
 
                     {/* Eventos */}
                     <Route path="events" element={<EventsPage />} />
-                    <Route path="events/raffles" element={<RafflesPage />} />
+                    <Route path="events/ingame" element={<IngameEventsPage />} />
 
                     {/* Operação do Servidor v1 (status / logs / export) */}
                     <Route path="server" element={<ServerOpsPage />}>

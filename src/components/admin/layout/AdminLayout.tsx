@@ -129,7 +129,7 @@ const SECTIONS: NavSection[] = [
     proInTrial: true,
     children: [
       { to: "/admin/events", label: "Visão geral", end: true },
-      { to: "/admin/events/raffles", label: "Sorteios" },
+      { to: "/admin/events/ingame", label: "Eventos ingame" },
     ],
   },
   {
