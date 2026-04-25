@@ -482,7 +482,15 @@ const RaffleCard = ({
 /* Painel de detalhes                                                         */
 /* -------------------------------------------------------------------------- */
 
-const RaffleDetailsPanel = ({ raffle }: { raffle: RaffleEvent }) => {
+const RaffleDetailsPanel = ({
+  raffle,
+  canManage,
+  tenantId,
+}: {
+  raffle: RaffleEvent;
+  canManage: boolean;
+  tenantId: string;
+}) => {
   const { metaFor } = useItemCatalog();
   const items = raffle.reward_payload_json.items;
   const gold = raffle.reward_payload_json.gold;
