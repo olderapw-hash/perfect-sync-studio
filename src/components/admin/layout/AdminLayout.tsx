@@ -127,9 +127,9 @@ const SECTIONS: NavSection[] = [
     icon: CalendarDays,
     basePath: "/admin/events",
     proInTrial: true,
-    comingSoon: true,
     children: [
       { to: "/admin/events", label: "Visão geral", end: true },
+      { to: "/admin/events/raffles", label: "Sorteios" },
     ],
   },
   {
