@@ -162,6 +162,35 @@ send_mail_lua     = /home/gdeliveryd/script/send_mail.lua
 deliveryd_console = /home/gdeliveryd/gdeliveryd
 ```
 
+### Eventos ingame — registerIngameParticipation
+
+O NPC/script ingame chama o `api_cls.php`, que repassa para o Supabase
+via RPC `register_ingame_participation`. **Antes de testar**, edite o
+`/var/www/html/apicls/api_cls.php` e preencha:
+
+```php
+'ingame_enabled'             => true,
+'supabase_url'               => 'https://SEU_PROJ.supabase.co',
+'supabase_service_role_key'  => 'eyJhbGciOi...', // service role, NUNCA expor publicamente
+'ingame_default_tenant_id'   => 'uuid-do-servidor', // opcional
+```
+
+Teste manual:
+
+```bash
+curl -s -X POST -H "x-sync-secret: SEU_SECRET" -H "Content-Type: application/json" \
+  -d '{"event_id":"UUID-DO-EVENTO","roleid":1024,"role_name":"Foo","npc_id":4001}' \
+  "http://127.0.0.1/apicls/api_cls.php?action=registerIngameParticipation"
+```
+
+Resposta esperada (sucesso):
+
+```json
+{"success":true,"status":"registered","message":"Participacao registrada com sucesso","id":"uuid","duplicate":false}
+```
+
+Logs em `/var/www/html/apicls/backups/ingame-logs/YYYY-MM-DD.log`.
+
 ## Cadastro no painel
 
 No PW Admin:

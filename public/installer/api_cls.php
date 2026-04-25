@@ -52,6 +52,23 @@ $CONFIG = [
     'mail_send_max_count'       => 9999,
     'mail_send_max_amount'      => 2000000000,
     'mail_send_log_dir'         => __DIR__ . '/backups/mail-logs',
+
+    // === Eventos ingame (registerIngameParticipation) ===
+    // Ponte NPC -> VPS -> Supabase. O NPC NUNCA fala direto com o Supabase:
+    // ele chama este api_cls.php, que aqui repassa para a RPC
+    // `register_ingame_participation` usando a service_role key do Supabase.
+    //
+    // PREENCHA com os dados do seu projeto PW Admin (Lovable Cloud):
+    //   supabase_url               -> ex: https://abcd1234.supabase.co
+    //   supabase_service_role_key  -> service role key do projeto (NUNCA expor publicamente)
+    //   ingame_default_tenant_id   -> uuid do servidor cadastrado no painel
+    //                                 (usado quando o NPC nao envia tenant_id)
+    'ingame_enabled'              => true,
+    'supabase_url'                => '',
+    'supabase_service_role_key'   => '',
+    'ingame_default_tenant_id'    => '',
+    'ingame_log_dir'              => __DIR__ . '/backups/ingame-logs',
+    'ingame_request_timeout'      => 8,
 ];
 
 $CULTIVATION_MAP = [
@@ -4098,6 +4115,191 @@ function respondJson($payload, $status = 200)
     echo $json;
 }
 
+/**
+ * registerIngameParticipation
+ * --------------------------------------------------------------
+ * Recebe payload do NPC/script ingame e repassa para a RPC
+ * `register_ingame_participation` no Supabase (Lovable Cloud).
+ *
+ * Payload aceito (JSON ou form):
+ *   - event_id      (uuid)   OU event_code (alias do mesmo uuid)  [obrigatorio]
+ *   - tenant_id     (uuid)   [opcional - default ingame_default_tenant_id]
+ *   - roleid        (int)    [obrigatorio]
+ *   - role_name     (string) [opcional]
+ *   - userid        (int)    [opcional]
+ *   - npc_id        (int)    [opcional - vai pro metadata]
+ *   - map_id        (int)    [opcional - vai pro metadata]
+ *   - source        (string) [opcional - rotulo no metadata]
+ *
+ * Resposta:
+ *   { success, status, message, id?, duplicate? }
+ *   status in: registered | duplicate | not_found | not_active
+ *            | unauthorized | invalid_payload | upstream_error
+ */
+function registerIngameParticipationHandler(array $config)
+{
+    if (empty($config['ingame_enabled'])) {
+        return [
+            'http' => 503,
+            'body' => [
+                'success' => false,
+                'status'  => 'upstream_error',
+                'message' => 'Endpoint ingame desativado em $CONFIG[ingame_enabled]',
+            ],
+        ];
+    }
+
+    $url  = isset($config['supabase_url']) ? trim((string)$config['supabase_url']) : '';
+    $skey = isset($config['supabase_service_role_key']) ? trim((string)$config['supabase_service_role_key']) : '';
+    if ($url === '' || $skey === '') {
+        return [
+            'http' => 500,
+            'body' => [
+                'success' => false,
+                'status'  => 'upstream_error',
+                'message' => 'supabase_url ou supabase_service_role_key nao configurados em api_cls.php',
+            ],
+        ];
+    }
+
+    $request = readRequestPayload();
+
+    // event_id / event_code (uuid). Aceita ambos.
+    $eventId = '';
+    if (isset($request['event_id']) && is_string($request['event_id'])) {
+        $eventId = trim($request['event_id']);
+    } elseif (isset($request['event_code']) && is_string($request['event_code'])) {
+        $eventId = trim($request['event_code']);
+    }
+
+    $tenantId = isset($request['tenant_id']) && is_string($request['tenant_id'])
+        ? trim($request['tenant_id'])
+        : (string)($config['ingame_default_tenant_id'] ?? '');
+
+    $roleid   = isset($request['roleid']) ? intval($request['roleid']) : 0;
+    $roleName = isset($request['role_name']) ? (string)$request['role_name'] : null;
+    $userid   = isset($request['userid']) ? intval($request['userid']) : 0;
+
+    if ($eventId === '' || $tenantId === '' || $roleid <= 0) {
+        return [
+            'http' => 400,
+            'body' => [
+                'success' => false,
+                'status'  => 'invalid_payload',
+                'message' => 'event_id (ou event_code), tenant_id e roleid sao obrigatorios',
+            ],
+        ];
+    }
+
+    // Metadata opcional (npc_id, map_id, source)
+    $metadata = [];
+    if (isset($request['npc_id'])) { $metadata['npc_id'] = intval($request['npc_id']); }
+    if (isset($request['map_id'])) { $metadata['map_id'] = intval($request['map_id']); }
+    if (isset($request['source'])) { $metadata['source_label'] = (string)$request['source']; }
+
+    $rpcUrl = rtrim($url, '/') . '/rest/v1/rpc/register_ingame_participation';
+    $body = [
+        '_event_id'  => $eventId,
+        '_tenant_id' => $tenantId,
+        '_roleid'    => $roleid,
+        '_role_name' => $roleName,
+        '_userid'    => $userid > 0 ? $userid : null,
+        '_metadata'  => empty($metadata) ? null : $metadata,
+    ];
+    $bodyJson = json_encode($body, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+    $ch = curl_init($rpcUrl);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST           => true,
+        CURLOPT_POSTFIELDS     => $bodyJson,
+        CURLOPT_TIMEOUT        => intval($config['ingame_request_timeout'] ?? 8),
+        CURLOPT_HTTPHEADER     => [
+            'Content-Type: application/json',
+            'Accept: application/json',
+            'apikey: ' . $skey,
+            'Authorization: Bearer ' . $skey,
+        ],
+    ]);
+    $rawResponse = curl_exec($ch);
+    $httpCode    = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlErr     = curl_error($ch);
+    curl_close($ch);
+
+    // Log best-effort (nao quebra fluxo)
+    if (!empty($config['ingame_log_dir'])) {
+        @mkdir($config['ingame_log_dir'], 0775, true);
+        $logFile = rtrim($config['ingame_log_dir'], '/') . '/' . date('Y-m-d') . '.log';
+        $logLine = sprintf(
+            "[%s] roleid=%d event=%s tenant=%s http=%d resp=%s\n",
+            date('c'),
+            $roleid,
+            $eventId,
+            $tenantId,
+            $httpCode,
+            is_string($rawResponse) ? substr($rawResponse, 0, 500) : 'null'
+        );
+        @file_put_contents($logFile, $logLine, FILE_APPEND);
+    }
+
+    if ($rawResponse === false) {
+        return [
+            'http' => 502,
+            'body' => [
+                'success' => false,
+                'status'  => 'upstream_error',
+                'message' => 'Falha ao contatar Supabase: ' . $curlErr,
+            ],
+        ];
+    }
+
+    $decoded = json_decode($rawResponse, true);
+
+    // Erro do PostgREST/RPC: { message, code, details, hint }
+    if ($httpCode >= 400 || !is_array($decoded)) {
+        $msg = is_array($decoded) && isset($decoded['message'])
+            ? (string)$decoded['message']
+            : (is_string($rawResponse) ? substr($rawResponse, 0, 300) : 'erro desconhecido');
+
+        $status = 'upstream_error';
+        $lower  = strtolower($msg);
+        if ($httpCode === 401 || $httpCode === 403) {
+            $status = 'unauthorized';
+        } elseif (strpos($lower, 'event not found') !== false) {
+            $status = 'not_found';
+        } elseif (strpos($lower, 'not active') !== false
+                || strpos($lower, 'has not started') !== false
+                || strpos($lower, 'already ended') !== false) {
+            $status = 'not_active';
+        }
+
+        return [
+            'http' => $httpCode >= 400 ? $httpCode : 502,
+            'body' => [
+                'success' => false,
+                'status'  => $status,
+                'message' => $msg,
+            ],
+        ];
+    }
+
+    // Sucesso: { id, duplicate }
+    $duplicate = !empty($decoded['duplicate']);
+    return [
+        'http' => 200,
+        'body' => [
+            'success'   => true,
+            'status'    => $duplicate ? 'duplicate' : 'registered',
+            'message'   => $duplicate
+                ? 'Participacao ja registrada anteriormente'
+                : 'Participacao registrada com sucesso',
+            'id'        => isset($decoded['id']) ? $decoded['id'] : null,
+            'duplicate' => $duplicate,
+        ],
+    ];
+}
+
+
 /* ============================================================
  * Operação do Servidor v1 — getServiceStatus / getServerLogs
  * Apenas LEITURA: pgrep + tail. Sem start/stop/kill.
@@ -4812,9 +5014,22 @@ if (php_sapi_name() !== 'cli' || isset($_GET['action'])) {
             }
             break;
 
+        case 'registerIngameParticipation':
+            try {
+                $result = registerIngameParticipationHandler($CONFIG);
+                respondJson($result['body'], $result['http']);
+            } catch (Exception $e) {
+                respondJson([
+                    'success' => false,
+                    'status'  => 'upstream_error',
+                    'message' => $e->getMessage(),
+                ], 500);
+            }
+            break;
+
         default:
             respondJson([
-                'error' => 'Acao invalida. Use: getRole, getRoles, getRoleEditable, getRolesEditable, getClasses, getClsconfig, getClsconfigDebug, getItemCatalog, listBackups, backupGamedbd, getBackupContent, restoreBackup, exportClsconfig, saveRoleEditable, saveClsconfigTemplate, sendMailItem, sendMailGold, getServiceStatus, getServerLogs',
+                'error' => 'Acao invalida. Use: getRole, getRoles, getRoleEditable, getRolesEditable, getClasses, getClsconfig, getClsconfigDebug, getItemCatalog, listBackups, backupGamedbd, getBackupContent, restoreBackup, exportClsconfig, saveRoleEditable, saveClsconfigTemplate, sendMailItem, sendMailGold, getServiceStatus, getServerLogs, registerIngameParticipation',
             ], 400);
             break;
     }
