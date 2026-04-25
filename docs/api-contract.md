@@ -325,13 +325,24 @@ botão desabilitado com a mensagem **"endpoint ainda não implementado"**.
 
 ---
 
-## 4. `POST ?action=registerIngameParticipation` — Eventos Ingame (Fase 1)
+## 7. `POST ?action=registerIngameParticipation` — Eventos Ingame (Fase 1) ✅ implementado
 
 Endpoint chamado pelo **NPC/script do servidor PW** para registrar a
 participação de um player em um evento ingame configurado no painel.
 
-A VPS valida o `x-sync-secret` do tenant e repassa para o Supabase via
-RPC `register_ingame_participation` usando o `SERVICE_ROLE` key.
+O `api_cls.php` valida o `x-sync-secret` do tenant, valida o payload
+mínimo e repassa para a RPC `register_ingame_participation` no Supabase
+usando a `SERVICE_ROLE` key. **O NPC NUNCA fala direto com o Supabase
+nesta fase.**
+
+**Configuração obrigatória no `api_cls.php`:**
+
+```php
+'ingame_enabled'             => true,
+'supabase_url'               => 'https://SEU_PROJ.supabase.co',
+'supabase_service_role_key'  => 'eyJhbGciOi...',  // service_role
+'ingame_default_tenant_id'   => 'uuid-do-servidor', // opcional
+```
 
 **Request:**
 
@@ -341,46 +352,73 @@ RPC `register_ingame_participation` usando o `SERVICE_ROLE` key.
   "tenant_id": "uuid-do-servidor",
   "roleid": 12345,
   "role_name": "PlayerName",
-  "userid": 67890
+  "userid": 67890,
+  "npc_id": 4001,
+  "map_id": 1,
+  "source": "npc"
 }
 ```
 
-Campos obrigatórios: `event_id`, `tenant_id`, `roleid`.
-Campos opcionais: `role_name`, `userid`.
+Campos obrigatórios: `event_id` (ou `event_code` como alias), `roleid`.
+`tenant_id` é obrigatório se `ingame_default_tenant_id` não estiver
+configurado no PHP. Demais campos são opcionais — `npc_id`, `map_id` e
+`source` viram `metadata` do registro.
 
-**Response 200 (sucesso):**
+**Response 200 (registrado):**
 
 ```json
-{ "success": true, "id": "uuid-da-participacao", "duplicate": false }
+{
+  "success": true,
+  "status": "registered",
+  "message": "Participacao registrada com sucesso",
+  "id": "uuid-da-participacao",
+  "duplicate": false
+}
 ```
 
 **Response 200 (duplicidade — silenciosa, não é erro):**
 
 ```json
-{ "success": true, "id": "uuid-existente", "duplicate": true }
+{
+  "success": true,
+  "status": "duplicate",
+  "message": "Participacao ja registrada anteriormente",
+  "id": "uuid-existente",
+  "duplicate": true
+}
 ```
 
-**Response 4xx (erro):**
+**Response 4xx/5xx (erro):**
 
 ```json
-{ "success": false, "error": "Event is not active (status=draft)" }
+{
+  "success": false,
+  "status": "not_active",
+  "message": "Event is not active (status=draft)"
+}
 ```
 
-Erros possíveis:
-- Event not found for tenant
-- Event is not active
-- Event has not started yet
-- Event already ended
+Possíveis valores de `status`:
 
-**Implementação no api_cls.php (pseudocódigo):**
+| status            | HTTP   | Significado                                              |
+|-------------------|--------|----------------------------------------------------------|
+| `registered`      | 200    | Nova participação criada                                 |
+| `duplicate`       | 200    | Já existia participação para esse `event_id + roleid`    |
+| `not_found`       | 4xx    | Evento não encontrado para o tenant                      |
+| `not_active`      | 4xx    | Evento não está `active` ou fora da janela de tempo      |
+| `unauthorized`    | 401/403| Service role inválida ou sem acesso à RPC                |
+| `invalid_payload` | 400    | `event_id`, `tenant_id` ou `roleid` ausentes/inválidos   |
+| `upstream_error`  | 5xx    | Falha de rede / Supabase fora / config faltando no PHP   |
 
-```php
-// recebe JSON, valida x-sync-secret do tenant (igual aos outros endpoints)
-// chama: POST {SUPABASE_URL}/rest/v1/rpc/register_ingame_participation
-// headers: apikey + Authorization: Bearer {SERVICE_ROLE_KEY}
-// body: { _event_id, _tenant_id, _roleid, _role_name, _userid, _metadata }
+**Logs:** cada chamada gera 1 linha em
+`/var/www/html/apicls/backups/ingame-logs/YYYY-MM-DD.log` para auditoria
+local na VPS, independente do log no Supabase.
+
+**Exemplo de chamada do NPC (curl equivalente):**
+
+```bash
+curl -s -X POST -H "x-sync-secret: SEU_SECRET" -H "Content-Type: application/json" \
+  -d '{"event_id":"UUID","roleid":1024,"role_name":"Foo","npc_id":4001}' \
+  "http://IP_DA_VPS/apicls/api_cls.php?action=registerIngameParticipation"
 ```
 
-**Nota:** A função RPC já existe no Supabase. Só falta o endpoint
-PHP fazer a ponte. Enquanto não existir, o painel mostra o evento
-mas nenhuma participação chega ingame.
