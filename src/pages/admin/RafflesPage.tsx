@@ -62,6 +62,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useServers } from "@/hooks/useServers";
 import { useServerPermissions } from "@/hooks/useServerPermissions";
 import { useRaffles, type CreateRaffleInput } from "@/hooks/useRaffles";
+import { useRaffleParticipants } from "@/hooks/useRaffleParticipants";
 import { useItemCatalog } from "@/context/ItemCatalogContext";
 import { NoActiveServerState } from "@/components/admin/NoActiveServerState";
 import { formatGold } from "@/lib/mailTemplates";
