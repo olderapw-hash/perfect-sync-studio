@@ -272,7 +272,7 @@ const RafflesPage = () => {
           {/* Painel lateral */}
           <aside className="lg:sticky lg:top-4 lg:h-[calc(100vh-7rem)] lg:overflow-y-auto">
             {selected ? (
-              <RaffleDetailsPanel raffle={selected} />
+              <RaffleDetailsPanel raffle={selected} canManage={canManage} tenantId={tenantId} />
             ) : (
               <div className="rounded-2xl border border-dashed border-border bg-card/20 p-6 text-center text-xs text-muted-foreground">
                 Selecione um sorteio para ver os detalhes.
