@@ -27,7 +27,7 @@ const MODULES: EventModule[] = [
     title: "Sorteios",
     description: "Sorteios pontuais com regras de elegibilidade e log público.",
     icon: Gift,
-    comingSoon: true,
+    to: "/admin/events/raffles",
     bullets: [
       "Sorteio entre presentes ou entre todos",
       "Janelas configuráveis",
