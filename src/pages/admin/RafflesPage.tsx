@@ -19,6 +19,7 @@ import {
   CalendarClock,
   CheckCircle2,
   Coins,
+  Dices,
   Gift,
   Loader2,
   Lock,
@@ -26,10 +27,12 @@ import {
   Pencil,
   Play,
   Plus,
+  RotateCw,
   Search,
   Square,
   Trash2,
   Trophy,
+  UserPlus,
   Users,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -59,6 +62,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useServers } from "@/hooks/useServers";
 import { useServerPermissions } from "@/hooks/useServerPermissions";
 import { useRaffles, type CreateRaffleInput } from "@/hooks/useRaffles";
+import { useRaffleParticipants } from "@/hooks/useRaffleParticipants";
 import { useItemCatalog } from "@/context/ItemCatalogContext";
 import { NoActiveServerState } from "@/components/admin/NoActiveServerState";
 import { formatGold } from "@/lib/mailTemplates";
@@ -66,6 +70,7 @@ import {
   isRewardPayloadValid,
   raffleStatusLabel,
   type RaffleEvent,
+  type RaffleParticipant,
   type RaffleRewardItem,
   type RaffleRewardPayload,
   type RaffleStatus,
@@ -268,7 +273,7 @@ const RafflesPage = () => {
           {/* Painel lateral */}
           <aside className="lg:sticky lg:top-4 lg:h-[calc(100vh-7rem)] lg:overflow-y-auto">
             {selected ? (
-              <RaffleDetailsPanel raffle={selected} />
+              <RaffleDetailsPanel raffle={selected} canManage={canManage} tenantId={tenantId} />
             ) : (
               <div className="rounded-2xl border border-dashed border-border bg-card/20 p-6 text-center text-xs text-muted-foreground">
                 Selecione um sorteio para ver os detalhes.
@@ -478,7 +483,15 @@ const RaffleCard = ({
 /* Painel de detalhes                                                         */
 /* -------------------------------------------------------------------------- */
 
-const RaffleDetailsPanel = ({ raffle }: { raffle: RaffleEvent }) => {
+const RaffleDetailsPanel = ({
+  raffle,
+  canManage,
+  tenantId,
+}: {
+  raffle: RaffleEvent;
+  canManage: boolean;
+  tenantId: string;
+}) => {
   const { metaFor } = useItemCatalog();
   const items = raffle.reward_payload_json.items;
   const gold = raffle.reward_payload_json.gold;
@@ -578,28 +591,483 @@ const RaffleDetailsPanel = ({ raffle }: { raffle: RaffleEvent }) => {
         )}
       </div>
 
-      {/* Roadmap das próximas fases */}
-      <div className="rounded-2xl border border-dashed border-border bg-card/20 p-4 text-[11px] text-muted-foreground">
-        <div className="flex items-center gap-2 text-foreground">
-          <Users className="h-3.5 w-3.5 text-primary" />
-          <span className="font-bold">Próximas fases</span>
-        </div>
-        <ul className="mt-2 space-y-1.5">
-          <li>
-            <span className="font-mono text-[10px] text-primary">4B2</span> — Pool
-            de participantes e botão "Sortear agora".
-          </li>
-          <li>
-            <span className="font-mono text-[10px] text-primary">4B3</span> —
-            Entrega automática por correio (sendMailItem/sendMailGold).
-          </li>
-        </ul>
-        <p className="mt-2 inline-flex items-center gap-1 text-[10px]">
+      {/* Participantes & sorteio (Fase 4B2) */}
+      <RaffleParticipantsSection
+        raffle={raffle}
+        canManage={canManage}
+        tenantId={tenantId}
+      />
+
+      <div className="rounded-2xl border border-dashed border-border bg-card/20 p-3 text-[11px] text-muted-foreground">
+        <p className="inline-flex items-center gap-1 text-[10px]">
           <CalendarClock className="h-3 w-3" />
           Criado em {new Date(raffle.created_at).toLocaleString("pt-BR")}
         </p>
+        <p className="mt-1 text-[10px]">
+          A entrega automática de prêmios por correio será adicionada na próxima
+          fase (4B3).
+        </p>
       </div>
     </div>
+  );
+};
+
+/* -------------------------------------------------------------------------- */
+/* Participantes & Sorteio (Fase 4B2)                                         */
+/* -------------------------------------------------------------------------- */
+
+interface ParticipantsSectionProps {
+  raffle: RaffleEvent;
+  canManage: boolean;
+  tenantId: string;
+}
+
+const RaffleParticipantsSection = ({
+  raffle,
+  canManage,
+  tenantId,
+}: ParticipantsSectionProps) => {
+  const {
+    participants,
+    winners,
+    loading,
+    drawing,
+    error,
+    addParticipant,
+    bulkAddParticipants,
+    removeParticipant,
+    drawWinners,
+  } = useRaffleParticipants({ raffleId: raffle.id, tenantId });
+
+  const [newRoleid, setNewRoleid] = useState("");
+  const [newRoleName, setNewRoleName] = useState("");
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkText, setBulkText] = useState("");
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [drawConfirmOpen, setDrawConfirmOpen] = useState(false);
+  const [redrawConfirmOpen, setRedrawConfirmOpen] = useState(false);
+  const [removeTarget, setRemoveTarget] = useState<RaffleParticipant | null>(null);
+
+  const winnerRoleids = useMemo(
+    () => new Set(winners.map((w) => w.roleid)),
+    [winners],
+  );
+
+  const canDraw =
+    canManage && raffle.status !== "draft" && participants.length > 0 &&
+    raffle.winners_count <= participants.length;
+
+  const handleAdd = async () => {
+    const id = parseInt(newRoleid, 10);
+    if (!Number.isFinite(id) || id <= 0) {
+      toast.error("Roleid inválido");
+      return;
+    }
+    if (participants.some((p) => p.roleid === id)) {
+      toast.error("Esse personagem já está no sorteio");
+      return;
+    }
+    const r = await addParticipant({
+      roleid: id,
+      role_name: newRoleName.trim() || null,
+      source: "manual",
+    });
+    if (r) {
+      toast.success("Participante adicionado");
+      setNewRoleid("");
+      setNewRoleName("");
+    } else {
+      toast.error("Falha ao adicionar (verifique permissão / duplicidade)");
+    }
+  };
+
+  const handleBulk = async () => {
+    const lines = bulkText
+      .split(/[\s,;\n]+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const ids = lines
+      .map((l) => parseInt(l, 10))
+      .filter((n) => Number.isFinite(n) && n > 0);
+    if (ids.length === 0) {
+      toast.error("Cole ao menos um roleid válido");
+      return;
+    }
+    setBulkBusy(true);
+    try {
+      const result = await bulkAddParticipants(ids, "import");
+      const parts: string[] = [];
+      if (result.added > 0) parts.push(`${result.added} adicionado(s)`);
+      if (result.duplicates > 0) parts.push(`${result.duplicates} duplicado(s)`);
+      if (result.invalid > 0) parts.push(`${result.invalid} inválido(s)`);
+      if (result.errors > 0) parts.push(`${result.errors} erro(s)`);
+      if (result.added > 0) toast.success(parts.join(" · "));
+      else toast.error(parts.join(" · ") || "Nada importado");
+      if (result.added > 0) {
+        setBulkOpen(false);
+        setBulkText("");
+      }
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const handleRemove = async () => {
+    if (!removeTarget) return;
+    const ok = await removeParticipant(removeTarget.id);
+    if (ok) toast.success("Participante removido");
+    else toast.error("Falha ao remover");
+    setRemoveTarget(null);
+  };
+
+  const handleDraw = async (clearPrevious: boolean) => {
+    const r = await drawWinners(raffle.winners_count, clearPrevious);
+    if (r) {
+      toast.success(
+        `Sorteio concluído — ${r.length} vencedor(es) selecionado(s)`,
+      );
+    } else if (error) {
+      toast.error(error);
+    } else {
+      toast.error("Falha ao sortear");
+    }
+  };
+
+  return (
+    <>
+      {/* Participantes */}
+      <div className="rounded-2xl border border-border bg-card/60 p-4">
+        <div className="flex items-center justify-between gap-2">
+          <p className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+            <Users className="h-3 w-3" />
+            Participantes ({participants.length})
+          </p>
+          {canManage && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 gap-1 px-2 text-[11px]"
+              onClick={() => setBulkOpen(true)}
+            >
+              <UserPlus className="h-3 w-3" />
+              Importar
+            </Button>
+          )}
+        </div>
+
+        {canManage && (
+          <div className="mt-2 grid grid-cols-[110px_1fr_auto] gap-2">
+            <Input
+              value={newRoleid}
+              onChange={(e) => setNewRoleid(e.target.value)}
+              placeholder="Roleid"
+              inputMode="numeric"
+              className="h-8 text-xs"
+            />
+            <Input
+              value={newRoleName}
+              onChange={(e) => setNewRoleName(e.target.value)}
+              placeholder="Nome (opcional)"
+              className="h-8 text-xs"
+            />
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              className="h-8 gap-1"
+              onClick={handleAdd}
+            >
+              <Plus className="h-3 w-3" />
+              Add
+            </Button>
+          </div>
+        )}
+
+        {loading ? (
+          <div className="flex h-16 items-center justify-center">
+            <Loader2 className="h-4 w-4 animate-spin text-primary" />
+          </div>
+        ) : participants.length === 0 ? (
+          <p className="mt-3 text-[11px] text-muted-foreground">
+            Nenhum participante ainda.
+          </p>
+        ) : (
+          <ul className="mt-3 max-h-56 space-y-1 overflow-y-auto pr-1">
+            {participants.map((p) => {
+              const isWinner = winnerRoleids.has(p.roleid);
+              return (
+                <li
+                  key={p.id}
+                  className={cn(
+                    "flex items-center justify-between rounded-md border px-2 py-1.5 text-[11px]",
+                    isWinner
+                      ? "border-primary/50 bg-primary/10"
+                      : "border-border bg-background/40",
+                  )}
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-mono font-semibold text-foreground">
+                        {p.roleid}
+                      </span>
+                      {p.role_name && (
+                        <span className="truncate text-muted-foreground">
+                          {p.role_name}
+                        </span>
+                      )}
+                      {isWinner && (
+                        <Trophy className="h-3 w-3 shrink-0 text-primary" />
+                      )}
+                    </div>
+                    <div className="text-[10px] text-muted-foreground">
+                      {p.source === "manual"
+                        ? "Manual"
+                        : p.source === "import"
+                          ? "Importado"
+                          : "Auto"}
+                    </div>
+                  </div>
+                  {canManage && (
+                    <button
+                      onClick={() => setRemoveTarget(p)}
+                      className="text-destructive hover:opacity-80"
+                      title="Remover"
+                      type="button"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+
+      {/* Sortear */}
+      {canManage && (
+        <div className="rounded-2xl border border-border bg-card/60 p-4">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                Sorteio
+              </p>
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Selecionar <span className="font-bold text-foreground">{raffle.winners_count}</span>{" "}
+                de <span className="font-bold text-foreground">{participants.length}</span> participante(s).
+              </p>
+            </div>
+            {winners.length === 0 ? (
+              <Button
+                size="sm"
+                className="gap-1.5"
+                disabled={!canDraw || drawing}
+                onClick={() => setDrawConfirmOpen(true)}
+              >
+                {drawing ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Dices className="h-3.5 w-3.5" />
+                )}
+                Sortear agora
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1.5"
+                disabled={!canDraw || drawing}
+                onClick={() => setRedrawConfirmOpen(true)}
+              >
+                {drawing ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <RotateCw className="h-3.5 w-3.5" />
+                )}
+                Sortear de novo
+              </Button>
+            )}
+          </div>
+
+          {raffle.status === "draft" && (
+            <p className="mt-3 rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-[10px] text-amber-500">
+              Ative o sorteio antes de sortear vencedores.
+            </p>
+          )}
+          {raffle.status !== "draft" &&
+            participants.length < raffle.winners_count && (
+              <p className="mt-3 rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-[10px] text-amber-500">
+                Adicione mais participantes — são necessários pelo menos{" "}
+                {raffle.winners_count}.
+              </p>
+            )}
+          {error && (
+            <p className="mt-3 rounded-md border border-destructive/40 bg-destructive/10 p-2 text-[10px] text-destructive">
+              {error}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Vencedores */}
+      {winners.length > 0 && (
+        <div className="rounded-2xl border border-primary/40 bg-primary/5 p-4">
+          <p className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-primary">
+            <Trophy className="h-3 w-3" />
+            Vencedores ({winners.length})
+          </p>
+          <ul className="mt-3 space-y-1.5">
+            {winners.map((w, idx) => (
+              <li
+                key={w.id}
+                className="flex items-center justify-between rounded-md border border-primary/30 bg-background/60 px-2 py-1.5 text-[11px]"
+              >
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary/20 font-mono text-[10px] font-bold text-primary">
+                    {idx + 1}
+                  </span>
+                  <div className="min-w-0">
+                    <div className="font-mono font-semibold text-foreground">
+                      {w.roleid}
+                    </div>
+                    {w.role_name && (
+                      <div className="truncate text-[10px] text-muted-foreground">
+                        {w.role_name}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <span className="text-[10px] text-muted-foreground">
+                  {new Date(w.drawn_at).toLocaleString("pt-BR")}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Diálogo: importar lista */}
+      <Dialog open={bulkOpen} onOpenChange={setBulkOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Importar participantes</DialogTitle>
+            <DialogDescription>
+              Cole os roleids separados por vírgula, espaço ou linha. Duplicados
+              são ignorados automaticamente.
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            value={bulkText}
+            onChange={(e) => setBulkText(e.target.value)}
+            placeholder="Ex.: 31, 42, 99&#10;128&#10;512"
+            rows={8}
+            className="font-mono text-xs"
+          />
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setBulkOpen(false)}
+              disabled={bulkBusy}
+            >
+              Cancelar
+            </Button>
+            <Button onClick={handleBulk} disabled={bulkBusy}>
+              {bulkBusy && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
+              Importar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirmação: sortear */}
+      <AlertDialog open={drawConfirmOpen} onOpenChange={setDrawConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Dices className="h-5 w-5 text-primary" />
+              Sortear agora?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Será selecionado(s) <strong>{raffle.winners_count}</strong> vencedor(es)
+              entre os <strong>{participants.length}</strong> participantes.
+              O resultado é registrado de forma permanente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                setDrawConfirmOpen(false);
+                void handleDraw(false);
+              }}
+            >
+              Sortear
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Confirmação forte: re-sortear */}
+      <AlertDialog open={redrawConfirmOpen} onOpenChange={setRedrawConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Sortear novamente?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Os <strong>{winners.length}</strong> vencedor(es) atuais serão
+              <strong> apagados</strong> e um novo sorteio será executado. Esta
+              ação é registrada na auditoria.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                setRedrawConfirmOpen(false);
+                void handleDraw(true);
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Sortear novamente
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Confirmação: remover participante */}
+      <AlertDialog
+        open={!!removeTarget}
+        onOpenChange={(open) => !open && setRemoveTarget(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover participante?</AlertDialogTitle>
+            <AlertDialogDescription>
+              O personagem <strong>{removeTarget?.roleid}</strong>
+              {removeTarget?.role_name ? ` (${removeTarget.role_name})` : ""} será
+              removido deste sorteio.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                void handleRemove();
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Remover
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };
 
