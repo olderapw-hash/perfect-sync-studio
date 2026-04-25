@@ -575,6 +575,236 @@ export type Database = {
           },
         ]
       }
+      raffle_events: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          ends_at: string | null
+          id: string
+          name: string
+          reward_message: string | null
+          reward_payload_json: Json
+          reward_title: string | null
+          starts_at: string | null
+          status: Database["public"]["Enums"]["raffle_status"]
+          tenant_id: string
+          updated_at: string
+          winners_count: number
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          ends_at?: string | null
+          id?: string
+          name: string
+          reward_message?: string | null
+          reward_payload_json?: Json
+          reward_title?: string | null
+          starts_at?: string | null
+          status?: Database["public"]["Enums"]["raffle_status"]
+          tenant_id: string
+          updated_at?: string
+          winners_count?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          ends_at?: string | null
+          id?: string
+          name?: string
+          reward_message?: string | null
+          reward_payload_json?: Json
+          reward_title?: string | null
+          starts_at?: string | null
+          status?: Database["public"]["Enums"]["raffle_status"]
+          tenant_id?: string
+          updated_at?: string
+          winners_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "raffle_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      raffle_participants: {
+        Row: {
+          added_by: string
+          created_at: string
+          id: string
+          raffle_id: string
+          role_name: string | null
+          roleid: number
+          source: Database["public"]["Enums"]["raffle_participant_source"]
+          tenant_id: string
+          userid: number | null
+        }
+        Insert: {
+          added_by: string
+          created_at?: string
+          id?: string
+          raffle_id: string
+          role_name?: string | null
+          roleid: number
+          source?: Database["public"]["Enums"]["raffle_participant_source"]
+          tenant_id: string
+          userid?: number | null
+        }
+        Update: {
+          added_by?: string
+          created_at?: string
+          id?: string
+          raffle_id?: string
+          role_name?: string | null
+          roleid?: number
+          source?: Database["public"]["Enums"]["raffle_participant_source"]
+          tenant_id?: string
+          userid?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "raffle_participants_raffle_id_fkey"
+            columns: ["raffle_id"]
+            isOneToOne: false
+            referencedRelation: "raffle_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "raffle_participants_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      raffle_reward_deliveries: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          id: string
+          idempotency_key: string
+          mail_log_ids: string[]
+          raffle_id: string
+          response_json: Json | null
+          reward_payload_json: Json
+          role_name: string | null
+          roleid: number
+          sent_at: string | null
+          sent_by: string
+          status: Database["public"]["Enums"]["raffle_delivery_status"]
+          tenant_id: string
+          updated_at: string
+          userid: number | null
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          idempotency_key: string
+          mail_log_ids?: string[]
+          raffle_id: string
+          response_json?: Json | null
+          reward_payload_json: Json
+          role_name?: string | null
+          roleid: number
+          sent_at?: string | null
+          sent_by: string
+          status?: Database["public"]["Enums"]["raffle_delivery_status"]
+          tenant_id: string
+          updated_at?: string
+          userid?: number | null
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          idempotency_key?: string
+          mail_log_ids?: string[]
+          raffle_id?: string
+          response_json?: Json | null
+          reward_payload_json?: Json
+          role_name?: string | null
+          roleid?: number
+          sent_at?: string | null
+          sent_by?: string
+          status?: Database["public"]["Enums"]["raffle_delivery_status"]
+          tenant_id?: string
+          updated_at?: string
+          userid?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "raffle_reward_deliveries_raffle_id_fkey"
+            columns: ["raffle_id"]
+            isOneToOne: false
+            referencedRelation: "raffle_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "raffle_reward_deliveries_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      raffle_winners: {
+        Row: {
+          drawn_at: string
+          drawn_by: string
+          id: string
+          raffle_id: string
+          role_name: string | null
+          roleid: number
+          tenant_id: string
+          userid: number | null
+        }
+        Insert: {
+          drawn_at?: string
+          drawn_by: string
+          id?: string
+          raffle_id: string
+          role_name?: string | null
+          roleid: number
+          tenant_id: string
+          userid?: number | null
+        }
+        Update: {
+          drawn_at?: string
+          drawn_by?: string
+          id?: string
+          raffle_id?: string
+          role_name?: string | null
+          roleid?: number
+          tenant_id?: string
+          userid?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "raffle_winners_raffle_id_fkey"
+            columns: ["raffle_id"]
+            isOneToOne: false
+            referencedRelation: "raffle_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "raffle_winners_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       server_invites: {
         Row: {
           accepted_at: string | null
@@ -921,6 +1151,9 @@ export type Database = {
         | "error"
         | "duplicate_blocked"
       invite_status: "pending" | "accepted" | "revoked" | "expired"
+      raffle_delivery_status: "pending" | "sent" | "error" | "duplicate_blocked"
+      raffle_participant_source: "manual" | "import" | "auto"
+      raffle_status: "draft" | "active" | "closed"
       server_role: "owner" | "admin" | "editor" | "readonly"
     }
     CompositeTypes: {
@@ -1057,6 +1290,9 @@ export const Constants = {
         "duplicate_blocked",
       ],
       invite_status: ["pending", "accepted", "revoked", "expired"],
+      raffle_delivery_status: ["pending", "sent", "error", "duplicate_blocked"],
+      raffle_participant_source: ["manual", "import", "auto"],
+      raffle_status: ["draft", "active", "closed"],
       server_role: ["owner", "admin", "editor", "readonly"],
     },
   },
