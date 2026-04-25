@@ -174,7 +174,7 @@ export function useRaffles({ tenantId }: { tenantId: string | null }) {
 
       const { data, error: err } = await supabase
         .from("raffle_events")
-        .update(update)
+        .update(update as never)
         .eq("id", id)
         .eq("tenant_id", tenantId)
         .select("*")
