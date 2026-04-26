@@ -126,6 +126,20 @@ export default function ServerHistoryPage() {
   const [trackedOp, setTrackedOp] = useState<{ id: string; type?: string } | null>(
     null,
   );
+  const [confirmClearOpen, setConfirmClearOpen] = useState(false);
+
+  const handleClearHistory = () => {
+    setEntries([]);
+    setConfirmClearOpen(false);
+    toast.success("Histórico limpo da visualização");
+    void logAuditEvent({
+      action: "server_ops.history_clear_view",
+      tenantId: active?.id ?? null,
+      target: "client_only",
+      status: "ok",
+      metadata: { type, success_state: stateFilter, limit },
+    });
+  };
 
   const allowed = isSuperadmin || can("view_audit") || can("view");
 
