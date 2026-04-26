@@ -7,7 +7,6 @@ import { pwApi, EndpointMissingError } from "@/lib/pwApiActions";
 import { normalizeClsconfigResponse } from "@/lib/clsconfig";
 import type { ClsEntry } from "@/types/clsconfig";
 import { ClsconfigEditor } from "./ClsconfigEditor";
-import { RoleOverviewPanel } from "./RoleOverviewPanel";
 import { toast } from "sonner";
 
 /**
@@ -175,19 +174,10 @@ export const RolePersonagemTab = () => {
         )}
       </section>
 
-      {/* Painel GM read-only premium — Visão Geral / Inventário / Equipamentos / Banco / Status / Tasks / Progressão */}
-      {entry && (
-        <RoleOverviewPanel
-          template={entry.template}
-          roleid={entry.template.roleid}
-          online={online}
-        />
-      )}
-
-      {/* Editor reutilizado em modo "role" */}
+      {/* Editor reutilizado em modo "role" — abre em VIEW (read-only premium)
+          por padrão; o botão "Editar" no header alterna para edição. */}
       {entry && (
         <div className="overflow-hidden rounded-xl border border-border bg-card/30">
-          {/* O editor preenche toda a área disponível. */}
           <div className="h-[calc(100vh-22rem)] min-h-[480px]">
             <ClsconfigEditor
               entry={entry}

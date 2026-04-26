@@ -52,6 +52,8 @@ import { pwApi, EndpointMissingError } from "@/lib/pwApiActions";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { BaseTab } from "./BaseTab";
+import { RoleOverviewPanel } from "./RoleOverviewPanel";
+import { Eye, Pencil, X } from "lucide-react";
 import { StatusTab } from "./StatusTab";
 import { InventoryTab } from "./InventoryTab";
 import { EquipmentTab } from "./EquipmentTab";
@@ -143,6 +145,12 @@ const extractAny = (obj: unknown, path: string[]): unknown => {
 export const ClsconfigEditor = ({ entry, allEntries = [], mode = "template", onSaved, onReload }: Props) => {
   const [template, setTemplate] = useState<ClsTemplate>(entry.template);
   const [tab, setTab] = useState<TabKey>("base");
+  /**
+   * Fluxo View → Edit: a tela abre em modo visualização (RoleOverviewPanel
+   * read-only premium). Só entra em modo edição quando o usuário clica em
+   * "Editar". Save/Reset existentes continuam funcionando exatamente igual.
+   */
+  const [editMode, setEditMode] = useState(false);
   const [saving, setSaving] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [checklistResult, setChecklistResult] = useState<SaveChecklistResult | null>(null);
@@ -188,6 +196,7 @@ export const ClsconfigEditor = ({ entry, allEntries = [], mode = "template", onS
   useEffect(() => {
     setTemplate(entry.template);
     setTab("base");
+    setEditMode(false);
   }, [entry.key_hex]);
 
   const dirty = JSON.stringify(template) !== JSON.stringify(entry.template);
@@ -226,6 +235,19 @@ export const ClsconfigEditor = ({ entry, allEntries = [], mode = "template", onS
   const handleReset = () => {
     setTemplate(entry.template);
     toast.info("Template restaurado para a versão original");
+  };
+
+  /**
+   * Cancela o modo edição. Se houver mudanças pendentes, descarta-as
+   * silenciosamente (já houve confirmação prévia ou o usuário sabe o
+   * que está fazendo). Volta para o modo View.
+   */
+  const handleCancelEdit = () => {
+    if (dirty) {
+      setTemplate(entry.template);
+      toast.info("Alterações descartadas");
+    }
+    setEditMode(false);
   };
 
   /**
@@ -752,6 +774,18 @@ export const ClsconfigEditor = ({ entry, allEntries = [], mode = "template", onS
                       {entry.key_hex.slice(0, 10)}…
                     </span>
                   )}
+                  {/* Indicador de modo: leitura (default) vs edição */}
+                  {editMode ? (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-primary/60 bg-primary/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary">
+                      <Pencil className="h-2.5 w-2.5" />
+                      Modo edição
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-bronze-soft bg-card/40 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-bronze-muted">
+                      <Eye className="h-2.5 w-2.5" />
+                      Visualização
+                    </span>
+                  )}
                   {dirty && (
                     <span className="inline-flex items-center gap-1 rounded-full border border-primary/50 bg-primary/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary animate-pulse-glow">
                       ● Não salvo
@@ -762,7 +796,8 @@ export const ClsconfigEditor = ({ entry, allEntries = [], mode = "template", onS
             </div>
 
             <div className="flex flex-wrap items-center justify-end gap-1.5">
-              {!isRoleMode && (
+              {/* Botões avançados de edição: só aparecem em MODO EDIÇÃO. */}
+              {editMode && !isRoleMode && (
                 <>
                   <button
                     onClick={() => setPresetsOpen(true)}
@@ -834,7 +869,7 @@ export const ClsconfigEditor = ({ entry, allEntries = [], mode = "template", onS
                   </button>
                 </>
               )}
-              {isRoleMode && (
+              {editMode && isRoleMode && (
                 <label
                   className="inline-flex items-center gap-1 rounded-full border border-bronze-soft bg-card/50 px-2.5 py-1 text-[10px] text-bronze-muted"
                   title="Por padrão NÃO disparamos exportclsconfig em personagem real."
@@ -848,6 +883,7 @@ export const ClsconfigEditor = ({ entry, allEntries = [], mode = "template", onS
                   exportclsconfig
                 </label>
               )}
+              {/* Sempre visíveis (auxiliares, não destrutivos). */}
               <button
                 onClick={() => setKitsOpen(true)}
                 className="inline-flex items-center gap-1 rounded-full border border-bronze-soft bg-card/50 px-2.5 py-1 text-[11px] font-semibold text-bronze-muted transition hover:border-primary/60 hover:text-bronze"
@@ -864,113 +900,168 @@ export const ClsconfigEditor = ({ entry, allEntries = [], mode = "template", onS
                 <History className="h-3 w-3" />
                 Histórico
               </button>
-              <button
-                onClick={handleReset}
-                disabled={!dirty}
-                className="inline-flex items-center gap-1 rounded-full border border-bronze-soft bg-card/50 px-2.5 py-1 text-[11px] font-semibold text-bronze-muted transition hover:border-primary/60 hover:text-bronze disabled:opacity-40"
-              >
-                <RotateCcw className="h-3 w-3" />
-                Reset
-              </button>
-              <button
-                onClick={handleSave}
-                disabled={saving || !dirty || !canSave}
-                title={canSave ? undefined : permDeniedTitle}
-                className={cn(
-                  "inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-bold tracking-wide transition disabled:cursor-not-allowed disabled:opacity-50",
-                  isRoleMode
-                    ? "bg-destructive text-destructive-foreground shadow-[0_4px_16px_hsl(0_70%_45%/0.4)] hover:brightness-110"
-                    : "bg-gradient-to-br from-[hsl(38_75%_60%)] to-[hsl(32_60%_40%)] text-[hsl(28_30%_10%)] shadow-[0_4px_18px_hsl(38_60%_40%/0.45)] hover:brightness-110",
-                )}
-              >
-                {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-                {saving ? "Salvando..." : isRoleMode ? "Salvar real" : "Salvar"}
-              </button>
+
+              {/* ─── View ↔ Edit ─── */}
+              {!editMode ? (
+                <button
+                  onClick={() => setEditMode(true)}
+                  disabled={!canSave}
+                  title={canSave ? "Entrar em modo edição" : permDeniedTitle}
+                  className={cn(
+                    "inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-bold tracking-wide transition disabled:cursor-not-allowed disabled:opacity-50",
+                    "bg-gradient-to-br from-[hsl(38_75%_60%)] to-[hsl(32_60%_40%)] text-[hsl(28_30%_10%)] shadow-[0_4px_18px_hsl(38_60%_40%/0.45)] hover:brightness-110",
+                  )}
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                  Editar
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={handleReset}
+                    disabled={!dirty}
+                    className="inline-flex items-center gap-1 rounded-full border border-bronze-soft bg-card/50 px-2.5 py-1 text-[11px] font-semibold text-bronze-muted transition hover:border-primary/60 hover:text-bronze disabled:opacity-40"
+                    title="Reverter alterações desta sessão para o estado salvo"
+                  >
+                    <RotateCcw className="h-3 w-3" />
+                    Reset
+                  </button>
+                  <button
+                    onClick={handleCancelEdit}
+                    disabled={saving}
+                    className="inline-flex items-center gap-1 rounded-full border border-bronze-soft bg-card/50 px-2.5 py-1 text-[11px] font-semibold text-bronze-muted transition hover:border-destructive/60 hover:text-destructive disabled:opacity-40"
+                    title={dirty ? "Descartar alterações e voltar para visualização" : "Sair do modo edição"}
+                  >
+                    <X className="h-3 w-3" />
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleSave}
+                    disabled={saving || !dirty || !canSave}
+                    title={canSave ? undefined : permDeniedTitle}
+                    className={cn(
+                      "inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-bold tracking-wide transition disabled:cursor-not-allowed disabled:opacity-50",
+                      isRoleMode
+                        ? "bg-destructive text-destructive-foreground shadow-[0_4px_16px_hsl(0_70%_45%/0.4)] hover:brightness-110"
+                        : "bg-gradient-to-br from-[hsl(38_75%_60%)] to-[hsl(32_60%_40%)] text-[hsl(28_30%_10%)] shadow-[0_4px_18px_hsl(38_60%_40%/0.45)] hover:brightness-110",
+                    )}
+                  >
+                    {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                    {saving ? "Salvando..." : isRoleMode ? "Salvar real" : "Salvar"}
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
       </header>
 
-      {/* ─────────── Navegação modular ─────────── */}
-      <nav className="px-3 pb-2 sm:px-5 lg:px-6">
-        {/* Mobile/tablet: scroll horizontal — evita corte de texto.
-            Desktop largo (xl): grid 9 colunas distribuído. */}
-        <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 xl:grid xl:grid-cols-9 xl:overflow-visible xl:px-0 [scrollbar-width:thin]">
-          {TABS.map((t) => {
-            const Icon = t.icon;
-            const active = tab === t.key;
-            const hasChanges = dirtyByTab[t.key];
-            return (
-              <button
-                key={t.key}
-                type="button"
-                data-active={active}
-                onClick={() => setTab(t.key)}
-                className="nav-card group !p-2 !gap-2 shrink-0 xl:shrink min-w-[110px] xl:min-w-0"
-                title={hasChanges ? `${t.label} · alterações pendentes` : t.label}
-              >
-                <span
-                  className={cn(
-                    "relative flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border transition",
-                    active
-                      ? "border-primary/60 bg-primary/15 text-primary shadow-[0_0_14px_hsl(38_70%_50%/0.35)]"
-                      : "border-bronze-soft bg-black/30 text-bronze-muted group-hover:text-bronze",
-                  )}
+      {/* ─────────── Navegação modular (somente em modo edição) ─────────── */}
+      {editMode && (
+        <nav className="px-3 pb-2 sm:px-5 lg:px-6">
+          {/* Mobile/tablet: scroll horizontal — evita corte de texto.
+              Desktop largo (xl): grid 9 colunas distribuído. */}
+          <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 xl:grid xl:grid-cols-9 xl:overflow-visible xl:px-0 [scrollbar-width:thin]">
+            {TABS.map((t) => {
+              const Icon = t.icon;
+              const active = tab === t.key;
+              const hasChanges = dirtyByTab[t.key];
+              return (
+                <button
+                  key={t.key}
+                  type="button"
+                  data-active={active}
+                  onClick={() => setTab(t.key)}
+                  className="nav-card group !p-2 !gap-2 shrink-0 xl:shrink min-w-[110px] xl:min-w-0"
+                  title={hasChanges ? `${t.label} · alterações pendentes` : t.label}
                 >
-                  <Icon className="h-3.5 w-3.5" />
-                  {hasChanges && (
-                    <span
-                      aria-hidden
-                      className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-primary shadow-[0_0_6px_hsl(38_70%_50%/0.9)] animate-pulse-glow"
-                    />
-                  )}
-                </span>
-                <span className="text-xs font-semibold tracking-wide whitespace-nowrap">{t.label}</span>
-              </button>
-            );
-          })}
-        </div>
-      </nav>
+                  <span
+                    className={cn(
+                      "relative flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border transition",
+                      active
+                        ? "border-primary/60 bg-primary/15 text-primary shadow-[0_0_14px_hsl(38_70%_50%/0.35)]"
+                        : "border-bronze-soft bg-black/30 text-bronze-muted group-hover:text-bronze",
+                    )}
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                    {hasChanges && (
+                      <span
+                        aria-hidden
+                        className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-primary shadow-[0_0_6px_hsl(38_70%_50%/0.9)] animate-pulse-glow"
+                      />
+                    )}
+                  </span>
+                  <span className="text-xs font-semibold tracking-wide whitespace-nowrap">{t.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </nav>
+      )}
 
       {/* ─────────── Painel principal ─────────── */}
       <div className="flex-1 overflow-y-auto px-3 pb-4 sm:px-5 lg:px-6">
-        <section key={tab} className="frame-bronze relative animate-fade-in-up">
-          <header className="flex flex-wrap items-center justify-between gap-2 px-4 pt-3 pb-2 sm:px-5">
-            <div className="flex items-center gap-2">
-              <ActiveTabIcon className="h-4 w-4 text-bronze" />
-              <h2
-                className="font-serif text-base font-bold tracking-wide text-bronze sm:text-lg"
-                style={{ textShadow: "0 2px 8px hsl(38 70% 40% / 0.35)" }}
-              >
-                {activeTabMeta.label}
-              </h2>
-            </div>
-            <div className="hidden text-[10px] font-semibold uppercase tracking-[0.18em] text-bronze-muted sm:block">
-              {className} · LV {template.status.level}
-            </div>
-          </header>
-          <div className="ornate-divider mx-5 mb-3 opacity-60" />
-          <div className="px-3 pb-4 sm:px-5">
-            {tab === "base" && <BaseTab template={template} onChange={setTemplate} />}
-            {tab === "status" && (
-              <StatusTab
-                template={template}
-                entry={entry}
-                onChange={setTemplate}
-                onEntryRefreshed={(next) => {
-                  entry.template = next;
-                }}
-              />
-            )}
-            {tab === "inventory" && <InventoryTab template={template} onChange={setTemplate} />}
-            {tab === "equipment" && <EquipmentTab template={template} onChange={setTemplate} />}
-            {tab === "storehouse" && <StorehouseTab template={template} onChange={setTemplate} />}
-            {tab === "task" && <TaskTab template={template} onChange={setTemplate} />}
-            {tab === "titles" && <TitlesTab template={template} onChange={setTemplate} />}
-            {tab === "reputation" && <ReputationTab template={template} onChange={setTemplate} />}
-            {tab === "skills" && <SkillsTab template={template} />}
+        {!editMode ? (
+          /* MODO VIEW · reusa o painel premium read-only do GM Panel.
+             Funciona para template e role — só lê o ClsTemplate em memória. */
+          <div className="animate-fade-in-up">
+            <RoleOverviewPanel
+              template={template}
+              roleid={entry.template.roleid}
+              online={isRoleMode ? null : null}
+            />
           </div>
-        </section>
+        ) : (
+          /* MODO EDIÇÃO · ring dourado destaca a área editável e diferencia
+             visualmente do modo leitura sem mudar a paleta. */
+          <section
+            key={tab}
+            className={cn(
+              "frame-bronze relative animate-fade-in-up",
+              "ring-2 ring-primary/40 shadow-[0_0_28px_hsl(38_70%_50%/0.18)]",
+            )}
+          >
+            <header className="flex flex-wrap items-center justify-between gap-2 px-4 pt-3 pb-2 sm:px-5">
+              <div className="flex items-center gap-2">
+                <ActiveTabIcon className="h-4 w-4 text-primary" />
+                <h2
+                  className="font-serif text-base font-bold tracking-wide text-bronze sm:text-lg"
+                  style={{ textShadow: "0 2px 8px hsl(38 70% 40% / 0.35)" }}
+                >
+                  {activeTabMeta.label}
+                </h2>
+                <span className="ml-1 inline-flex items-center gap-1 rounded-full border border-primary/50 bg-primary/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary">
+                  <Pencil className="h-2.5 w-2.5" />
+                  Editando
+                </span>
+              </div>
+              <div className="hidden text-[10px] font-semibold uppercase tracking-[0.18em] text-bronze-muted sm:block">
+                {className} · LV {template.status.level}
+              </div>
+            </header>
+            <div className="ornate-divider mx-5 mb-3 opacity-60" />
+            <div className="px-3 pb-4 sm:px-5">
+              {tab === "base" && <BaseTab template={template} onChange={setTemplate} />}
+              {tab === "status" && (
+                <StatusTab
+                  template={template}
+                  entry={entry}
+                  onChange={setTemplate}
+                  onEntryRefreshed={(next) => {
+                    entry.template = next;
+                  }}
+                />
+              )}
+              {tab === "inventory" && <InventoryTab template={template} onChange={setTemplate} />}
+              {tab === "equipment" && <EquipmentTab template={template} onChange={setTemplate} />}
+              {tab === "storehouse" && <StorehouseTab template={template} onChange={setTemplate} />}
+              {tab === "task" && <TaskTab template={template} onChange={setTemplate} />}
+              {tab === "titles" && <TitlesTab template={template} onChange={setTemplate} />}
+              {tab === "reputation" && <ReputationTab template={template} onChange={setTemplate} />}
+              {tab === "skills" && <SkillsTab template={template} />}
+            </div>
+          </section>
+        )}
       </div>
 
 
