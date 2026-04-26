@@ -13,17 +13,19 @@ export const TrialBanner = () => {
     <div className="flex flex-wrap items-center gap-3 border-b border-primary/30 bg-primary/10 px-4 py-2 text-[12px]">
       <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary">
         <Sparkles className="h-3 w-3" />
-        Free Trial
+        Plano Free
       </span>
       <span className="text-foreground/90">
-        Você está no modo <strong>gratuito</strong>: pode visualizar tudo, mas só{" "}
-        <strong>edição manual de templates iniciais</strong> está liberada.
+        Você está no plano <strong>Free</strong>: pode visualizar tudo, mas só{" "}
+        <strong>edição manual de templates iniciais</strong> está liberada. Faça upgrade pra{" "}
+        <strong>Pro</strong> ou <strong>Ultimate</strong> pra liberar bulk apply, mail, eventos
+        e Server Ops.
       </span>
       <Link
         to="/pricing"
         className="ml-auto rounded-md bg-primary px-3 py-1 text-[11px] font-bold text-primary-foreground hover:brightness-110"
       >
-        Fazer upgrade
+        Ver planos
       </Link>
     </div>
   );
