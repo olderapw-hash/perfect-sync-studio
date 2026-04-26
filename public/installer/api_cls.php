@@ -5197,9 +5197,30 @@ if (php_sapi_name() !== 'cli' || isset($_GET['action'])) {
             }
             break;
 
+        case 'sendSystemMessage':
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                respondJson(['error' => 'Use POST para sendSystemMessage'], 405);
+                exit;
+            }
+            $request = readRequestPayload();
+            if (isset($request['__json_error'])) {
+                respondJson(['error' => 'JSON invalido: ' . $request['__json_error']], 400);
+                exit;
+            }
+            try {
+                $result = handleSendSystemMessageRequest($CONFIG, $request);
+                respondJson($result, 200);
+            } catch (Exception $e) {
+                respondJson([
+                    'success' => false,
+                    'error'   => $e->getMessage(),
+                ], 400);
+            }
+            break;
+
         default:
             respondJson([
-                'error' => 'Acao invalida. Use: getRole, getRoles, getRoleEditable, getRolesEditable, getClasses, getClsconfig, getClsconfigDebug, getItemCatalog, listBackups, backupGamedbd, getBackupContent, restoreBackup, exportClsconfig, saveRoleEditable, saveClsconfigTemplate, sendMailItem, sendMailGold, getServiceStatus, getServerLogs, registerIngameParticipation',
+                'error' => 'Acao invalida. Use: getRole, getRoles, getRoleEditable, getRolesEditable, getClasses, getClsconfig, getClsconfigDebug, getItemCatalog, listBackups, backupGamedbd, getBackupContent, restoreBackup, exportClsconfig, saveRoleEditable, saveClsconfigTemplate, sendMailItem, sendMailGold, getServiceStatus, getServerLogs, sendSystemMessage, registerIngameParticipation',
             ], 400);
             break;
     }
