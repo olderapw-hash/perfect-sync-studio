@@ -351,6 +351,23 @@ sed -i 's/\r$//' "$TMP_SYSMSG_SH"
 install -m 0750 -o root -g root "$TMP_SYSMSG_SH" /usr/local/sbin/sendsysmsg-api.sh
 log "sendsysmsg-api.sh instalado em /usr/local/sbin/sendsysmsg-api.sh"
 
+# ===== Wrapper sudo de controle de servicos (manageservice-api.sh) =====
+TMP_MGRSVC_SH="$TMP_DIR/manageservice-api.sh"
+MGRSVC_SH_SRC="$SCRIPT_DIR/manageservice-api.sh"
+if [ -f "$MGRSVC_SH_SRC" ]; then
+  cp -f "$MGRSVC_SH_SRC" "$TMP_MGRSVC_SH"
+else
+  warn "manageservice-api.sh nao encontrado ao lado do instalador. Escrevendo stub."
+  cat > "$TMP_MGRSVC_SH" <<'SHEOF'
+#!/bin/bash
+echo '{"success":false,"error":"manageservice-api.sh real nao instalado neste host"}' >&2
+exit 99
+SHEOF
+fi
+sed -i 's/\r$//' "$TMP_MGRSVC_SH"
+install -m 0750 -o root -g root "$TMP_MGRSVC_SH" /usr/local/sbin/manageservice-api.sh
+log "manageservice-api.sh instalado em /usr/local/sbin/manageservice-api.sh"
+
 
 cat > /usr/local/sbin/exportclsconfig-api.sh <<'EOF'
 #!/bin/sh

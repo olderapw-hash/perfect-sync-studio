@@ -51,6 +51,11 @@ const ALLOWED_ACTIONS = new Set([
   "sendSystemMessage",
   "getMaintenanceMode",
   "setMaintenanceMode",
+  // Server Ops v3 — controle real de servicos.
+  "getManageableServices",
+  "startService",
+  "stopService",
+  "restartService",
 ]);
 
 // Mapa Action → permissão exigida (deve refletir src/lib/serverPermissions.ts).
@@ -82,6 +87,11 @@ const ACTION_PERMISSION: Record<string, string> = {
   sendSystemMessage: "save_templates",
   getMaintenanceMode: "view",
   setMaintenanceMode: "manage_servers",
+  // Server Ops v3 — leitura é "view"; ações destrutivas exigem manage_servers.
+  getManageableServices: "view",
+  startService: "manage_servers",
+  stopService: "manage_servers",
+  restartService: "manage_servers",
 };
 
 function jsonError(message: string, status: number): Response {
@@ -524,6 +534,10 @@ const NEW_ACTIONS_FALLBACK_MISSING = new Set([
   "sendSystemMessage",
   "getMaintenanceMode",
   "setMaintenanceMode",
+  "getManageableServices",
+  "startService",
+  "stopService",
+  "restartService",
 ]);
 
 async function relay(

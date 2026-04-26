@@ -20,12 +20,16 @@ import {
   FileText,
   Globe,
   Link2,
+  Loader2,
+  Play,
   PlayCircle,
   RefreshCw,
+  RotateCcw,
   Server as ServerIcon,
   Shield,
   ShieldOff,
   Sparkles,
+  Square,
   Truck,
   User as UserIcon,
   Wrench,
@@ -39,7 +43,18 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useAuth } from "@/hooks/useAuth";
 import { useServers } from "@/hooks/useServers";
 import { useServerPermissions } from "@/hooks/useServerPermissions";

@@ -38,6 +38,12 @@ export const ACTION_PERMISSION: Record<string, ServerPermissionKey> = {
   getMaintenanceMode: "view",
   setMaintenanceMode: "manage_servers",
 
+  // operação do servidor v3 (controle real de instâncias)
+  getManageableServices: "view",
+  startService: "manage_servers",
+  stopService: "manage_servers",
+  restartService: "manage_servers",
+
   // segurança (kick/ban/unban + histórico)
   kickRole: "manage_security",
   banAccount: "manage_security",

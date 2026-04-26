@@ -76,6 +76,19 @@ $CONFIG = [
     'maintenance_max_reason_len'  => 240,
     'maintenance_max_eta_minutes' => 24 * 60, // 24h teto sanitario
 
+    // === Gerencia de servicos (getManageableServices / startService / stopService / restartService) ===
+    // Wrapper sudo dedicado, sem shell arbitrario. O PHP delega para
+    // /usr/local/sbin/manageservice-api.sh, que aceita apenas servicos
+    // whitelisted e acoes whitelisted (start|stop|restart). Cada servico
+    // pode ser um daemon do PW (gamedbd, gdeliveryd, gacd, glink, authd,
+    // uniquenamed) ou um servico de sistema (mysql, httpd) — o wrapper
+    // resolve qual systemd unit / binario usar.
+    'manage_service_enabled'      => true,
+    'manage_service_command'      => '/usr/bin/sudo -n /usr/local/sbin/manageservice-api.sh',
+    'manage_service_workdir'      => __DIR__,
+    'manage_service_log_dir'      => __DIR__ . '/backups/service-actions',
+    'manage_service_max_batch'    => 16,
+
     // === Eventos ingame (registerIngameParticipation) ===
     // Ponte NPC -> VPS -> Supabase. O NPC NUNCA fala direto com o Supabase:
     // ele chama este api_cls.php, que aqui repassa para a RPC
@@ -4897,6 +4910,274 @@ function getServiceStatusSnapshot()
     ];
 }
 
+/* ============================================================
+ * Server Ops v3 — getManageableServices + start/stop/restart
+ *
+ * Lista enriquecida (state + aliases + supported_actions + selectable)
+ * para alimentar o painel sem hardcode no frontend. As acoes destrutivas
+ * passam por wrapper sudo whitelisted (manageservice-api.sh).
+ * ============================================================ */
+
+/** Quais acoes sao suportadas por servico. */
+function serverOpsSupportedActions($name)
+{
+    // Lista intencionalmente curta. Qualquer servico nao listado caira no
+    // default (start/stop/restart) — seguro porque o wrapper bash tambem
+    // filtra por whitelist.
+    $map = [
+        'gamedbd'     => ['start', 'stop', 'restart'],
+        'gdeliveryd'  => ['start', 'stop', 'restart'],
+        'gacd'        => ['start', 'stop', 'restart'],
+        'glink'       => ['start', 'stop', 'restart'],
+        'authd'       => ['start', 'stop', 'restart'],
+        'uniquenamed' => ['start', 'stop', 'restart'],
+        'mysql'       => ['start', 'stop', 'restart'],
+        'httpd'       => ['start', 'stop', 'restart'],
+    ];
+    return isset($map[$name]) ? $map[$name] : ['start', 'stop', 'restart'];
+}
+
+/** True quando o servico pode ser controlado por start/stop/restart. */
+function serverOpsServiceSelectable($name)
+{
+    $allowed = ['gamedbd','gdeliveryd','gacd','glink','authd','uniquenamed','mysql','httpd'];
+    return in_array($name, $allowed, true);
+}
+
+function getManageableServicesSnapshot()
+{
+    $services = [];
+    foreach (serverOpsKnownServices() as $svc) {
+        list($name, $label, $port) = $svc;
+        $base = serverOpsCollectService($name, $label, $port);
+
+        // Re-mapear `name` -> `key` no shape esperado pelo painel novo
+        // (mantemos `name` tambem para compat com getServiceStatus).
+        $entry = [
+            'key'           => $name,
+            'label'         => $label,
+            'process_name'  => $name,
+            'state'         => isset($base['state']) ? $base['state'] : 'unknown',
+            'pid'           => isset($base['pid']) ? $base['pid'] : null,
+            'process_count' => isset($base['process_count']) ? intval($base['process_count']) : 0,
+            'pids'          => isset($base['pid']) && $base['pid'] ? [intval($base['pid'])] : [],
+            'port'          => $port > 0 ? intval($port) : null,
+            'systemd_state' => null,
+            'listening'     => $port > 0 ? serverOpsPortListening($port) : null,
+            'aliases'       => array_values(array_diff(serverOpsProcessAliases($name), [$name])),
+            'supported_actions' => serverOpsSupportedActions($name),
+            'selectable'    => serverOpsServiceSelectable($name),
+            'message'       => isset($base['message']) ? $base['message'] : null,
+        ];
+
+        // systemd state (best-effort — null quando systemctl ausente).
+        if ($name === 'mysql') {
+            foreach (['mariadb','mysql','mysqld'] as $unit) {
+                $active = serverOpsSystemctlActive($unit);
+                if ($active === true) { $entry['systemd_state'] = 'active'; break; }
+                if ($active === false) { $entry['systemd_state'] = 'inactive'; }
+            }
+        } elseif ($name === 'httpd') {
+            foreach (['httpd','apache2'] as $unit) {
+                $active = serverOpsSystemctlActive($unit);
+                if ($active === true) { $entry['systemd_state'] = 'active'; break; }
+                if ($active === false) { $entry['systemd_state'] = 'inactive'; }
+            }
+        } else {
+            $active = serverOpsSystemctlActive($name);
+            if ($active === true) $entry['systemd_state'] = 'active';
+            elseif ($active === false) $entry['systemd_state'] = 'inactive';
+            else $entry['systemd_state'] = 'unknown';
+        }
+
+        $services[] = $entry;
+    }
+
+    return [
+        'success'      => true,
+        'count'        => count($services),
+        'collected_at' => gmdate('c'),
+        'services'     => $services,
+    ];
+}
+
+/** Aceita {service:"x"} OU {services:["x","y"]} e devolve lista normalizada. */
+function serverOpsExtractServiceList(array $request, array $config)
+{
+    $list = [];
+    if (isset($request['services']) && is_array($request['services'])) {
+        foreach ($request['services'] as $s) {
+            $s = strtolower(trim((string) $s));
+            if ($s !== '') $list[] = $s;
+        }
+    }
+    if (isset($request['service']) && is_string($request['service'])) {
+        $s = strtolower(trim($request['service']));
+        if ($s !== '') $list[] = $s;
+    }
+    $list = array_values(array_unique($list));
+    if (empty($list)) {
+        throw new Exception('Informe ao menos um servico (campo `service` ou `services`)');
+    }
+    $max = intval(array_value($config, 'manage_service_max_batch', 16));
+    if ($max > 0 && count($list) > $max) {
+        throw new Exception('Lote acima do limite (' . $max . ' servicos).');
+    }
+    foreach ($list as $name) {
+        if (!serverOpsServiceSelectable($name)) {
+            throw new Exception('Servico nao suportado: ' . $name);
+        }
+    }
+    return $list;
+}
+
+/**
+ * Executa start/stop/restart em 1+ servicos via wrapper sudo.
+ * Cada servico vira uma chamada individual ao wrapper (mais simples
+ * de auditar e isolar falhas que um payload em batch).
+ */
+function handleServiceControlRequest(array $config, $action, array $request)
+{
+    if (!truthyValue(array_value($config, 'manage_service_enabled', true))) {
+        throw new Exception('Controle de servicos desabilitado nesta VPS');
+    }
+    $allowed = ['startService' => 'start', 'stopService' => 'stop', 'restartService' => 'restart'];
+    if (!isset($allowed[$action])) {
+        throw new Exception('Acao invalida (use startService|stopService|restartService)');
+    }
+    $verb = $allowed[$action];
+
+    $services = serverOpsExtractServiceList($request, $config);
+    $dryRun   = truthyValue(array_value($request, 'dry_run', false));
+    $verify   = truthyValue(array_value($request, 'verify', true));
+
+    if ($dryRun) {
+        return [
+            'success' => true,
+            'dry_run' => true,
+            'action'  => $verb,
+            'services' => $services,
+            'verify'  => $verify,
+            'message' => 'Validacao OK — nenhuma acao executada.',
+        ];
+    }
+
+    $command = trim((string) array_value($config, 'manage_service_command', ''));
+    if ($command === '') {
+        throw new Exception('Comando de controle de servico nao configurado');
+    }
+
+    $logDir = trim((string) array_value($config, 'manage_service_log_dir', ''));
+    if ($logDir !== '' && !is_dir($logDir)) {
+        @mkdir($logDir, 0750, true);
+    }
+
+    $results = [];
+    foreach ($services as $svc) {
+        $result = serverOpsInvokeWrapper($command, $verb, $svc, $config);
+        if ($verify) {
+            // Pequena pausa pro processo subir/cair antes de re-amostrar.
+            usleep(800000);
+            $known = null;
+            foreach (serverOpsKnownServices() as $row) {
+                if ($row[0] === $svc) { $known = $row; break; }
+            }
+            if ($known) {
+                $snap = serverOpsCollectService($known[0], $known[1], $known[2]);
+                $result['post_state'] = isset($snap['state']) ? $snap['state'] : 'unknown';
+                $result['post_pid']   = isset($snap['pid']) ? $snap['pid'] : null;
+                $result['post_process_count'] = isset($snap['process_count']) ? intval($snap['process_count']) : 0;
+            }
+        }
+        $results[] = $result;
+    }
+
+    $allOk = true;
+    foreach ($results as $r) { if (empty($r['success'])) { $allOk = false; break; } }
+
+    $logFile = null;
+    if ($logDir !== '' && is_dir($logDir) && is_writable($logDir)) {
+        $logFile = $logDir . '/' . gmdate('Ymd-His') . '-' . $verb . '.json';
+        @file_put_contents($logFile, json_encode([
+            'sent_at_utc' => gmdate('c'),
+            'action'      => $verb,
+            'services'    => $services,
+            'verify'      => $verify,
+            'results'     => $results,
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT));
+    }
+
+    return [
+        'success'  => $allOk,
+        'action'   => $verb,
+        'services' => $services,
+        'verify'   => $verify,
+        'results'  => $results,
+        'log_file' => $logFile,
+    ];
+}
+
+function serverOpsInvokeWrapper($command, $verb, $service, array $config)
+{
+    $descriptors = [
+        0 => ['pipe', 'r'],
+        1 => ['pipe', 'w'],
+        2 => ['pipe', 'w'],
+    ];
+    $cwd = (string) array_value($config, 'manage_service_workdir', __DIR__);
+    // Argumentos sao passados via STDIN como JSON pra evitar shell escape.
+    $payload = json_encode([
+        'action'  => $verb,
+        'service' => $service,
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+    $process = @proc_open($command, $descriptors, $pipes, $cwd);
+    if (!is_resource($process)) {
+        return [
+            'success' => false,
+            'service' => $service,
+            'action'  => $verb,
+            'error'   => 'Nao foi possivel iniciar wrapper de servico',
+        ];
+    }
+    fwrite($pipes[0], $payload);
+    fclose($pipes[0]);
+    $stdout = stream_get_contents($pipes[1]); fclose($pipes[1]);
+    $stderr = stream_get_contents($pipes[2]); fclose($pipes[2]);
+    $exit   = proc_close($process);
+
+    $decoded = json_decode((string) $stdout, true);
+    if (is_array($decoded)) {
+        if (!array_key_exists('service', $decoded)) $decoded['service'] = $service;
+        if (!array_key_exists('action', $decoded))  $decoded['action']  = $verb;
+        if (!array_key_exists('success', $decoded)) $decoded['success'] = ($exit === 0);
+        if ($exit !== 0 && empty($decoded['error'])) {
+            $decoded['error'] = trim((string) $stderr) ?: ('exit ' . $exit);
+        }
+        return $decoded;
+    }
+
+    if ($exit !== 0) {
+        $msg = trim((string) $stderr);
+        if ($msg === '') $msg = trim((string) $stdout);
+        if ($msg === '') $msg = 'Falha (exit ' . $exit . ')';
+        return [
+            'success' => false,
+            'service' => $service,
+            'action'  => $verb,
+            'error'   => $msg,
+            'exit'    => $exit,
+        ];
+    }
+    return [
+        'success' => true,
+        'service' => $service,
+        'action'  => $verb,
+        'raw'     => trim((string) $stdout),
+    ];
+}
+
+
 function serverOpsLogSources($CONFIG)
 {
     $apicls_dir = isset($CONFIG['clsconfig_export_log_dir'])
@@ -5483,9 +5764,40 @@ if (php_sapi_name() !== 'cli' || isset($_GET['action'])) {
             }
             break;
 
+        case 'getManageableServices':
+            try {
+                respondJson(getManageableServicesSnapshot(), 200);
+            } catch (Exception $e) {
+                respondJson(['success' => false, 'error' => $e->getMessage()], 500);
+            }
+            break;
+
+        case 'startService':
+        case 'stopService':
+        case 'restartService':
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                respondJson(['error' => 'Use POST para ' . $action], 405);
+                exit;
+            }
+            $request = readRequestPayload();
+            if (isset($request['__json_error'])) {
+                respondJson(['error' => 'JSON invalido: ' . $request['__json_error']], 400);
+                exit;
+            }
+            try {
+                $result = handleServiceControlRequest($CONFIG, $action, $request);
+                respondJson($result, 200);
+            } catch (Exception $e) {
+                respondJson([
+                    'success' => false,
+                    'error'   => $e->getMessage(),
+                ], 400);
+            }
+            break;
+
         default:
             respondJson([
-                'error' => 'Acao invalida. Use: getRole, getRoles, getRoleEditable, getRolesEditable, getClasses, getClsconfig, getClsconfigDebug, getItemCatalog, listBackups, backupGamedbd, getBackupContent, restoreBackup, exportClsconfig, saveRoleEditable, saveClsconfigTemplate, sendMailItem, sendMailGold, getServiceStatus, getServerLogs, sendSystemMessage, registerIngameParticipation, getMaintenanceMode, setMaintenanceMode',
+                'error' => 'Acao invalida. Use: getRole, getRoles, getRoleEditable, getRolesEditable, getClasses, getClsconfig, getClsconfigDebug, getItemCatalog, listBackups, backupGamedbd, getBackupContent, restoreBackup, exportClsconfig, saveRoleEditable, saveClsconfigTemplate, sendMailItem, sendMailGold, getServiceStatus, getServerLogs, getManageableServices, startService, stopService, restartService, sendSystemMessage, registerIngameParticipation, getMaintenanceMode, setMaintenanceMode',
             ], 400);
             break;
     }
