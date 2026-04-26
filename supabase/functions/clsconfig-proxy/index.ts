@@ -47,6 +47,10 @@ const ALLOWED_ACTIONS = new Set([
   "banAccount",
   "unbanAccount",
   "listSecurityHistory",
+  // Server Ops v2 — operação real (mensagem global + manutenção).
+  "sendSystemMessage",
+  "getMaintenanceMode",
+  "setMaintenanceMode",
 ]);
 
 // Mapa Action → permissão exigida (deve refletir src/lib/serverPermissions.ts).
