@@ -17,6 +17,7 @@ import {
   History,
   Sparkles,
   Eraser,
+  Upload,
 } from "lucide-react";
 import {
   AlertDialog,
