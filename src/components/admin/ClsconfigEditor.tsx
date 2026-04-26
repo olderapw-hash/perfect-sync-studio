@@ -527,6 +527,29 @@ export const ClsconfigEditor = ({ entry, allEntries = [], mode = "template", onS
       seenBackups.add(savedRoleid, "role_json", backupRoleJson);
       seenBackups.add(savedRoleid, "clsconfig_file", backupClsconfigFile);
 
+      // Auto-export opt-in (modo template). Roda DEPOIS do save bem-sucedido.
+      // Falha aqui não invalida o save — só vira um item "amarelo" no checklist.
+      let autoExport: SaveChecklistResult["autoExport"] | undefined;
+      if (autoExportTemplate) {
+        autoExport = { triggered: true };
+        try {
+          const exportRes = await pwApi.exportClsconfig();
+          autoExport.ok = exportRes?.success !== false;
+          autoExport.logFile = exportRes?.log_file;
+          if (!autoExport.ok && exportRes?.error) {
+            autoExport.error = exportRes.error;
+          }
+        } catch (e) {
+          autoExport.ok = false;
+          if (e instanceof EndpointMissingError) {
+            autoExport.endpointMissing = true;
+            autoExport.error = "Endpoint exportClsconfig ainda não implementado na VPS";
+          } else {
+            autoExport.error = e instanceof Error ? e.message : String(e);
+          }
+        }
+      }
+
       setPreviewOpen(false);
       setChecklistResult({
         saved: savedOk,
@@ -535,6 +558,7 @@ export const ClsconfigEditor = ({ entry, allEntries = [], mode = "template", onS
         backupClsconfigFile,
         exportLogFile,
         exportScheduled,
+        autoExport,
       });
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Erro desconhecido ao salvar";
