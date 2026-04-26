@@ -83,6 +83,7 @@ const ServerOpsPage = () => {
   const currentTab = useMemo(() => {
     if (location.pathname.startsWith("/admin/server/logs")) return "logs";
     if (location.pathname.startsWith("/admin/server/actions")) return "actions";
+    if (location.pathname.startsWith("/admin/server/history")) return "history";
     return "status";
   }, [location.pathname]);
 
