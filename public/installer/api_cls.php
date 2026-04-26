@@ -4264,7 +4264,7 @@ function handleSendSystemMessageRequest(array $config, array $request)
     return $decoded;
 }
 
-
+function respondJson($payload, $status = 200)
 {
     http_response_code($status);
     $flags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES;
