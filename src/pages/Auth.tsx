@@ -112,7 +112,7 @@ const Auth = () => {
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,hsl(var(--primary)/0.22),transparent_65%)]"
       />
 
-      <section className="w-full max-w-sm rounded-xl border border-border bg-card/70 p-6 shadow-glow backdrop-blur-xl">
+      <section className="relative z-10 w-full max-w-sm rounded-xl border border-border bg-card/70 p-6 shadow-glow backdrop-blur-xl">
         <header className="mb-6 flex flex-col items-center gap-3 text-center">
           <img
             src={orpheaLogo}
