@@ -648,6 +648,39 @@ export interface ServiceControlPayload {
   dry_run?: boolean;
 }
 
+/**
+ * Payload do Server Ops v4 (`startServer`/`stopServer`/`restartServer`).
+ *
+ * Regras de autostart (start/restart):
+ *  - omitir `instances` → backend usa o autostart configurado.
+ *  - `instances: ["is24",...]` → sobe a lista explícita.
+ *  - `use_auto_start: false` → desliga o autostart nessa chamada.
+ *  - `use_auto_start: true` + `instances` → soma manual + autostart.
+ *
+ * Não enviar `instances: []` (vazio) como "limpar"; o backend trata como
+ * "sem seleção" e cai no autostart.
+ */
+export interface ServerControlPayload {
+  verify?: boolean;
+  dry_run?: boolean;
+  /** Lista explícita de instâncias (omitir → autostart). */
+  instances?: string[];
+  /** Sobrescreve o uso do autostart. */
+  use_auto_start?: boolean;
+  /** Restart: contagem regressiva antes do shutdown (segundos). */
+  countdown_seconds?: number;
+  /** Restart: broadcast de aviso aos players. */
+  broadcast?: boolean;
+  /** Restart: liga manutenção durante o ciclo. */
+  enable_maintenance?: boolean;
+  /** Restart: dispara backup antes do restart. */
+  backup_before_restart?: boolean;
+  /** Restart: verifica services após o restart. */
+  verify_after_restart?: boolean;
+  /** Texto livre pra trilha de auditoria. */
+  reason?: string;
+}
+
 export interface ServiceControlResultEntry {
   success: boolean;
   service: string;
