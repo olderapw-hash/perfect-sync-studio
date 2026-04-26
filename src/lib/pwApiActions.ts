@@ -333,6 +333,17 @@ export const pwApi = {
   exportClsconfig() {
     return callAction<ExportClsconfigResponse>("exportClsconfig", { method: "POST", body: {} });
   },
+  /**
+   * Envia uma mensagem global/system para todos os jogadores online
+   * via wrapper sudo dedicado na VPS. Suporta `dry_run` para validar
+   * o payload sem entregar de fato.
+   */
+  sendSystemMessage(body: SendSystemMessagePayload) {
+    return callAction<SendSystemMessageResponse>("sendSystemMessage", {
+      method: "POST",
+      body,
+    });
+  },
   /* ─────────── Segurança v1 (kick / ban / unban) ─────────── */
   /**
    * Desconecta um personagem online (kick). Não bane — apenas força a
@@ -442,6 +453,45 @@ export interface ExportClsconfigResponse {
   output?: string;
   /** Backup do gamedbd gerado antes do export, quando aplicável. */
   gamedbd_backup?: { file?: string; bytes?: number };
+  error?: string;
+}
+
+/* ─────────── Mensagem de Sistema (Server Ops v2) ─────────── */
+
+export type SystemMessageKind = "system" | "broadcast" | "tip" | "world";
+export type SystemMessagePriority = "low" | "normal" | "high";
+
+export interface SendSystemMessagePayload {
+  /** Texto da mensagem (1..200 chars por default). */
+  message: string;
+  /** Tipo de canal. Default: system. */
+  kind?: SystemMessageKind;
+  /** Prioridade visual/sonora repassada ao wrapper. Default: normal. */
+  priority?: SystemMessagePriority;
+  /** Quando true, valida sem entregar. */
+  dry_run?: boolean;
+}
+
+export interface SendSystemMessageResponse {
+  success: boolean;
+  /** Eco do dry_run quando aplicável. */
+  dry_run?: boolean;
+  /** Eco do que foi enviado/validado. */
+  message?: string;
+  kind?: SystemMessageKind;
+  priority?: SystemMessagePriority;
+  /** Tamanho em chars (UTF-8) reportado pelo PHP. */
+  length?: number;
+  /** True quando o gdeliveryd entregou; false = enfileirado/queue. */
+  delivered?: boolean;
+  /** Mecanismo usado: lua_console, custom, no_native_handler... */
+  method?: string;
+  /** Caminho do log JSON gerado em backups/sysmsg-logs. */
+  log_file?: string;
+  /** Saída bruta quando o handler não retorna JSON. */
+  raw?: string;
+  /** Mensagem amigável quando ficou em queue. */
+  note?: string;
   error?: string;
 }
 

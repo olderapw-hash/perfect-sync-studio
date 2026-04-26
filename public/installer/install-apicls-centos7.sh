@@ -293,6 +293,64 @@ sed -i 's/\r$//' "$TMP_REWARD"
 install -m 0750 -o root -g root "$TMP_REWARD" /usr/local/sbin/sendreward-api.sh
 log "sendreward-api.sh instalado em /usr/local/sbin/sendreward-api.sh"
 
+# ===== Handler PHP da mensagem de sistema (pw_send_system_message.php) =====
+TMP_SYSMSG_PHP="$TMP_DIR/pw_send_system_message.php"
+SYSMSG_PHP_SRC="$SCRIPT_DIR/pw_send_system_message.php"
+if [ -f "$SYSMSG_PHP_SRC" ]; then
+  cp -f "$SYSMSG_PHP_SRC" "$TMP_SYSMSG_PHP"
+  sed -i 's/\r$//' "$TMP_SYSMSG_PHP"
+  php -l "$TMP_SYSMSG_PHP" >/dev/null || die "pw_send_system_message.php tem erro de sintaxe."
+  log "Usando pw_send_system_message.php encontrado em $SYSMSG_PHP_SRC"
+else
+  warn "pw_send_system_message.php nao encontrado ao lado do instalador. Escrevendo stub queue-only."
+  cat > "$TMP_SYSMSG_PHP" <<'PHPEOF'
+<?php
+// Stub instalado quando pw_send_system_message.php real nao foi enviado.
+$raw = stream_get_contents(STDIN);
+$dec = json_decode((string) $raw, true) ?: [];
+echo json_encode([
+  'success'   => true,
+  'delivered' => false,
+  'queued'    => true,
+  'method'    => 'stub',
+  'note'      => 'pw_send_system_message.php real nao instalado — mensagem enfileirada',
+], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+PHPEOF
+fi
+install -m 0755 -o root -g root "$TMP_SYSMSG_PHP" /usr/local/bin/pw_send_system_message.php
+log "pw_send_system_message.php instalado em /usr/local/bin/pw_send_system_message.php"
+
+# ===== Wrapper sudo da mensagem de sistema (sendsysmsg-api.sh) =====
+TMP_SYSMSG_SH="$TMP_DIR/sendsysmsg-api.sh"
+SYSMSG_SH_SRC="$SCRIPT_DIR/sendsysmsg-api.sh"
+if [ -f "$SYSMSG_SH_SRC" ]; then
+  cp -f "$SYSMSG_SH_SRC" "$TMP_SYSMSG_SH"
+else
+  cat > "$TMP_SYSMSG_SH" <<'SHEOF'
+#!/bin/bash
+# Wrapper sudo gerado automaticamente. Le JSON via STDIN e delega para
+# /usr/local/bin/pw_send_system_message.php (executado como root).
+set -euo pipefail
+PHP_BIN="${PHP_BIN:-/usr/bin/php}"
+HANDLER="${PW_SEND_SYSMSG_HANDLER:-/usr/local/bin/pw_send_system_message.php}"
+if [ ! -x "$PHP_BIN" ] && command -v php >/dev/null 2>&1; then
+  PHP_BIN="$(command -v php)"
+fi
+if [ ! -f "$HANDLER" ]; then
+  echo "Handler nao encontrado: $HANDLER" >&2
+  exit 11
+fi
+if [ "$(id -u)" != "0" ]; then
+  echo "sendsysmsg-api.sh precisa rodar como root (via sudo)" >&2
+  exit 12
+fi
+exec "$PHP_BIN" "$HANDLER"
+SHEOF
+fi
+sed -i 's/\r$//' "$TMP_SYSMSG_SH"
+install -m 0750 -o root -g root "$TMP_SYSMSG_SH" /usr/local/sbin/sendsysmsg-api.sh
+log "sendsysmsg-api.sh instalado em /usr/local/sbin/sendsysmsg-api.sh"
+
 
 cat > /usr/local/sbin/exportclsconfig-api.sh <<'EOF'
 #!/bin/sh
@@ -406,6 +464,7 @@ cat > "$SUDOERS_FILE" <<EOF
 $WEB_USER ALL=(root) NOPASSWD: /usr/local/sbin/exportclsconfig-api.sh
 $WEB_USER ALL=(root) NOPASSWD: /usr/local/sbin/backupgamedbd-api.sh
 $WEB_USER ALL=(root) NOPASSWD: /usr/local/sbin/sendreward-api.sh
+$WEB_USER ALL=(root) NOPASSWD: /usr/local/sbin/sendsysmsg-api.sh
 EOF
 chmod 440 "$SUDOERS_FILE"
 visudo -cf "$SUDOERS_FILE" >/dev/null || die "sudoers invalido em $SUDOERS_FILE"
@@ -478,6 +537,16 @@ else
   warn "Teste sendMailItem (dry_run) falhou. Saida: $MAIL_OUT"
 fi
 
+# Teste da mensagem de sistema em modo dry_run — valida rota mas nao envia.
+SYSMSG_OUT="$(curl -s -X POST -H "x-sync-secret: $SECRET" -H "Content-Type: application/json" \
+  -d '{"message":"installer dry-run","kind":"system","priority":"normal","dry_run":true}' \
+  "$BASE_URL?action=sendSystemMessage" 2>/dev/null || true)"
+if echo "$SYSMSG_OUT" | grep -q '"success":true'; then
+  log "Teste sendSystemMessage (dry_run) OK."
+else
+  warn "Teste sendSystemMessage (dry_run) falhou. Saida: $SYSMSG_OUT"
+fi
+
 PUBLIC_IP="$(curl -fsS --max-time 3 https://api.ipify.org 2>/dev/null || hostname -I 2>/dev/null | awk '{print $1}' || true)"
 
 cat <<EOF
@@ -497,6 +566,7 @@ Comandos de validacao:
   curl -s -H "x-sync-secret: $SECRET" "$BASE_URL?action=getClasses"
   curl -s -X POST -H "x-sync-secret: $SECRET" -H "Content-Type: application/json" -d '{"reason":"manual-test","force":true}' "$BASE_URL?action=backupGamedbd"
   curl -s -X POST -H "x-sync-secret: $SECRET" -H "Content-Type: application/json" -d '{"roleid":1,"dry_run":true,"item":{"item_id":11530,"count":1}}' "$BASE_URL?action=sendMailItem"
+  curl -s -X POST -H "x-sync-secret: $SECRET" -H "Content-Type: application/json" -d '{"message":"teste manual","kind":"system","dry_run":true}' "$BASE_URL?action=sendSystemMessage"
 
 Correio (sendMailItem / sendMailGold):
   Handler: /usr/local/bin/pw_send_mail.php
@@ -505,5 +575,13 @@ Correio (sendMailItem / sendMailGold):
   Queue:   $INSTALL_DIR/backups/mail-queue/
   Para entrega imediata edite /etc/pw_send_mail.conf apontando seu
   send_mail.lua / deliveryd_console.
+
+Mensagem de sistema (sendSystemMessage):
+  Handler: /usr/local/bin/pw_send_system_message.php
+  Wrapper: /usr/local/sbin/sendsysmsg-api.sh (sudo NOPASSWD)
+  Logs:    $INSTALL_DIR/backups/sysmsg-logs/
+  Queue:   $INSTALL_DIR/backups/sysmsg-queue/
+  Para entrega imediata edite /etc/pw_send_system_message.conf apontando
+  seu send_system_message.lua / deliveryd_console.
 ============================================================
 EOF
