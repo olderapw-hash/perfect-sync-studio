@@ -15,6 +15,7 @@ Deno.serve(async (req) => {
   try {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 
     const authHeader = req.headers.get("Authorization") ?? "";
     if (!authHeader.startsWith("Bearer ")) {
@@ -22,15 +23,17 @@ Deno.serve(async (req) => {
     }
     const token = authHeader.replace("Bearer ", "");
 
-    // Cliente SERVICE → usado pra validar JWT (getClaims), checar role e mutar.
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
+    const userClient = createClient(SUPABASE_URL, ANON_KEY, {
+      global: { headers: { Authorization: authHeader } },
+    });
 
-    // 1) Valida JWT do caller via getClaims (sem depender de sessão).
-    const { data: claimsData, error: claimsErr } = await admin.auth.getClaims(token);
-    if (claimsErr || !claimsData?.claims?.sub) {
+    // 1) Valida o JWT do caller sem depender de sessão persistida no edge runtime.
+    const { data: userData, error: userErr } = await userClient.auth.getUser(token);
+    if (userErr || !userData.user) {
       return json({ error: "Invalid session" }, 401);
     }
-    const callerId = claimsData.claims.sub as string;
+    const callerId = userData.user.id;
 
     // 2) Confirma que o caller é superadmin.
     const { data: isSuper, error: roleErr } = await admin.rpc("has_role", {
@@ -46,10 +49,7 @@ Deno.serve(async (req) => {
     if (targetId === callerId) return json({ error: "Cannot delete yourself" }, 400);
 
     // 3) Purge dos dados de aplicação. A RPC checa superadmin via auth.uid(),
-    // então precisamos chamar com o JWT do caller.
-    const userClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!, {
-      global: { headers: { Authorization: authHeader } },
-    });
+    // então ela precisa rodar com o JWT do caller.
     const { error: purgeErr } = await userClient.rpc("admin_purge_user_data", {
       target_user_id: targetId,
     });
