@@ -17,6 +17,23 @@ export interface SaveChecklistResult {
   error?: string;
   /** opcional: status do export consultado após delay */
   exportLogStatus?: "pending" | "ok" | "error" | "unknown";
+  /**
+   * Resultado do `pwApi.exportClsconfig()` disparado automaticamente pelo
+   * front após o save (toggle Auto-export). Diferente de `exportScheduled`,
+   * que reflete o que o PHP do save já agendou internamente.
+   */
+  autoExport?: {
+    /** Disparado pelo front (toggle ON). */
+    triggered: boolean;
+    /** Sucesso da chamada exportClsconfig. */
+    ok?: boolean;
+    /** Caminho do log gerado (quando disponível). */
+    logFile?: string;
+    /** Mensagem de erro (quando ok=false). */
+    error?: string;
+    /** True quando o endpoint não existe na VPS (fallback amigável). */
+    endpointMissing?: boolean;
+  };
 }
 
 interface Props {
