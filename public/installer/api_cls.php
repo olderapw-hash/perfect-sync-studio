@@ -4107,7 +4107,164 @@ function handleSendMailRequest(array $config, $action, array $request)
     return $decoded;
 }
 
-function respondJson($payload, $status = 200)
+/**
+ * Handler de sendSystemMessage.
+ *
+ * Envia uma mensagem global/system ao servidor PW via wrapper sudo
+ * dedicado. Valida tamanho/tipo, suporta dry_run, registra log JSON
+ * em backups/sysmsg-logs e devolve resposta JSON consistente.
+ *
+ * Payload aceito:
+ *   {
+ *     "message":  "texto da mensagem (1..max_length)",
+ *     "kind":     "system" | "broadcast" | "tip"   (opcional, default = system_message_default_kind)
+ *     "priority": "low" | "normal" | "high"        (opcional, default normal — repassado ao wrapper)
+ *     "channel":  "world" | "system" | "tip"       (opcional, alias de kind para compat)
+ *     "dry_run":  true|false                       (opcional)
+ *   }
+ *
+ * Resposta:
+ *   { success, dry_run?, kind, priority, message, delivered?, method?, log_file? }
+ */
+function handleSendSystemMessageRequest(array $config, array $request)
+{
+    if (!truthyValue(array_value($config, 'system_message_enabled', true))) {
+        throw new Exception('Envio de mensagem de sistema desabilitado nesta VPS');
+    }
+
+    $message = isset($request['message']) ? trim((string) $request['message']) : '';
+    if ($message === '') {
+        throw new Exception('campo message obrigatorio');
+    }
+
+    $minLen = intval(array_value($config, 'system_message_min_length', 1));
+    $maxLen = intval(array_value($config, 'system_message_max_length', 200));
+    $len = function_exists('mb_strlen') ? mb_strlen($message, 'UTF-8') : strlen($message);
+    if ($minLen > 0 && $len < $minLen) {
+        throw new Exception('message muito curta (minimo ' . $minLen . ')');
+    }
+    if ($maxLen > 0 && $len > $maxLen) {
+        throw new Exception('message acima do limite (' . $maxLen . ' caracteres)');
+    }
+
+    // Bloqueia caracteres de controle perigosos (mantem \n e \t).
+    if (preg_match('/[\x00-\x08\x0B\x0C\x0E-\x1F]/', $message)) {
+        throw new Exception('message contem caracteres de controle invalidos');
+    }
+
+    $kind = strtolower(trim((string) array_value($request, 'kind',
+        array_value($request, 'channel', array_value($config, 'system_message_default_kind', 'system')))));
+    $allowedKinds = ['system', 'broadcast', 'tip', 'world'];
+    if (!in_array($kind, $allowedKinds, true)) {
+        throw new Exception('kind invalido (use: ' . implode(', ', $allowedKinds) . ')');
+    }
+
+    $priority = strtolower(trim((string) array_value($request, 'priority', 'normal')));
+    $allowedPriorities = ['low', 'normal', 'high'];
+    if (!in_array($priority, $allowedPriorities, true)) {
+        $priority = 'normal';
+    }
+
+    $dryRun = truthyValue(array_value($request, 'dry_run', false));
+
+    $payload = [
+        'message'  => $message,
+        'kind'     => $kind,
+        'priority' => $priority,
+        'length'   => $len,
+    ];
+
+    if ($dryRun) {
+        return [
+            'success'   => true,
+            'dry_run'   => true,
+            'validated' => true,
+            'message'   => $message,
+            'kind'      => $kind,
+            'priority'  => $priority,
+            'length'    => $len,
+        ];
+    }
+
+    $command = trim((string) array_value($config, 'system_message_command', ''));
+    if ($command === '') {
+        throw new Exception('Comando de envio de mensagem de sistema nao configurado');
+    }
+
+    $logDir = trim((string) array_value($config, 'system_message_log_dir', ''));
+    if ($logDir !== '' && !is_dir($logDir)) {
+        @mkdir($logDir, 0750, true);
+    }
+
+    $json = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    if ($json === false) {
+        throw new Exception('Falha ao serializar payload da mensagem');
+    }
+
+    $descriptors = [
+        0 => ['pipe', 'r'],
+        1 => ['pipe', 'w'],
+        2 => ['pipe', 'w'],
+    ];
+    $cwd = (string) array_value($config, 'system_message_workdir', __DIR__);
+    $process = @proc_open($command, $descriptors, $pipes, $cwd);
+    if (!is_resource($process)) {
+        throw new Exception('Nao foi possivel iniciar comando de envio de mensagem');
+    }
+
+    fwrite($pipes[0], $json);
+    fclose($pipes[0]);
+    $stdout = stream_get_contents($pipes[1]);
+    fclose($pipes[1]);
+    $stderr = stream_get_contents($pipes[2]);
+    fclose($pipes[2]);
+    $exitCode = proc_close($process);
+
+    $logFile = null;
+    if ($logDir !== '' && is_dir($logDir) && is_writable($logDir)) {
+        $logFile = $logDir . '/' . gmdate('Ymd-His') . '-' . $kind . '.json';
+        @file_put_contents($logFile, json_encode([
+            'sent_at_utc' => gmdate('c'),
+            'request'     => $payload,
+            'exit_code'   => $exitCode,
+            'stdout'      => $stdout,
+            'stderr'      => $stderr,
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT));
+    }
+
+    if ($exitCode !== 0) {
+        $msg = trim((string) $stderr);
+        if ($msg === '') $msg = trim((string) $stdout);
+        if ($msg === '') $msg = 'Falha ao enviar mensagem (exit ' . $exitCode . ')';
+        throw new Exception($msg);
+    }
+
+    $decoded = json_decode((string) $stdout, true);
+    if (!is_array($decoded)) {
+        return [
+            'success'   => true,
+            'kind'      => $kind,
+            'priority'  => $priority,
+            'message'   => $message,
+            'delivered' => true,
+            'raw'       => trim((string) $stdout),
+            'log_file'  => $logFile,
+        ];
+    }
+
+    if (!array_key_exists('success', $decoded))   $decoded['success']   = true;
+    if (!array_key_exists('delivered', $decoded)) $decoded['delivered'] = (bool) $decoded['success'];
+    $decoded['kind']     = $kind;
+    $decoded['priority'] = $priority;
+    $decoded['message']  = $message;
+    if ($logFile !== null && !array_key_exists('log_file', $decoded)) {
+        $decoded['log_file'] = $logFile;
+    }
+
+    return $decoded;
+}
+
+
 {
     http_response_code($status);
     $flags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES;
