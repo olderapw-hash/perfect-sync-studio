@@ -238,6 +238,19 @@ export const ClsconfigEditor = ({ entry, allEntries = [], mode = "template", onS
   };
 
   /**
+   * Cancela o modo edição. Se houver mudanças pendentes, descarta-as
+   * silenciosamente (já houve confirmação prévia ou o usuário sabe o
+   * que está fazendo). Volta para o modo View.
+   */
+  const handleCancelEdit = () => {
+    if (dirty) {
+      setTemplate(entry.template);
+      toast.info("Alterações descartadas");
+    }
+    setEditMode(false);
+  };
+
+  /**
    * Dispara `exportclsconfig` na VPS de forma manual (botão "Exportar agora").
    * Independe do save — útil pra ressincronizar `clsconfig.data` quando o
    * usuário sabe que algo mudou no banco fora do editor.
