@@ -15,22 +15,25 @@ Deno.serve(async (req) => {
   try {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 
     const authHeader = req.headers.get("Authorization") ?? "";
     if (!authHeader.startsWith("Bearer ")) {
       return json({ error: "Missing authorization" }, 401);
     }
+    const token = authHeader.replace("Bearer ", "");
 
-    // 1) Cliente do CHAMADOR (preserva JWT) → confirma que é superadmin.
-    const userClient = createClient(SUPABASE_URL, ANON_KEY, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { data: userData, error: userErr } = await userClient.auth.getUser();
-    if (userErr || !userData.user) return json({ error: "Invalid session" }, 401);
+    // Cliente SERVICE → usado pra validar JWT (getClaims), checar role e mutar.
+    const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
 
-    const callerId = userData.user.id;
-    const { data: isSuper, error: roleErr } = await userClient.rpc("has_role", {
+    // 1) Valida JWT do caller via getClaims (sem depender de sessão).
+    const { data: claimsData, error: claimsErr } = await admin.auth.getClaims(token);
+    if (claimsErr || !claimsData?.claims?.sub) {
+      return json({ error: "Invalid session" }, 401);
+    }
+    const callerId = claimsData.claims.sub as string;
+
+    // 2) Confirma que o caller é superadmin.
+    const { data: isSuper, error: roleErr } = await admin.rpc("has_role", {
       _user_id: callerId,
       _role: "superadmin",
     });
@@ -42,17 +45,17 @@ Deno.serve(async (req) => {
     if (!targetId) return json({ error: "Missing target_user_id" }, 400);
     if (targetId === callerId) return json({ error: "Cannot delete yourself" }, 400);
 
-    // 2) Cliente SERVICE → executa purge + remoção de auth.users.
-    const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
-
-    // Purga dados de aplicação. RPC já valida superadmin via JWT do caller,
-    // então usamos o userClient pra essa parte.
+    // 3) Purge dos dados de aplicação. A RPC checa superadmin via auth.uid(),
+    // então precisamos chamar com o JWT do caller.
+    const userClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!, {
+      global: { headers: { Authorization: authHeader } },
+    });
     const { error: purgeErr } = await userClient.rpc("admin_purge_user_data", {
       target_user_id: targetId,
     });
     if (purgeErr) return json({ error: `purge failed: ${purgeErr.message}` }, 400);
 
-    // Remove conta de login.
+    // 4) Remove conta de login.
     const { error: delErr } = await admin.auth.admin.deleteUser(targetId);
     if (delErr) return json({ error: `auth delete failed: ${delErr.message}` }, 400);
 
