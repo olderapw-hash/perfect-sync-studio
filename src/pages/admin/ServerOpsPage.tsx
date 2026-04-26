@@ -227,6 +227,7 @@ function ServerStatusTab() {
   const [dryRun, setDryRun] = useState(false);
   const [acting, setActing] = useState(false);
   const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm | null>(null);
+  const [confirmReason, setConfirmReason] = useState("");
   // Operação async em andamento (start/stop/restart). Quando preenchido,
   // abre o drawer de progresso e dispara polling de getServerOperationStatus.
   const [trackedOp, setTrackedOp] = useState<{ id: string | null; type?: string } | null>(null);
