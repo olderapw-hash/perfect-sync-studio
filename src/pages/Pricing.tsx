@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowRight, Check, Loader2, Shield, Sparkles } from "lucide-react";
+import { ArrowRight, Check, Crown, Loader2, Shield, Sparkles, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { usePaddleCheckout } from "@/hooks/usePaddleCheckout";
@@ -10,24 +10,49 @@ import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 import { supabase } from "@/integrations/supabase/client";
 import { getPaymentEnvironment } from "@/lib/paddle";
 
-const PLAN_FEATURES = [
+type BillingCycle = "monthly" | "yearly";
+
+const FREE_FEATURES = [
+  "Visualizar todo o painel",
+  "Editar slots de equipamento (CLS) manualmente",
+  "Editar inventário item por item (CLS)",
+  "Editar status básico (HP/MP/level inicial)",
+  "Salvar templates iniciais",
+];
+
+const PRO_FEATURES = [
   "Editor completo de personagens (status, equip, inventário, storehouse)",
   "Templates iniciais por classe (clsconfig)",
-  "Controle do servidor (start, stop, restart remoto)",
-  "Área de segurança: kick, ban e moderação de jogadores",
-  "Envio de itens e recompensas por correio in-game",
+  "Bulk apply: aplicar template em vários personagens",
   "Backups automáticos + restauração 1-clique",
   "Histórico completo de alterações",
-  "Múltiplos administradores com permissões granulares",
-  "Fotos personalizadas das classes e personagens",
-  "Branding do seu servidor (logo, nome, cor)",
+  "Envio de itens e recompensas por correio in-game",
+  "Eventos in-game e participações",
+  "Kits iniciais e item catalog avançado",
+  "Branding do servidor (logo, nome, cor)",
   "Suporte por Discord",
+];
+
+const ULTIMATE_FEATURES = [
+  "Tudo do plano Pro",
+  "Server Ops: start, stop e restart remoto do servidor",
+  "Controle granular de instâncias (gs/gsalt/world)",
+  "Múltiplos servidores no mesmo painel",
+  "Convites e membros ilimitados",
+  "Área de segurança: kick, ban e moderação",
+  "Manutenção, mensagens globais e logs do servidor",
+  "Auditoria completa e histórico de operações",
+  "Suporte prioritário",
 ];
 
 const FAQ = [
   {
-    q: "Como funcionam os 7 dias grátis?",
-    a: "Você cadastra o cartão, mas não é cobrado nos primeiros 7 dias. Pode cancelar a qualquer momento dentro desse período sem pagar nada.",
+    q: "Posso trocar de plano depois?",
+    a: "Sim. Você pode subir do Pro pro Ultimate (ou voltar) a qualquer momento — a cobrança é ajustada proporcionalmente.",
+  },
+  {
+    q: "O que muda entre Pro e Ultimate?",
+    a: "O Pro cobre toda a gestão de personagens, templates, kits, mail e eventos. O Ultimate adiciona controle do servidor (start/stop/restart, instâncias), múltiplos servidores e moderação avançada.",
   },
   {
     q: "Preciso instalar algo na minha VPS?",
@@ -37,27 +62,61 @@ const FAQ = [
     q: "Posso cancelar quando quiser?",
     a: "Sim, sem multa, sem fidelidade. O cancelamento é imediato pela página /admin → Conta.",
   },
+];
+
+interface PaidPlan {
+  id: "pro" | "ultimate";
+  name: string;
+  tagline: string;
+  monthly: number;
+  yearly: number;
+  monthlyPriceId: string;
+  yearlyPriceId: string;
+  features: string[];
+  highlight?: boolean;
+}
+
+const PAID_PLANS: PaidPlan[] = [
   {
-    q: "Funciona com qualquer versão do Perfect World?",
-    a: "Funciona com servidores que rodam gamedbd padrão (1.5.5+). Compatível com a maioria dos servidores PT-BR e internacionais.",
+    id: "pro",
+    name: "Pro",
+    tagline: "Gestão completa de personagens e templates",
+    monthly: 250,
+    yearly: 2500,
+    monthlyPriceId: "pw_admin_pro_monthly",
+    yearlyPriceId: "pw_admin_pro_yearly",
+    features: PRO_FEATURES,
+  },
+  {
+    id: "ultimate",
+    name: "Ultimate",
+    tagline: "Tudo do Pro + controle total do servidor",
+    monthly: 500,
+    yearly: 5000,
+    monthlyPriceId: "pw_admin_ultimate_monthly",
+    yearlyPriceId: "pw_admin_ultimate_yearly",
+    features: ULTIMATE_FEATURES,
+    highlight: true,
   },
 ];
+
+const formatBRL = (n: number) =>
+  n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 
 const Pricing = () => {
   const navigate = useNavigate();
   const { session, user, isAdmin, isSuperadmin, loading: authLoading } = useAuth();
-  const { isActive, isTrial, loading: subLoading, refetch: refetchSub } = useSubscription();
+  const { isActive, isTrial, plan, loading: subLoading, refetch: refetchSub } = useSubscription();
   const { active, loading: serversLoading } = useServers();
   const { openCheckout, loading } = usePaddleCheckout();
   const [trialLoading, setTrialLoading] = useState(false);
+  const [cycle, setCycle] = useState<BillingCycle>("monthly");
+  const [checkoutTarget, setCheckoutTarget] = useState<string | null>(null);
 
-  // Se o usuário já tem acesso (assinatura ativa OU é admin/superadmin)
-  // e tem servidor configurado, mandamos direto pro painel — não faz sentido
-  // exibir tela de assinatura.
+  // Bypass: usuário com acesso e onboarding pronto vai direto pro painel.
   useEffect(() => {
     if (authLoading || subLoading || serversLoading) return;
     if (!session) return;
-    // Trial → área dedicada /trial.
     if (isTrial) {
       navigate("/trial", { replace: true });
       return;
@@ -79,18 +138,15 @@ const Pricing = () => {
     navigate,
   ]);
 
-  const handleCheckout = async () => {
+  const handleCheckout = async (priceId: string) => {
     if (!session) {
       navigate("/auth?next=/pricing");
       return;
     }
-    if (isActive && !isTrial) {
-      navigate("/admin");
-      return;
-    }
+    setCheckoutTarget(priceId);
     try {
       await openCheckout({
-        priceId: "pw_admin_monthly",
+        priceId,
         customerEmail: user?.email,
         userId: user?.id,
         successUrl: `${window.location.origin}/checkout/success`,
@@ -98,6 +154,8 @@ const Pricing = () => {
     } catch (e) {
       console.error(e);
       toast.error("Erro ao abrir checkout. Tenta de novo.");
+    } finally {
+      setCheckoutTarget(null);
     }
   };
 
@@ -112,16 +170,19 @@ const Pricing = () => {
         _environment: getPaymentEnvironment(),
       });
       if (error) throw error;
-      toast.success("Trial gratuito ativado!");
+      toast.success("Plano gratuito ativado!");
       await refetchSub();
       navigate("/trial");
     } catch (e) {
       console.error(e);
-      toast.error("Não foi possível iniciar o trial. Tenta de novo.");
+      toast.error("Não foi possível ativar o plano gratuito. Tenta de novo.");
     } finally {
       setTrialLoading(false);
     }
   };
+
+  const yearlyDiscountPct = (p: PaidPlan) =>
+    Math.round((1 - p.yearly / (p.monthly * 12)) * 100);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -134,7 +195,7 @@ const Pricing = () => {
               <Shield className="h-4 w-4 text-primary" />
             </div>
             <span className="text-sm font-extrabold uppercase tracking-wider">
-              PW <span className="text-primary">Admin</span>
+              Orphea <span className="text-primary">Core</span>
             </span>
           </Link>
           {session ? (
@@ -155,47 +216,75 @@ const Pricing = () => {
         </div>
       </header>
 
-      <main className="mx-auto max-w-5xl px-4 py-8 sm:py-16">
-        <div className="mb-8 text-center sm:mb-10">
+      <main className="mx-auto max-w-6xl px-4 py-8 sm:py-16">
+        <div className="mb-6 text-center sm:mb-8">
           <p className="text-xs font-bold uppercase tracking-wider text-primary">Escolha seu plano</p>
           <h1 className="mt-2 text-2xl font-extrabold tracking-tight sm:text-4xl">
             Pare de editar SQL na unha
           </h1>
           <p className="mx-auto mt-3 max-w-xl text-sm text-muted-foreground">
-            Painel completo pra administrar seu servidor Perfect World.
-            <strong className="text-foreground"> Comece grátis</strong> · cancele quando quiser ·
-            sem fidelidade.
+            Painel completo pra administrar seu servidor Perfect World. Comece grátis · cancele
+            quando quiser · sem fidelidade.
           </p>
         </div>
 
-        <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
-          {/* Free Trial */}
-          <div className="relative flex flex-col overflow-hidden rounded-2xl border border-border bg-card/40 p-5 sm:p-8">
-            <div className="mb-4 inline-flex w-fit items-center gap-2 rounded-full bg-primary/15 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-primary">
+        {/* Toggle mensal/anual */}
+        <div className="mb-8 flex justify-center">
+          <div className="inline-flex items-center gap-1 rounded-full border border-border bg-card/60 p-1">
+            <button
+              type="button"
+              onClick={() => setCycle("monthly")}
+              className={`rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-wider transition-smooth ${
+                cycle === "monthly"
+                  ? "bg-primary text-primary-foreground shadow-glow"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Mensal
+            </button>
+            <button
+              type="button"
+              onClick={() => setCycle("yearly")}
+              className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-wider transition-smooth ${
+                cycle === "yearly"
+                  ? "bg-primary text-primary-foreground shadow-glow"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Anual
+              <span className="rounded-full bg-emerald-500/20 px-1.5 py-0.5 text-[9px] font-extrabold text-emerald-400">
+                -17%
+              </span>
+            </button>
+          </div>
+        </div>
+
+        <div className="grid gap-4 sm:gap-6 lg:grid-cols-3">
+          {/* Free */}
+          <div className="relative flex flex-col overflow-hidden rounded-2xl border border-border bg-card/40 p-5 sm:p-7">
+            <div className="mb-4 inline-flex w-fit items-center gap-2 rounded-full bg-muted/40 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
               <Sparkles className="h-3 w-3" />
-              Free Trial
+              Free
             </div>
 
-            <div className="mb-2 flex items-baseline gap-2">
-              <span className="text-4xl font-extrabold tracking-tight sm:text-5xl">R$ 0</span>
-              <span className="text-sm text-muted-foreground sm:text-base">/sempre</span>
+            <div className="mb-1">
+              <h3 className="text-xl font-extrabold">Free</h3>
+              <p className="text-xs text-muted-foreground">Ideal pra testar o painel</p>
+            </div>
+
+            <div className="mb-2 mt-4 flex items-baseline gap-2">
+              <span className="text-4xl font-extrabold tracking-tight">R$ 0</span>
+              <span className="text-sm text-muted-foreground">/sempre</span>
             </div>
             <p className="mb-6 text-sm text-muted-foreground">
               Sem cartão. Visualize tudo, edite só templates iniciais (CLS).
             </p>
 
-            <ul className="mb-8 space-y-3">
-              {[
-                "Visualizar todo o painel",
-                "Editar slots de equipamento (CLS) manualmente",
-                "Editar inventário item por item (CLS)",
-                "Editar status básico (HP/MP/level inicial)",
-                "Salvar templates iniciais",
-                "Recursos Pro bloqueados (bulk, mail, segurança)",
-              ].map((f) => (
-                <li key={f} className="flex items-start gap-3 text-sm">
-                  <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
-                    <Check className="h-3 w-3" strokeWidth={3} />
+            <ul className="mb-8 space-y-2.5">
+              {FREE_FEATURES.map((f) => (
+                <li key={f} className="flex items-start gap-2.5 text-sm">
+                  <div className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                    <Check className="h-2.5 w-2.5" strokeWidth={3} />
                   </div>
                   <span className="text-foreground/80">{f}</span>
                 </li>
@@ -204,13 +293,15 @@ const Pricing = () => {
 
             <button
               onClick={handleStartTrial}
-              disabled={trialLoading || isTrial}
-              className="mt-auto inline-flex w-full items-center justify-center gap-2 rounded-md border border-primary/40 bg-primary/10 px-6 py-3.5 text-sm font-bold text-primary transition-smooth hover:bg-primary/20 disabled:opacity-60"
+              disabled={trialLoading || isTrial || plan !== "free"}
+              className="mt-auto inline-flex w-full items-center justify-center gap-2 rounded-md border border-border bg-card px-6 py-3 text-sm font-bold transition-smooth hover:border-primary/40 disabled:opacity-60"
             >
               {trialLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : isTrial ? (
-                "Trial já ativo"
+                "Plano gratuito ativo"
+              ) : plan !== "free" ? (
+                "Você já é assinante"
               ) : (
                 <>
                   Começar grátis
@@ -218,64 +309,111 @@ const Pricing = () => {
                 </>
               )}
             </button>
-
-            <p className="mt-4 text-center text-xs text-muted-foreground">
-              Sem cartão · sem prazo · upgrade quando quiser
-            </p>
           </div>
 
-          {/* Paid plan */}
-          <div className="relative flex flex-col overflow-hidden rounded-2xl border-2 border-primary/40 bg-gradient-to-br from-card via-card/80 to-card p-5 shadow-glow sm:p-8">
-            <div className="absolute -right-12 -top-12 h-40 w-40 rounded-full bg-primary/20 blur-3xl" />
-            <div className="relative flex flex-1 flex-col">
-              <div className="mb-4 flex flex-wrap items-center gap-2">
-                <div className="inline-flex items-center gap-2 rounded-full bg-primary/15 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-primary">
-                  Plano Pro · tudo incluso
-                </div>
-                <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary-foreground">
-                  Recomendado
-                </span>
-              </div>
-
-              <div className="mb-2 flex items-baseline gap-2">
-                <span className="text-4xl font-extrabold tracking-tight sm:text-5xl">R$ 47</span>
-                <span className="text-sm text-muted-foreground sm:text-base">/mês</span>
-              </div>
-              <p className="mb-6 text-sm text-muted-foreground">
-                Por servidor. Sem limite de personagens, edições ou administradores.
-              </p>
-
-              <ul className="mb-8 space-y-3">
-                {PLAN_FEATURES.map((f) => (
-                  <li key={f} className="flex items-start gap-3 text-sm">
-                    <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/20 text-primary">
-                      <Check className="h-3 w-3" strokeWidth={3} />
-                    </div>
-                    <span className="text-foreground/90">{f}</span>
-                  </li>
-                ))}
-              </ul>
-
-              <button
-                onClick={handleCheckout}
-                disabled={loading}
-                className="mt-auto inline-flex w-full items-center justify-center gap-2 rounded-md bg-primary px-6 py-3.5 text-sm font-bold text-primary-foreground shadow-glow transition-smooth hover:brightness-110 disabled:opacity-60"
+          {/* Pro / Ultimate */}
+          {PAID_PLANS.map((p) => {
+            const priceId = cycle === "monthly" ? p.monthlyPriceId : p.yearlyPriceId;
+            const value = cycle === "monthly" ? p.monthly : p.yearly;
+            const suffix = cycle === "monthly" ? "/mês" : "/ano";
+            const monthlyEquivalent = cycle === "yearly" ? p.yearly / 12 : null;
+            const isCurrent = plan === p.id;
+            const isThisLoading = loading && checkoutTarget === priceId;
+            const Icon = p.id === "ultimate" ? Crown : Zap;
+            return (
+              <div
+                key={p.id}
+                className={`relative flex flex-col overflow-hidden rounded-2xl p-5 sm:p-7 ${
+                  p.highlight
+                    ? "border-2 border-primary/40 bg-gradient-to-br from-card via-card/80 to-card shadow-glow"
+                    : "border border-border bg-card/40"
+                }`}
               >
-                {loading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <>
-                    {isActive && !isTrial ? "Você já é assinante" : "Começar 7 dias grátis"}
-                    <ArrowRight className="h-4 w-4" />
-                  </>
+                {p.highlight && (
+                  <div className="absolute -right-12 -top-12 h-40 w-40 rounded-full bg-primary/20 blur-3xl" />
                 )}
-              </button>
+                <div className="relative flex flex-1 flex-col">
+                  <div className="mb-4 flex flex-wrap items-center gap-2">
+                    <div
+                      className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wider ${
+                        p.highlight
+                          ? "bg-primary/15 text-primary"
+                          : "bg-muted/40 text-muted-foreground"
+                      }`}
+                    >
+                      <Icon className="h-3 w-3" />
+                      {p.name}
+                    </div>
+                    {p.highlight && (
+                      <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary-foreground">
+                        Recomendado
+                      </span>
+                    )}
+                  </div>
 
-              <p className="mt-4 text-center text-xs text-muted-foreground">
-                Sem cobrança nos 7 primeiros dias · Pagamento seguro via Paddle
-              </p>
-            </div>
-          </div>
+                  <div className="mb-1">
+                    <h3 className="text-xl font-extrabold">Orphea Core {p.name}</h3>
+                    <p className="text-xs text-muted-foreground">{p.tagline}</p>
+                  </div>
+
+                  <div className="mb-2 mt-4 flex items-baseline gap-2">
+                    <span className="text-4xl font-extrabold tracking-tight">{formatBRL(value)}</span>
+                    <span className="text-sm text-muted-foreground">{suffix}</span>
+                  </div>
+                  {monthlyEquivalent !== null && (
+                    <p className="mb-2 text-xs text-emerald-400">
+                      ≈ {formatBRL(monthlyEquivalent)}/mês · economia de {yearlyDiscountPct(p)}%
+                    </p>
+                  )}
+                  <p className="mb-6 text-sm text-muted-foreground">
+                    Por servidor. Sem limite de personagens, edições ou administradores.
+                  </p>
+
+                  <ul className="mb-8 space-y-2.5">
+                    {p.features.map((f) => (
+                      <li key={f} className="flex items-start gap-2.5 text-sm">
+                        <div
+                          className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full ${
+                            p.highlight
+                              ? "bg-primary/20 text-primary"
+                              : "bg-muted text-foreground/70"
+                          }`}
+                        >
+                          <Check className="h-2.5 w-2.5" strokeWidth={3} />
+                        </div>
+                        <span className="text-foreground/90">{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  <button
+                    onClick={() => handleCheckout(priceId)}
+                    disabled={loading || isCurrent}
+                    className={`mt-auto inline-flex w-full items-center justify-center gap-2 rounded-md px-6 py-3 text-sm font-bold transition-smooth disabled:opacity-60 ${
+                      p.highlight
+                        ? "bg-primary text-primary-foreground shadow-glow hover:brightness-110"
+                        : "border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20"
+                    }`}
+                  >
+                    {isThisLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : isCurrent ? (
+                      "Plano atual"
+                    ) : (
+                      <>
+                        Assinar {p.name}
+                        <ArrowRight className="h-4 w-4" />
+                      </>
+                    )}
+                  </button>
+
+                  <p className="mt-3 text-center text-xs text-muted-foreground">
+                    Pagamento seguro via Paddle
+                  </p>
+                </div>
+              </div>
+            );
+          })}
         </div>
 
         {/* FAQ */}
