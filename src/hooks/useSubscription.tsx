@@ -82,5 +82,18 @@ export function useSubscription() {
     subscription.is_trial === true &&
     subscription.status === "trialing";
 
-  return { subscription, loading, isActive, isTrial, refetch: fetchSubscription };
+  // Plano efetivo derivado do product_id da assinatura ativa.
+  // - "free"     → sem assinatura paga (inclui trial e usuário sem sub).
+  // - "pro"      → Orphea Core Pro (gestão de personagens, sem Server Ops).
+  // - "ultimate" → Orphea Core Ultimate (libera tudo).
+  const plan: "free" | "pro" | "ultimate" = (() => {
+    if (!isActive || isTrial) return "free";
+    if (subscription?.product_id === "pw_admin_ultimate") return "ultimate";
+    if (subscription?.product_id === "pw_admin_pro") return "pro";
+    // Fallback p/ assinaturas legadas do produto antigo "pw_admin" → trata como Pro.
+    if (subscription?.product_id === "pw_admin") return "pro";
+    return "free";
+  })();
+
+  return { subscription, loading, isActive, isTrial, plan, refetch: fetchSubscription };
 }
