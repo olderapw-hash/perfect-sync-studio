@@ -57,6 +57,9 @@ import { InventoryTab } from "./InventoryTab";
 import { EquipmentTab } from "./EquipmentTab";
 import { StorehouseTab } from "./StorehouseTab";
 import { TaskTab } from "./TaskTab";
+import { TitlesTab } from "./TitlesTab";
+import { ReputationTab } from "./ReputationTab";
+import { SkillsTab } from "./SkillsTab";
 import { SavePreviewDialog } from "./SavePreviewDialog";
 import { SaveChecklistDialog, type SaveChecklistResult } from "./SaveChecklistDialog";
 import { PresetsDialog } from "./PresetsDialog";
@@ -67,6 +70,7 @@ import { RoleidHistoryDialog } from "./RoleidHistoryDialog";
 import { InitialKitsDialog } from "./InitialKitsDialog";
 import { useTenant } from "@/hooks/useTenant";
 import { useCharacterPhoto } from "@/hooks/useCharacterPhoto";
+import { Award, ScrollText as ScrollTextIcon } from "lucide-react";
 
 /**
  * Modo de operação:
@@ -87,15 +91,27 @@ interface Props {
   onReload?: () => void;
 }
 
-type TabKey = "base" | "status" | "inventory" | "equipment" | "storehouse" | "task";
+type TabKey =
+  | "base"
+  | "status"
+  | "inventory"
+  | "equipment"
+  | "storehouse"
+  | "task"
+  | "titles"
+  | "reputation"
+  | "skills";
 
 const TABS: { key: TabKey; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
-  { key: "base", label: "Base", icon: User },
+  { key: "base", label: "Atributos", icon: User },
   { key: "status", label: "Status", icon: Activity },
   { key: "inventory", label: "Inventário", icon: Backpack },
   { key: "equipment", label: "Equipamentos", icon: Sword },
   { key: "storehouse", label: "Baú", icon: Warehouse },
   { key: "task", label: "Tarefas", icon: ScrollText },
+  { key: "titles", label: "Títulos", icon: ScrollTextIcon },
+  { key: "reputation", label: "Reputação", icon: Award },
+  { key: "skills", label: "Skills", icon: Sparkles },
 ];
 
 /** Lê um caminho aninhado em objeto destrutivo. Retorna string ou undefined. */
