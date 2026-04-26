@@ -145,6 +145,12 @@ const extractAny = (obj: unknown, path: string[]): unknown => {
 export const ClsconfigEditor = ({ entry, allEntries = [], mode = "template", onSaved, onReload }: Props) => {
   const [template, setTemplate] = useState<ClsTemplate>(entry.template);
   const [tab, setTab] = useState<TabKey>("base");
+  /**
+   * Fluxo View → Edit: a tela abre em modo visualização (RoleOverviewPanel
+   * read-only premium). Só entra em modo edição quando o usuário clica em
+   * "Editar". Save/Reset existentes continuam funcionando exatamente igual.
+   */
+  const [editMode, setEditMode] = useState(false);
   const [saving, setSaving] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [checklistResult, setChecklistResult] = useState<SaveChecklistResult | null>(null);
