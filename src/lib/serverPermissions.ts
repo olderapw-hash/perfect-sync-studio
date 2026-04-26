@@ -43,6 +43,10 @@ export const ACTION_PERMISSION: Record<string, ServerPermissionKey> = {
   startService: "manage_servers",
   stopService: "manage_servers",
   restartService: "manage_servers",
+  // Server Ops v4 — controle do servidor inteiro (autostart-aware).
+  startServer: "manage_servers",
+  stopServer: "manage_servers",
+  restartServer: "manage_servers",
   getServerOperationStatus: "view",
   getServerOperationsHistory: "view_audit",
 

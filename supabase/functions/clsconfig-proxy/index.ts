@@ -56,6 +56,12 @@ const ALLOWED_ACTIONS = new Set([
   "startService",
   "stopService",
   "restartService",
+  // Server Ops v4 — controle do servidor inteiro (autostart-aware).
+  // startServer/restartServer usam autostart por padrão quando `instances`
+  // não é enviado (ver INSTANCE_CONTROL_V1_FRONTEND_CONTRACT.md).
+  "startServer",
+  "stopServer",
+  "restartServer",
   // Server Ops v3 — polling de progresso de operações longas.
   "getServerOperationStatus",
   "getServerOperationsHistory",
@@ -104,6 +110,10 @@ const ACTION_PERMISSION: Record<string, string> = {
   startService: "manage_servers",
   stopService: "manage_servers",
   restartService: "manage_servers",
+  // Server Ops v4 — controle do servidor inteiro.
+  startServer: "manage_servers",
+  stopServer: "manage_servers",
+  restartServer: "manage_servers",
   // Polling de status de operações é leitura.
   getServerOperationStatus: "view",
   getServerOperationsHistory: "view_audit",
@@ -562,6 +572,9 @@ const NEW_ACTIONS_FALLBACK_MISSING = new Set([
   "startService",
   "stopService",
   "restartService",
+  "startServer",
+  "stopServer",
+  "restartServer",
   "getServerOperationStatus",
 ]);
 

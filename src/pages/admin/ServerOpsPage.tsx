@@ -181,6 +181,7 @@ import {
   type ManageableService,
   type ServiceControlPayload,
   type ServiceControlResponse,
+  type ServerControlPayload,
 } from "@/lib/pwApiActions";
 import { logAuditEvent } from "@/lib/auditLog";
 import { toast } from "sonner";
@@ -328,33 +329,46 @@ function ServerStatusTab() {
   ) {
     setActing(true);
     setPendingConfirm(null);
-    const payload: ServiceControlPayload = {
-      verify: true,
-      dry_run: dryRun,
-    };
-    if (scope === "selection") {
-      payload.services = explicitServices ?? Array.from(selected);
+    // Server Ops v4: bot\u00f5es "servidor" usam os endpoints novos
+    // (startServer/stopServer/restartServer). startServer e restartServer
+    // assumem o autostart por padr\u00e3o quando `instances` n\u00e3o \u00e9 enviado.
+    // Sele\u00e7\u00e3o granular continua usando startService/stopService/restartService.
+    const isServerWide = scope === "server";
+    let payload: ServiceControlPayload | ServerControlPayload;
+    if (isServerWide) {
+      // N\u00c3O enviar `instances: []` (vazio) \u2014 backend trataria como "sem
+      // sele\u00e7\u00e3o" e cairia no autostart, mas a inten\u00e7\u00e3o aqui \u00e9 deixar o
+      // backend decidir. Para o bot\u00e3o "servidor", omitir o campo.
+      payload = { verify: true, dry_run: dryRun } satisfies ServerControlPayload;
     } else {
-      // "server" scope: a API exige a lista explícita de serviços.
-      // Mandamos todos os serviços selecionáveis carregados do getManageableServices.
-      payload.services = (services ?? [])
-        .filter((s) => s.selectable !== false)
-        .map((s) => s.key);
+      const list = explicitServices ?? Array.from(selected);
+      if (list.length === 0) {
+        toast.error("Nenhum servi\u00e7o dispon\u00edvel para esta a\u00e7\u00e3o.");
+        setActing(false);
+        return;
+      }
+      payload = {
+        verify: true,
+        dry_run: dryRun,
+        services: list,
+      } satisfies ServiceControlPayload;
     }
-    if (!payload.services || payload.services.length === 0) {
-      toast.error("Nenhum serviço disponível para esta ação.");
-      setActing(false);
-      return;
-    }
-    const fn =
-      action === "start"
+    const fn = isServerWide
+      ? action === "start"
+        ? pwApi.startServer
+        : action === "stop"
+          ? pwApi.stopServer
+          : pwApi.restartServer
+      : action === "start"
         ? pwApi.startService
         : action === "stop"
           ? pwApi.stopService
           : pwApi.restartService;
     const auditAction = `server_ops.${scope}_${action}`;
     try {
-      const res: ServiceControlResponse = await fn(payload);
+      const res: ServiceControlResponse = await (fn as (
+        body: ServiceControlPayload | ServerControlPayload,
+      ) => Promise<ServiceControlResponse>)(payload);
       const okCount = (res.results ?? []).filter((r) => r.success).length;
       const failCount = (res.results ?? []).filter((r) => !r.success).length;
       const summary = res.results
@@ -377,7 +391,9 @@ function ServerStatusTab() {
       void logAuditEvent({
         action: auditAction,
         tenantId: active?.id ?? null,
-        target: payload.services?.join(",") ?? "server",
+        target: isServerWide
+          ? "server"
+          : (payload as ServiceControlPayload).services?.join(",") ?? "server",
         status: failCount > 0 ? "error" : "ok",
         metadata: {
           dry_run: dryRun,
@@ -397,11 +413,15 @@ function ServerStatusTab() {
       // 1) Endpoint não existe nesta VPS → notice amigável.
       if (e instanceof EndpointMissingError) {
         setEndpointMissing(true);
-        toast.error(`Endpoint ${action}Service ausente nesta VPS.`);
+        toast.error(
+          `Endpoint ${action}${isServerWide ? "Server" : "Service"} ausente nesta VPS.`,
+        );
         void logAuditEvent({
           action: auditAction,
           tenantId: active?.id ?? null,
-          target: payload.services?.join(",") ?? "server",
+          target: isServerWide
+            ? "server"
+            : (payload as ServiceControlPayload).services?.join(",") ?? "server",
           status: "error",
           error: "endpoint_missing",
         });
@@ -431,7 +451,9 @@ function ServerStatusTab() {
       void logAuditEvent({
         action: auditAction,
         tenantId: active?.id ?? null,
-        target: payload.services?.join(",") ?? "server",
+        target: isServerWide
+          ? "server"
+          : (payload as ServiceControlPayload).services?.join(",") ?? "server",
         status: "error",
         error: shortMsg,
       });
