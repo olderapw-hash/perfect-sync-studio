@@ -178,6 +178,7 @@ import {
 } from "@/lib/pwApiActions";
 import { logAuditEvent } from "@/lib/auditLog";
 import { toast } from "sonner";
+import { ServerOperationProgressDrawer } from "@/components/admin/ServerOperationProgressDrawer";
 
 /** Ícones temáticos por chave conhecida (apenas visual — a lista vem da API). */
 const SERVICE_ICONS: Record<string, typeof Database> = {
@@ -218,6 +219,9 @@ function ServerStatusTab() {
   const [dryRun, setDryRun] = useState(false);
   const [acting, setActing] = useState(false);
   const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm | null>(null);
+  // Operação async em andamento (start/stop/restart). Quando preenchido,
+  // abre o drawer de progresso e dispara polling de getServerOperationStatus.
+  const [trackedOp, setTrackedOp] = useState<{ id: string | null; type?: string } | null>(null);
 
   const canManage = isSuperadmin || can("manage_servers");
 
@@ -359,6 +363,11 @@ function ServerStatusTab() {
           `${labelForAction(action)}${dryRun ? " (dry-run)" : ""}: ${summary}`,
         );
       }
+      // Operação assíncrona disparada pela VPS → abre drawer de progresso.
+      // Em dry-run não faz sentido pollar (não muda estado).
+      if (!dryRun && res.operation?.id) {
+        setTrackedOp({ id: res.operation.id, type: res.operation.type });
+      }
       void logAuditEvent({
         action: auditAction,
         tenantId: active?.id ?? null,
@@ -370,6 +379,7 @@ function ServerStatusTab() {
           fail: failCount,
           log_file: res.log_file ?? null,
           results: res.results ?? null,
+          operation_id: res.operation?.id ?? null,
         },
       });
       // Recarrega estado pós-ação (exceto dry-run, que não muda nada).
@@ -732,6 +742,18 @@ function ServerStatusTab() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* ─── Drawer de progresso da operação async ─── */}
+      <ServerOperationProgressDrawer
+        open={trackedOp !== null}
+        operationId={trackedOp?.id ?? null}
+        type={trackedOp?.type}
+        onClose={() => {
+          setTrackedOp(null);
+          // Refresh ao fechar pra refletir o estado final.
+          void load();
+        }}
+      />
     </div>
   );
 }

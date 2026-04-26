@@ -56,6 +56,8 @@ const ALLOWED_ACTIONS = new Set([
   "startService",
   "stopService",
   "restartService",
+  // Server Ops v3 — polling de progresso de operações longas.
+  "getServerOperationStatus",
 ]);
 
 // Mapa Action → permissão exigida (deve refletir src/lib/serverPermissions.ts).
@@ -92,6 +94,8 @@ const ACTION_PERMISSION: Record<string, string> = {
   startService: "manage_servers",
   stopService: "manage_servers",
   restartService: "manage_servers",
+  // Polling de status de operações é leitura.
+  getServerOperationStatus: "view",
 };
 
 function jsonError(message: string, status: number): Response {
@@ -538,6 +542,7 @@ const NEW_ACTIONS_FALLBACK_MISSING = new Set([
   "startService",
   "stopService",
   "restartService",
+  "getServerOperationStatus",
 ]);
 
 async function relay(

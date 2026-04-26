@@ -413,6 +413,20 @@ export const pwApi = {
   restartService(body: ServiceControlPayload) {
     return callAction<ServiceControlResponse>("restartService", { method: "POST", body });
   },
+  /**
+   * Polling do progresso de operações longas (start/stop/restart server).
+   * `operation_id` é o id retornado em ServiceControlResponse.operation.id.
+   * Quando omitido, a VPS devolve a operação mais recente do tipo informado.
+   */
+  getServerOperationStatus(params: { operation_id?: string; type?: string } = {}) {
+    const query: Record<string, string> = {};
+    if (params.operation_id) query.operation_id = params.operation_id;
+    if (params.type) query.type = params.type;
+    return callAction<ServerOperationStatusResponse>("getServerOperationStatus", {
+      method: "GET",
+      query,
+    });
+  },
 };
 
 /* ─────────── Server Ops v3 — controle real de servicos ─────────── */
@@ -474,6 +488,70 @@ export interface ServiceControlResponse {
   log_file?: string | null;
   message?: string;
   error?: string;
+  /** Quando a VPS dispara operação assíncrona (start/stop/restart server completo). */
+  operation?: ServerOperationStatus;
+}
+
+/* ─────────── Server Ops — progresso assíncrono ─────────── */
+
+export type ServerOperationStage =
+  | "queued"
+  | "broadcast"
+  | "countdown"
+  | "backup"
+  | "stop"
+  | "start"
+  | "restart"
+  | "verify"
+  | "completed"
+  | "failed"
+  | "unknown";
+
+export type ServerOperationSuccessState = "running" | "success" | "failed";
+
+export interface ServerOperationStatus {
+  id: string;
+  type:
+    | "startServer"
+    | "stopServer"
+    | "restartServer"
+    | "startService"
+    | "stopService"
+    | "restartService"
+    | string;
+  stage: ServerOperationStage;
+  running: boolean;
+  success_state: ServerOperationSuccessState;
+  success: boolean;
+  created_at?: string | number | null;
+  completed_at?: string | number | null;
+  reason?: string | null;
+  dry_run?: boolean;
+  log_file?: string | null;
+  countdown?: Array<{ seconds_left?: number; message?: string; sent_at?: string | number }> | null;
+  backup?: {
+    success?: boolean;
+    path?: string | null;
+    started_at?: string | number;
+    completed_at?: string | number;
+    error?: string | null;
+  } | null;
+  restart?: Record<string, unknown> | null;
+  verification?: {
+    success?: boolean;
+    services?: Array<{ key: string; state: ServiceState; ok?: boolean; message?: string }>;
+    started_at?: string | number;
+    completed_at?: string | number;
+  } | null;
+  error?: string | null;
+  services?: string[];
+}
+
+export interface ServerOperationStatusResponse {
+  success: boolean;
+  operation?: ServerOperationStatus;
+  error?: string;
+  endpoint_missing?: boolean;
 }
 
 /* ─────────── Operação do Servidor v1 ─────────── */
