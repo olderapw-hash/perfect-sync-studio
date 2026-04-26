@@ -15,10 +15,10 @@ export const SkillsTab = ({ template }: Props) => {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-start gap-3 rounded-xl border-2 border-amber-500/40 bg-amber-500/5 p-4">
-        <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-400" />
+      <div className="flex items-start gap-3 rounded-xl border-2 border-primary/40 bg-primary/5 p-4">
+        <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
         <div className="space-y-1.5 text-sm">
-          <p className="font-bold uppercase tracking-wider text-amber-300">
+          <p className="font-bold uppercase tracking-wider text-primary">
             Edição de skills em construção
           </p>
           <p className="text-bronze-muted">
