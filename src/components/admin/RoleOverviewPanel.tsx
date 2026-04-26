@@ -92,7 +92,7 @@ export const RoleOverviewPanel = ({ template, roleid, online }: Props) => {
   const className = template.summary?.class_name || classInfo.name;
   const charName = template.summary?.name || template.base?.name || "(sem nome)";
 
-  const settings = useAppSettings();
+  const { settings } = useAppSettings();
   const fallbackPhotoUrl = useMemo(() => {
     const path = template.summary?.class_icon_path;
     if (!path) return null;
