@@ -412,6 +412,12 @@ const AdminUsers = () => {
           onDeleted={load}
         />
       )}
+      {testDialogOpen && (
+        <TestUserCreateDialog
+          onClose={() => setTestDialogOpen(false)}
+          onCreated={load}
+        />
+      )}
     </main>
   );
 };
