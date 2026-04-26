@@ -7,7 +7,7 @@ import { pwApi, EndpointMissingError } from "@/lib/pwApiActions";
 import { normalizeClsconfigResponse } from "@/lib/clsconfig";
 import type { ClsEntry } from "@/types/clsconfig";
 import { ClsconfigEditor } from "./ClsconfigEditor";
-import { RoleOverviewPanel } from "./RoleOverviewPanel";
+import { toast } from "sonner";
 import { toast } from "sonner";
 
 /**
