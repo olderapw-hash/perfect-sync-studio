@@ -52,6 +52,8 @@ import { pwApi, EndpointMissingError } from "@/lib/pwApiActions";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { BaseTab } from "./BaseTab";
+import { RoleOverviewPanel } from "./RoleOverviewPanel";
+import { Eye, Pencil, X } from "lucide-react";
 import { StatusTab } from "./StatusTab";
 import { InventoryTab } from "./InventoryTab";
 import { EquipmentTab } from "./EquipmentTab";
