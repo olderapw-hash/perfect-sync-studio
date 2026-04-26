@@ -964,6 +964,9 @@ export const ClsconfigEditor = ({ entry, allEntries = [], mode = "template", onS
             {tab === "equipment" && <EquipmentTab template={template} onChange={setTemplate} />}
             {tab === "storehouse" && <StorehouseTab template={template} onChange={setTemplate} />}
             {tab === "task" && <TaskTab template={template} onChange={setTemplate} />}
+            {tab === "titles" && <TitlesTab template={template} onChange={setTemplate} />}
+            {tab === "reputation" && <ReputationTab template={template} onChange={setTemplate} />}
+            {tab === "skills" && <SkillsTab template={template} />}
           </div>
         </section>
       </div>
