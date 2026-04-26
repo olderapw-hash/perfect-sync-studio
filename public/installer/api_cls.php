@@ -76,6 +76,19 @@ $CONFIG = [
     'maintenance_max_reason_len'  => 240,
     'maintenance_max_eta_minutes' => 24 * 60, // 24h teto sanitario
 
+    // === Gerencia de servicos (getManageableServices / startService / stopService / restartService) ===
+    // Wrapper sudo dedicado, sem shell arbitrario. O PHP delega para
+    // /usr/local/sbin/manageservice-api.sh, que aceita apenas servicos
+    // whitelisted e acoes whitelisted (start|stop|restart). Cada servico
+    // pode ser um daemon do PW (gamedbd, gdeliveryd, gacd, glink, authd,
+    // uniquenamed) ou um servico de sistema (mysql, httpd) — o wrapper
+    // resolve qual systemd unit / binario usar.
+    'manage_service_enabled'      => true,
+    'manage_service_command'      => '/usr/bin/sudo -n /usr/local/sbin/manageservice-api.sh',
+    'manage_service_workdir'      => __DIR__,
+    'manage_service_log_dir'      => __DIR__ . '/backups/service-actions',
+    'manage_service_max_batch'    => 16,
+
     // === Eventos ingame (registerIngameParticipation) ===
     // Ponte NPC -> VPS -> Supabase. O NPC NUNCA fala direto com o Supabase:
     // ele chama este api_cls.php, que aqui repassa para a RPC
