@@ -93,14 +93,31 @@ const Auth = () => {
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-hero p-4">
-      <section className="w-full max-w-sm rounded-xl border border-border bg-card/60 p-6 backdrop-blur-md shadow-glow">
-        <header className="mb-6 flex flex-col items-center gap-2 text-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/15">
-            <Shield className="h-6 w-6 text-primary" />
-          </div>
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-hero p-4">
+      {/* Background image + overlays */}
+      <div
+        aria-hidden
+        className="absolute inset-0 -z-10 bg-cover bg-center"
+        style={{ backgroundImage: `url(${heroBg})` }}
+      />
+      <div
+        aria-hidden
+        className="absolute inset-0 -z-10 bg-gradient-to-b from-background/85 via-background/70 to-background/95"
+      />
+      <div
+        aria-hidden
+        className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_center,hsl(var(--primary)/0.18),transparent_60%)]"
+      />
+
+      <section className="w-full max-w-sm rounded-xl border border-border bg-card/70 p-6 shadow-glow backdrop-blur-xl">
+        <header className="mb-6 flex flex-col items-center gap-3 text-center">
+          <img
+            src={orpheaLogo}
+            alt="Orphea Core"
+            className="h-16 w-16 rounded-2xl object-contain shadow-glow ring-1 ring-primary/30"
+          />
           <h1 className="text-xl font-extrabold tracking-tight text-foreground">
-            Painel Admin
+            Orphea Core
           </h1>
           <p className="text-xs text-muted-foreground">
             Login e cadastro · Perfect World
