@@ -289,28 +289,14 @@ const CharacterCard = ({ group, onOpen }: { group: CharacterGroup; onOpen: () =>
         style={{ background: `hsl(${color})` }}
       />
       <div className="flex items-center gap-3 pl-1.5">
-        <div
-          className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border text-base font-extrabold text-white shadow-md"
-          style={{
-            background: `linear-gradient(135deg, hsl(${color} / 0.9), hsl(${color} / 0.55))`,
-            borderColor: `hsl(${color} / 0.6)`,
-            textShadow: "0 1px 2px rgba(0,0,0,0.5)",
-          }}
-        >
-          {iconUrl ? (
-            <img
-              src={iconUrl}
-              alt={group.className}
-              className="h-full w-full object-cover"
-              loading="lazy"
-              onError={(e) => {
-                (e.currentTarget as HTMLImageElement).style.display = "none";
-              }}
-            />
-          ) : (
-            short
-          )}
-        </div>
+        <CharacterAvatar
+          cls={group.cls}
+          iconUrl={iconUrl}
+          fallbackText={short}
+          color={color}
+          alt={group.className}
+          className="h-14 w-14 text-base"
+        />
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline gap-1.5">
             <span
