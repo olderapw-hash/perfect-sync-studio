@@ -5178,8 +5178,8 @@ function serverOpsInvokeWrapper($command, $verb, $service, array $config)
 }
 
 
+function serverOpsLogSources($CONFIG)
 {
-    $apicls_dir = isset($CONFIG['clsconfig_export_log_dir'])
         ? $CONFIG['clsconfig_export_log_dir']
         : (__DIR__ . '/backups/clsconfig/export-logs');
     $mail_dir = isset($CONFIG['mail_send_log_dir'])
