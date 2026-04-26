@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useServers } from "@/hooks/useServers";
+import { useAppSettings } from "@/hooks/useAppSettings";
 import { toast } from "sonner";
 import heroBg from "@/assets/landing-hero.jpg";
 import orpheaLogo from "@/assets/orphea-core-logo.png";
