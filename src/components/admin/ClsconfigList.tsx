@@ -3,6 +3,7 @@ import { ArrowLeft, Loader2, Search, ShieldAlert, Users } from "lucide-react";
 import type { ApiClass, ClsEntry } from "@/types/clsconfig";
 import { getClassInfo, getGenderInfo, getInitials, getRaceName } from "@/lib/pwClasses";
 import { buildClassIconUrl } from "@/lib/pwIcons";
+import { useCharacterPhoto } from "@/hooks/useCharacterPhoto";
 import { cn } from "@/lib/utils";
 
 interface Props {
