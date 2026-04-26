@@ -12,8 +12,20 @@ import {
   History as HistoryIcon,
   Loader2,
   RefreshCw,
+  Trash2,
   XCircle,
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -114,6 +126,20 @@ export default function ServerHistoryPage() {
   const [trackedOp, setTrackedOp] = useState<{ id: string; type?: string } | null>(
     null,
   );
+  const [confirmClearOpen, setConfirmClearOpen] = useState(false);
+
+  const handleClearHistory = () => {
+    setEntries([]);
+    setConfirmClearOpen(false);
+    toast.success("Histórico limpo da visualização");
+    void logAuditEvent({
+      action: "server_ops.history_clear_view",
+      tenantId: active?.id ?? null,
+      target: "client_only",
+      status: "ok",
+      metadata: { type, success_state: stateFilter, limit },
+    });
+  };
 
   const allowed = isSuperadmin || can("view_audit") || can("view");
 
@@ -228,15 +254,27 @@ export default function ServerHistoryPage() {
               </p>
             </div>
           </div>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => void load()}
-            disabled={loading}
-          >
-            <RefreshCw className={cn("h-3.5 w-3.5", loading && "animate-spin")} />
-            Atualizar
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => void load()}
+              disabled={loading}
+            >
+              <RefreshCw className={cn("h-3.5 w-3.5", loading && "animate-spin")} />
+              Atualizar
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-destructive hover:text-destructive"
+              onClick={() => setConfirmClearOpen(true)}
+              disabled={loading || list.length === 0}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Limpar histórico
+            </Button>
+          </div>
         </div>
 
         <div className="flex flex-wrap items-end gap-3 border-t border-border px-5 py-3">
@@ -445,6 +483,28 @@ export default function ServerHistoryPage() {
         type={trackedOp?.type}
         onClose={() => setTrackedOp(null)}
       />
+
+      <AlertDialog open={confirmClearOpen} onOpenChange={setConfirmClearOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Limpar histórico?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Isso remove os registros apenas da visualização atual. Ao
+              clicar em <strong>Atualizar</strong>, o histórico real do
+              servidor será carregado novamente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={handleClearHistory}
+            >
+              <Trash2 className="mr-2 h-4 w-4" /> Limpar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
