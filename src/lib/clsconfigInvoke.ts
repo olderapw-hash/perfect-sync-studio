@@ -56,6 +56,20 @@ export async function invokeClsconfigProxy<T = unknown>(
   opts: InvokeOptions = {},
 ): Promise<{ data: T | null; error: Error | null; status: number; rawBody: string }> {
   const method = opts.method ?? "GET";
+
+  // Curto-circuito: se a sessão já expirou, evita disparar a edge function
+  // (que retornaria 401 e geraria toast + log de erro desnecessário).
+  const { data: sessionData } = await supabase.auth.getSession();
+  if (!sessionData.session) {
+    handleMaybeAuthOrForbidden(new Error("401 Unauthorized: sessão expirada"));
+    return {
+      data: null,
+      error: new Error("Sessão expirada. Faça login novamente."),
+      status: 401,
+      rawBody: "",
+    };
+  }
+
   const tenantId = await readActiveTenantId();
   if (!tenantId && !opts.allowNoServer) {
     throw new NoServerSelectedError();
