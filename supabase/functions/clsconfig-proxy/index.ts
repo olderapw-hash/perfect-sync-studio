@@ -47,6 +47,10 @@ const ALLOWED_ACTIONS = new Set([
   "banAccount",
   "unbanAccount",
   "listSecurityHistory",
+  // Server Ops v2 — operação real (mensagem global + manutenção).
+  "sendSystemMessage",
+  "getMaintenanceMode",
+  "setMaintenanceMode",
 ]);
 
 // Mapa Action → permissão exigida (deve refletir src/lib/serverPermissions.ts).
@@ -72,6 +76,12 @@ const ACTION_PERMISSION: Record<string, string> = {
   banAccount: "manage_security",
   unbanAccount: "manage_security",
   listSecurityHistory: "view_audit",
+  // Server Ops v2: mensagem global usa o mesmo gating de save_templates;
+  // manutenção (set/get) é estado operacional do servidor → manage_servers
+  // para escrita; leitura cai em "view".
+  sendSystemMessage: "save_templates",
+  getMaintenanceMode: "view",
+  setMaintenanceMode: "manage_servers",
 };
 
 function jsonError(message: string, status: number): Response {
@@ -511,6 +521,9 @@ const NEW_ACTIONS_FALLBACK_MISSING = new Set([
   "banAccount",
   "unbanAccount",
   "listSecurityHistory",
+  "sendSystemMessage",
+  "getMaintenanceMode",
+  "setMaintenanceMode",
 ]);
 
 async function relay(

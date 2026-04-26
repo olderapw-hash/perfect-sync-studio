@@ -344,6 +344,28 @@ export const pwApi = {
       body,
     });
   },
+  /**
+   * Lê o estado atual de manutenção persistido na VPS.
+   * Operação leve (apenas lê o state.json local). Sempre devolve um
+   * estado bem-formado mesmo quando o arquivo ainda não existe.
+   */
+  getMaintenanceMode() {
+    return callAction<GetMaintenanceModeResponse>("getMaintenanceMode", {
+      method: "GET",
+    });
+  },
+  /**
+   * Liga/desliga o modo manutenção do servidor. Quando `broadcast=true`
+   * (default), uma mensagem global de alta prioridade é disparada
+   * automaticamente — mas a manutenção persiste mesmo se o broadcast falhar.
+   * `dry_run` valida sem persistir/enviar.
+   */
+  setMaintenanceMode(body: SetMaintenanceModePayload) {
+    return callAction<SetMaintenanceModeResponse>("setMaintenanceMode", {
+      method: "POST",
+      body,
+    });
+  },
   /* ─────────── Segurança v1 (kick / ban / unban) ─────────── */
   /**
    * Desconecta um personagem online (kick). Não bane — apenas força a
@@ -495,7 +517,56 @@ export interface SendSystemMessageResponse {
   error?: string;
 }
 
-/* ─────────── Correio (Fase 2) ─────────── */
+/* ─────────── Maintenance Mode (Server Ops v2) ─────────── */
+
+export interface MaintenanceState {
+  enabled: boolean;
+  reason: string | null;
+  eta_minutes: number | null;
+  /** ISO 8601 UTC quando entrou em manutenção (mantido em ON consecutivos). */
+  started_at: string | null;
+  /** ISO 8601 UTC = started_at + eta_minutes (best-effort). */
+  ends_at: string | null;
+  /** IP/identificador do chamador no PHP (best-effort). */
+  updated_by: string | null;
+  /** ISO 8601 UTC do último update. */
+  updated_at: string | null;
+}
+
+export interface SetMaintenanceModePayload {
+  enabled: boolean;
+  reason?: string;
+  /** Tempo previsto em minutos (>=0, teto de 1440). */
+  eta_minutes?: number | null;
+  /** Quando true, dispara sendSystemMessage automaticamente. Default true. */
+  broadcast?: boolean;
+  dry_run?: boolean;
+}
+
+export interface MaintenanceBroadcastResult {
+  attempted: boolean;
+  result?: SendSystemMessageResponse;
+  error?: string;
+  skipped_reason?: string;
+  planned?: boolean;
+}
+
+export interface SetMaintenanceModeResponse {
+  success: boolean;
+  dry_run?: boolean;
+  /** Estado já persistido após a operação (em dry_run vem em `next`). */
+  maintenance?: MaintenanceState;
+  next?: MaintenanceState;
+  previous?: MaintenanceState;
+  broadcast?: MaintenanceBroadcastResult;
+  error?: string;
+}
+
+export interface GetMaintenanceModeResponse {
+  success: boolean;
+  maintenance: MaintenanceState;
+  error?: string;
+}
 
 export interface MailItemAttachment {
   item_id: number;

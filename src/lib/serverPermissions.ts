@@ -33,6 +33,11 @@ export const ACTION_PERMISSION: Record<string, ServerPermissionKey> = {
   getServerLogs: "view_audit",
   exportClsconfig: "save_templates",
 
+  // operação do servidor (v2: mensagem global + manutenção)
+  sendSystemMessage: "save_templates",
+  getMaintenanceMode: "view",
+  setMaintenanceMode: "manage_servers",
+
   // segurança (kick/ban/unban + histórico)
   kickRole: "manage_security",
   banAccount: "manage_security",

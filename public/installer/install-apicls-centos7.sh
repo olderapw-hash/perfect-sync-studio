@@ -547,6 +547,22 @@ else
   warn "Teste sendSystemMessage (dry_run) falhou. Saida: $SYSMSG_OUT"
 fi
 
+# Teste do modo manutencao (get + dry_run set) — sem alterar estado real.
+MAINT_GET="$(curl -s -H "x-sync-secret: $SECRET" "$BASE_URL?action=getMaintenanceMode" 2>/dev/null || true)"
+if echo "$MAINT_GET" | grep -q '"success":true'; then
+  log "Teste getMaintenanceMode OK."
+else
+  warn "Teste getMaintenanceMode falhou. Saida: $MAINT_GET"
+fi
+MAINT_DRY="$(curl -s -X POST -H "x-sync-secret: $SECRET" -H "Content-Type: application/json" \
+  -d '{"enabled":true,"reason":"installer dry-run","eta_minutes":1,"broadcast":false,"dry_run":true}' \
+  "$BASE_URL?action=setMaintenanceMode" 2>/dev/null || true)"
+if echo "$MAINT_DRY" | grep -q '"success":true'; then
+  log "Teste setMaintenanceMode (dry_run) OK."
+else
+  warn "Teste setMaintenanceMode (dry_run) falhou. Saida: $MAINT_DRY"
+fi
+
 PUBLIC_IP="$(curl -fsS --max-time 3 https://api.ipify.org 2>/dev/null || hostname -I 2>/dev/null | awk '{print $1}' || true)"
 
 cat <<EOF
@@ -567,6 +583,8 @@ Comandos de validacao:
   curl -s -X POST -H "x-sync-secret: $SECRET" -H "Content-Type: application/json" -d '{"reason":"manual-test","force":true}' "$BASE_URL?action=backupGamedbd"
   curl -s -X POST -H "x-sync-secret: $SECRET" -H "Content-Type: application/json" -d '{"roleid":1,"dry_run":true,"item":{"item_id":11530,"count":1}}' "$BASE_URL?action=sendMailItem"
   curl -s -X POST -H "x-sync-secret: $SECRET" -H "Content-Type: application/json" -d '{"message":"teste manual","kind":"system","dry_run":true}' "$BASE_URL?action=sendSystemMessage"
+  curl -s -H "x-sync-secret: $SECRET" "$BASE_URL?action=getMaintenanceMode"
+  curl -s -X POST -H "x-sync-secret: $SECRET" -H "Content-Type: application/json" -d '{"enabled":true,"reason":"teste","eta_minutes":1,"broadcast":false,"dry_run":true}' "$BASE_URL?action=setMaintenanceMode"
 
 Correio (sendMailItem / sendMailGold):
   Handler: /usr/local/bin/pw_send_mail.php
@@ -583,5 +601,12 @@ Mensagem de sistema (sendSystemMessage):
   Queue:   $INSTALL_DIR/backups/sysmsg-queue/
   Para entrega imediata edite /etc/pw_send_system_message.conf apontando
   seu send_system_message.lua / deliveryd_console.
+
+Modo manutencao (setMaintenanceMode / getMaintenanceMode):
+  Estado:  $INSTALL_DIR/backups/maintenance/state.json
+  Log:     $INSTALL_DIR/backups/maintenance/history.log
+  Sem wrapper sudo dedicado: o estado e gravado pelo proprio usuario web.
+  Quando enabled=true e broadcast=true, dispara automaticamente
+  sendSystemMessage (alta prioridade) com motivo + ETA.
 ============================================================
 EOF

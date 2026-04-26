@@ -36,6 +36,7 @@ import {
 import { logAuditEvent } from "@/lib/auditLog";
 import { EndpointMissingNotice } from "./ServerOpsPage";
 import { SystemMessageCard } from "@/components/admin/SystemMessageCard";
+import { MaintenanceModeCard } from "@/components/admin/MaintenanceModeCard";
 
 interface ExportState {
   loading: boolean;
@@ -108,6 +109,9 @@ export default function ServerActionsPage() {
 
       {/* Send System Message — v2 */}
       <SystemMessageCard />
+
+      {/* Maintenance Mode — v2 */}
+      <MaintenanceModeCard />
 
       {/* Export clsconfig */}
       <section className="rounded-xl border border-border bg-card/40 p-5 backdrop-blur-md">
