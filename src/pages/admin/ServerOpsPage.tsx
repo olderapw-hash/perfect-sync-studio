@@ -742,6 +742,18 @@ function ServerStatusTab() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* ─── Drawer de progresso da operação async ─── */}
+      <ServerOperationProgressDrawer
+        open={trackedOp !== null}
+        operationId={trackedOp?.id ?? null}
+        type={trackedOp?.type}
+        onClose={() => {
+          setTrackedOp(null);
+          // Refresh ao fechar pra refletir o estado final.
+          void load();
+        }}
+      />
     </div>
   );
 }
