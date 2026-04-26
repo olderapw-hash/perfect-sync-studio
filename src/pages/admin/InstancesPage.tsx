@@ -682,21 +682,41 @@ export default function InstancesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {!loading && list.length === 0 && !endpointMissing && (
+              {!loading && runningList.length === 0 && !endpointMissing && (
                 <TableRow>
                   <TableCell colSpan={8} className="py-8 text-center text-xs text-muted-foreground">
-                    Nenhuma instância retornada pela API.
+                    {list.length === 0 ? (
+                      "Nenhuma instância retornada pela API."
+                    ) : (
+                      <>
+                        Nenhuma instância em execução.
+                        {startableList.length > 0 && (
+                          <>
+                            {" "}Use{" "}
+                            <button
+                              type="button"
+                              className="font-semibold text-primary underline-offset-2 hover:underline"
+                              onClick={openStartDialog}
+                              disabled={!canManage}
+                            >
+                              Iniciar instâncias
+                            </button>{" "}
+                            para ligar uma das {startableList.length} disponível(is).
+                          </>
+                        )}
+                      </>
+                    )}
                   </TableCell>
                 </TableRow>
               )}
-              {loading && list.length === 0 && (
+              {loading && runningList.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={8} className="py-8 text-center text-xs text-muted-foreground">
                     <Loader2 className="inline h-4 w-4 animate-spin" /> Coletando instâncias...
                   </TableCell>
                 </TableRow>
               )}
-              {list.map((inst) => (
+              {runningList.map((inst) => (
                 <InstanceRow
                   key={inst.code}
                   inst={inst}
