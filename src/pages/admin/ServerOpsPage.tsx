@@ -39,6 +39,7 @@ import {
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -226,6 +227,7 @@ function ServerStatusTab() {
   const [dryRun, setDryRun] = useState(false);
   const [acting, setActing] = useState(false);
   const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm | null>(null);
+  const [confirmReason, setConfirmReason] = useState("");
   // Operação async em andamento (start/stop/restart). Quando preenchido,
   // abre o drawer de progresso e dispara polling de getServerOperationStatus.
   const [trackedOp, setTrackedOp] = useState<{ id: string | null; type?: string } | null>(null);
@@ -320,30 +322,34 @@ function ServerStatusTab() {
       action,
       services: scope === "selection" ? Array.from(selected) : undefined,
     });
+    setConfirmReason("");
   }
 
   async function runAction(
     scope: "selection" | "server",
     action: ServerWideAction,
     explicitServices?: string[],
+    reason?: string,
   ) {
     setActing(true);
     setPendingConfirm(null);
-    // Server Ops v4: bot\u00f5es "servidor" usam os endpoints novos
+    const trimmedReason = (reason ?? "").trim();
+    // Server Ops v4: botões "servidor" usam os endpoints novos
     // (startServer/stopServer/restartServer). startServer e restartServer
-    // assumem o autostart por padr\u00e3o quando `instances` n\u00e3o \u00e9 enviado.
-    // Sele\u00e7\u00e3o granular continua usando startService/stopService/restartService.
+    // assumem o autostart por padrão quando `instances` não é enviado.
+    // Seleção granular continua usando startService/stopService/restartService.
     const isServerWide = scope === "server";
     let payload: ServiceControlPayload | ServerControlPayload;
     if (isServerWide) {
-      // N\u00c3O enviar `instances: []` (vazio) \u2014 backend trataria como "sem
-      // sele\u00e7\u00e3o" e cairia no autostart, mas a inten\u00e7\u00e3o aqui \u00e9 deixar o
-      // backend decidir. Para o bot\u00e3o "servidor", omitir o campo.
-      payload = { verify: true, dry_run: dryRun } satisfies ServerControlPayload;
+      payload = {
+        verify: true,
+        dry_run: dryRun,
+        ...(trimmedReason.length >= 3 ? { reason: trimmedReason } : {}),
+      } satisfies ServerControlPayload;
     } else {
       const list = explicitServices ?? Array.from(selected);
       if (list.length === 0) {
-        toast.error("Nenhum servi\u00e7o dispon\u00edvel para esta a\u00e7\u00e3o.");
+        toast.error("Nenhum serviço disponível para esta ação.");
         setActing(false);
         return;
       }
@@ -351,6 +357,7 @@ function ServerStatusTab() {
         verify: true,
         dry_run: dryRun,
         services: list,
+        ...(trimmedReason.length >= 3 ? { reason: trimmedReason } : {}),
       } satisfies ServiceControlPayload;
     }
     const fn = isServerWide
@@ -765,6 +772,24 @@ function ServerStatusTab() {
                     desconectados.
                   </p>
                 )}
+                {pendingConfirm?.action !== "start" && (
+                  <div className="space-y-1 pt-2">
+                    <Label htmlFor="op-reason" className="text-[11px] font-semibold">
+                      Motivo {!dryRun && <span className="text-destructive">*</span>}
+                    </Label>
+                    <Input
+                      id="op-reason"
+                      value={confirmReason}
+                      onChange={(e) => setConfirmReason(e.target.value)}
+                      placeholder="Ex.: manutenção programada"
+                      maxLength={200}
+                      autoFocus
+                    />
+                    <p className="text-[10px] text-muted-foreground">
+                      Mínimo 3 caracteres. Será registrado na auditoria.
+                    </p>
+                  </div>
+                )}
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -777,9 +802,14 @@ function ServerStatusTab() {
                   pendingConfirm.scope,
                   pendingConfirm.action,
                   pendingConfirm.services,
+                  confirmReason,
                 );
               }}
-              disabled={acting}
+              disabled={
+                acting ||
+                (pendingConfirm?.action !== "start" &&
+                  confirmReason.trim().length < 3)
+              }
               className={cn(
                 pendingConfirm?.action !== "start" &&
                   !dryRun &&
