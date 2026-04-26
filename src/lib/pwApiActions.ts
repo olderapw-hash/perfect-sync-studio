@@ -344,6 +344,28 @@ export const pwApi = {
       body,
     });
   },
+  /**
+   * Lê o estado atual de manutenção persistido na VPS.
+   * Operação leve (apenas lê o state.json local). Sempre devolve um
+   * estado bem-formado mesmo quando o arquivo ainda não existe.
+   */
+  getMaintenanceMode() {
+    return callAction<GetMaintenanceModeResponse>("getMaintenanceMode", {
+      method: "GET",
+    });
+  },
+  /**
+   * Liga/desliga o modo manutenção do servidor. Quando `broadcast=true`
+   * (default), uma mensagem global de alta prioridade é disparada
+   * automaticamente — mas a manutenção persiste mesmo se o broadcast falhar.
+   * `dry_run` valida sem persistir/enviar.
+   */
+  setMaintenanceMode(body: SetMaintenanceModePayload) {
+    return callAction<SetMaintenanceModeResponse>("setMaintenanceMode", {
+      method: "POST",
+      body,
+    });
+  },
   /* ─────────── Segurança v1 (kick / ban / unban) ─────────── */
   /**
    * Desconecta um personagem online (kick). Não bane — apenas força a
