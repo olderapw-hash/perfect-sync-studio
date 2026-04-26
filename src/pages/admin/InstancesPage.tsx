@@ -167,8 +167,12 @@ export default function InstancesPage() {
   }, [active?.id, allowed]);
 
   const list = instances ?? [];
+  // Apenas instâncias rodando (visíveis por padrão na tabela principal)
   const selectableCodes = useMemo(
-    () => list.filter((i) => i.selectable !== false).map((i) => i.code),
+    () =>
+      list
+        .filter((i) => i.running === true && i.selectable !== false)
+        .map((i) => i.code),
     [list],
   );
   const allSelected =
