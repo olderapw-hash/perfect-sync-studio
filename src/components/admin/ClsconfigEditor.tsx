@@ -196,6 +196,7 @@ export const ClsconfigEditor = ({ entry, allEntries = [], mode = "template", onS
   useEffect(() => {
     setTemplate(entry.template);
     setTab("base");
+    setEditMode(false);
   }, [entry.key_hex]);
 
   const dirty = JSON.stringify(template) !== JSON.stringify(entry.template);
