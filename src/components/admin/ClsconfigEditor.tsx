@@ -893,10 +893,11 @@ export const ClsconfigEditor = ({ entry, allEntries = [], mode = "template", onS
 
       {/* ─────────── Navegação modular ─────────── */}
       <nav className="px-3 pb-2 sm:px-5 lg:px-6">
-        <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-6">
+        <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-5 lg:grid-cols-9">
           {TABS.map((t) => {
             const Icon = t.icon;
             const active = tab === t.key;
+            const hasChanges = dirtyByTab[t.key];
             return (
               <button
                 key={t.key}
@@ -904,16 +905,23 @@ export const ClsconfigEditor = ({ entry, allEntries = [], mode = "template", onS
                 data-active={active}
                 onClick={() => setTab(t.key)}
                 className="nav-card group !p-2 !gap-2"
+                title={hasChanges ? `${t.label} · alterações pendentes` : t.label}
               >
                 <span
                   className={cn(
-                    "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border transition",
+                    "relative flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border transition",
                     active
                       ? "border-primary/60 bg-primary/15 text-primary shadow-[0_0_14px_hsl(38_70%_50%/0.35)]"
                       : "border-bronze-soft bg-black/30 text-bronze-muted group-hover:text-bronze",
                   )}
                 >
                   <Icon className="h-3.5 w-3.5" />
+                  {hasChanges && (
+                    <span
+                      aria-hidden
+                      className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-primary shadow-[0_0_6px_hsl(38_70%_50%/0.9)] animate-pulse-glow"
+                    />
+                  )}
                 </span>
                 <span className="text-xs font-semibold tracking-wide">{t.label}</span>
               </button>
