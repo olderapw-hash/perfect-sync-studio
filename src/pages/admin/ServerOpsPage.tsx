@@ -1,14 +1,14 @@
-// /admin/server — Operação do Servidor v1.
+// /admin/server — Operação do Servidor v3.
 //
-// Foco em observabilidade + export/reload seguro:
-//  - Tab Status: cards dos daemons principais (gamedbd, gdeliveryd, gacd,
-//    glink, authd, uniquenamed, mysql, httpd) lidos de getServiceStatus.
-//  - Tab Logs: tail de logs por origem (gamedbd, exportclsconfig, httpd, mail, apicls).
-//  - Tab Ações: exportClsconfig + reloads conhecidos (placeholder p/ Fase 2).
+// Foco em operação real + observabilidade premium:
+//  - Tab Status: lista DINÂMICA via getManageableServices (sem hardcode),
+//    com seleção múltipla, ações em lote (start/stop/restart) e operação
+//    geral do servidor.
+//  - Tab Logs: tail de logs por origem.
+//  - Tab Ações: exportClsconfig + manutenção + system message.
 //
-// Nenhuma ação destrutiva (sem start/stop/kill/kick) — esta v1 só lê,
-// faz tail e roda exportClsconfig (idempotente). Tudo gated por
-// permissão e auditado via log_audit_event.
+// Tudo gated por permissão (manage_servers para destrutivos) e auditado
+// via log_audit_event. Confirmação forte para stop/restart, dry-run opt-in.
 import { useEffect, useMemo, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
@@ -23,6 +23,8 @@ import {
   Loader2,
   Play,
   PlayCircle,
+  Power,
+  PowerOff,
   RefreshCw,
   RotateCcw,
   Server as ServerIcon,
@@ -34,6 +36,8 @@ import {
   User as UserIcon,
   Wrench,
 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
