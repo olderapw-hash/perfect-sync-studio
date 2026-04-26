@@ -809,6 +809,123 @@ export default function InstancesPage() {
           void load();
         }}
       />
+
+      {/* ─── Dialog: Iniciar instâncias paradas ─── */}
+      <Dialog open={startDialogOpen} onOpenChange={setStartDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Play className="h-5 w-5 text-success" />
+              Iniciar instâncias
+              {dryRun && (
+                <span className="ml-2 rounded-full border border-amber-500/50 bg-amber-500/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-500">
+                  dry-run
+                </span>
+              )}
+            </DialogTitle>
+            <DialogDescription>
+              Selecione abaixo quais instâncias paradas você deseja iniciar.
+            </DialogDescription>
+          </DialogHeader>
+
+          {startableList.length === 0 ? (
+            <div className="rounded-lg border border-border bg-muted/20 p-6 text-center text-sm text-muted-foreground">
+              Nenhuma instância parada disponível para iniciar.
+            </div>
+          ) : (
+            <div className="max-h-[50vh] overflow-auto rounded-lg border border-border">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-border hover:bg-transparent">
+                    <TableHead className="h-9 w-10 pl-4">
+                      <Checkbox
+                        checked={
+                          allStartSelected
+                            ? true
+                            : startSelected.size > 0
+                              ? "indeterminate"
+                              : false
+                        }
+                        onCheckedChange={toggleStartAll}
+                        aria-label="Selecionar todas as paradas"
+                      />
+                    </TableHead>
+                    <TableHead className="h-9 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                      Instância
+                    </TableHead>
+                    <TableHead className="h-9 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                      Categoria
+                    </TableHead>
+                    <TableHead className="h-9 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                      Scope
+                    </TableHead>
+                    <TableHead className="h-9 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                      Porta
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {startableList.map((inst) => {
+                    const checked = startSelected.has(inst.code);
+                    return (
+                      <TableRow
+                        key={inst.code}
+                        className={cn(
+                          "cursor-pointer border-border/60 hover:bg-muted/20",
+                          checked && "bg-primary/5",
+                        )}
+                        onClick={() => toggleStartOne(inst.code)}
+                      >
+                        <TableCell className="pl-4" onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={checked}
+                            onCheckedChange={() => toggleStartOne(inst.code)}
+                            aria-label={`Selecionar ${inst.code}`}
+                          />
+                        </TableCell>
+                        <TableCell className="py-2">
+                          <p className="text-sm font-semibold text-foreground">
+                            {inst.name || inst.code}
+                          </p>
+                          <p className="font-mono text-[10px] text-muted-foreground">
+                            {inst.code}
+                          </p>
+                        </TableCell>
+                        <TableCell className="py-2 font-mono text-[11px] text-muted-foreground">
+                          {inst.category || "—"}
+                        </TableCell>
+                        <TableCell className="py-2 font-mono text-[11px] text-muted-foreground">
+                          {inst.scope || "—"}
+                        </TableCell>
+                        <TableCell className="py-2 font-mono text-[11px] text-foreground">
+                          {inst.listen_port > 0 ? `:${inst.listen_port}` : "—"}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setStartDialogOpen(false)}
+              disabled={acting}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={confirmStartFromDialog}
+              disabled={acting || !canManage || startSelected.size === 0}
+            >
+              <Play className="h-3.5 w-3.5" />
+              Iniciar {startSelected.size > 0 ? `(${startSelected.size})` : ""}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
