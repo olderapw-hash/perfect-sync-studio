@@ -4274,6 +4274,228 @@ function handleSendSystemMessageRequest(array $config, array $request)
     return $decoded;
 }
 
+/**
+ * Handlers de Maintenance Mode.
+ *
+ * Estado persistido em $CONFIG[maintenance_state_file] (JSON). Estrutura:
+ *   {
+ *     "enabled":      bool,
+ *     "reason":       "texto livre|null",
+ *     "eta_minutes":  int|null,
+ *     "started_at":   "ISO 8601 UTC|null",
+ *     "ends_at":      "ISO 8601 UTC|null",  (started_at + eta_minutes quando aplicavel)
+ *     "updated_by":   "string|null",
+ *     "updated_at":   "ISO 8601 UTC"
+ *   }
+ *
+ * Sem schema novo no DB, sem shell arbitrario. Idempotente.
+ */
+function maintenanceLoadState(array $config)
+{
+    $file = (string) array_value($config, 'maintenance_state_file', '');
+    if ($file === '' || !file_exists($file)) {
+        return [
+            'enabled'      => false,
+            'reason'       => null,
+            'eta_minutes'  => null,
+            'started_at'   => null,
+            'ends_at'      => null,
+            'updated_by'   => null,
+            'updated_at'   => null,
+        ];
+    }
+    $raw = @file_get_contents($file);
+    if ($raw === false || $raw === '') {
+        return [
+            'enabled' => false, 'reason' => null, 'eta_minutes' => null,
+            'started_at' => null, 'ends_at' => null,
+            'updated_by' => null, 'updated_at' => null,
+        ];
+    }
+    $decoded = json_decode($raw, true);
+    if (!is_array($decoded)) {
+        return [
+            'enabled' => false, 'reason' => null, 'eta_minutes' => null,
+            'started_at' => null, 'ends_at' => null,
+            'updated_by' => null, 'updated_at' => null,
+        ];
+    }
+    return [
+        'enabled'      => !empty($decoded['enabled']),
+        'reason'       => isset($decoded['reason']) ? (string) $decoded['reason'] : null,
+        'eta_minutes'  => isset($decoded['eta_minutes']) ? (int) $decoded['eta_minutes'] : null,
+        'started_at'   => isset($decoded['started_at']) ? (string) $decoded['started_at'] : null,
+        'ends_at'      => isset($decoded['ends_at']) ? (string) $decoded['ends_at'] : null,
+        'updated_by'   => isset($decoded['updated_by']) ? (string) $decoded['updated_by'] : null,
+        'updated_at'   => isset($decoded['updated_at']) ? (string) $decoded['updated_at'] : null,
+    ];
+}
+
+function maintenancePersistState(array $config, array $state)
+{
+    $file = (string) array_value($config, 'maintenance_state_file', '');
+    if ($file === '') {
+        throw new Exception('maintenance_state_file nao configurado');
+    }
+    $dir = dirname($file);
+    if ($dir !== '' && !is_dir($dir)) {
+        @mkdir($dir, 0750, true);
+    }
+    $json = json_encode($state, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
+    if ($json === false) {
+        throw new Exception('Falha ao serializar estado de manutencao');
+    }
+    if (@file_put_contents($file, $json, LOCK_EX) === false) {
+        throw new Exception('Falha ao gravar estado de manutencao em ' . $file);
+    }
+
+    // Append append-only de auditoria local (best-effort).
+    $logDir = (string) array_value($config, 'maintenance_log_dir', $dir);
+    if ($logDir !== '' && is_dir($logDir) && is_writable($logDir)) {
+        @file_put_contents(
+            $logDir . '/history.log',
+            '[' . gmdate('c') . '] ' . $json . "\n",
+            FILE_APPEND | LOCK_EX
+        );
+    }
+}
+
+function buildMaintenanceBroadcastMessage(array $state, $previouslyEnabled)
+{
+    $turningOn  = !empty($state['enabled']) && !$previouslyEnabled;
+    $turningOff = empty($state['enabled']) && $previouslyEnabled;
+
+    if ($turningOn) {
+        $msg = 'Atencao: o servidor entrara em modo manutencao';
+        if (!empty($state['eta_minutes']) && intval($state['eta_minutes']) > 0) {
+            $msg .= ' em aproximadamente ' . intval($state['eta_minutes']) . ' minuto(s)';
+        }
+        $msg .= '.';
+        if (!empty($state['reason'])) {
+            $msg .= ' Motivo: ' . $state['reason'];
+        }
+        return $msg;
+    }
+    if ($turningOff) {
+        return 'Modo manutencao encerrado. Boas aventuras a todos!';
+    }
+    // Atualizacao de motivo/eta sem mudar o estado.
+    if (!empty($state['enabled'])) {
+        $msg = 'Atualizacao do modo manutencao em andamento.';
+        if (!empty($state['eta_minutes']) && intval($state['eta_minutes']) > 0) {
+            $msg .= ' Tempo estimado restante: ' . intval($state['eta_minutes']) . ' min.';
+        }
+        if (!empty($state['reason'])) {
+            $msg .= ' Motivo: ' . $state['reason'];
+        }
+        return $msg;
+    }
+    return null;
+}
+
+function handleSetMaintenanceModeRequest(array $config, array $request)
+{
+    if (!truthyValue(array_value($config, 'maintenance_enabled_action', true))) {
+        throw new Exception('Endpoint de manutencao desabilitado nesta VPS');
+    }
+    if (!array_key_exists('enabled', $request)) {
+        throw new Exception('campo enabled obrigatorio (true|false)');
+    }
+
+    $enabled = truthyValue($request['enabled']);
+    $reason  = isset($request['reason']) ? trim((string) $request['reason']) : '';
+    $eta     = array_key_exists('eta_minutes', $request) && $request['eta_minutes'] !== ''
+        ? intval($request['eta_minutes']) : null;
+    $broadcast = truthyValue(array_value($request, 'broadcast', true));
+    $dryRun    = truthyValue(array_value($request, 'dry_run', false));
+
+    $maxReason = intval(array_value($config, 'maintenance_max_reason_len', 240));
+    if ($maxReason > 0 && strlen($reason) > $maxReason) {
+        throw new Exception('reason acima do limite (' . $maxReason . ' chars)');
+    }
+    if (preg_match('/[\x00-\x08\x0B\x0C\x0E-\x1F]/', $reason)) {
+        throw new Exception('reason contem caracteres de controle invalidos');
+    }
+    $maxEta = intval(array_value($config, 'maintenance_max_eta_minutes', 1440));
+    if ($eta !== null && ($eta < 0 || ($maxEta > 0 && $eta > $maxEta))) {
+        throw new Exception('eta_minutes fora do intervalo (0..' . $maxEta . ')');
+    }
+
+    $previous = maintenanceLoadState($config);
+    $now = gmdate('c');
+
+    $next = [
+        'enabled'      => $enabled,
+        'reason'       => $reason !== '' ? $reason : null,
+        'eta_minutes'  => $eta,
+        'started_at'   => $enabled
+            ? ($previous['enabled'] && !empty($previous['started_at'])
+                ? $previous['started_at']
+                : $now)
+            : null,
+        'ends_at'      => null,
+        'updated_by'   => isset($_SERVER['REMOTE_ADDR']) ? (string) $_SERVER['REMOTE_ADDR'] : null,
+        'updated_at'   => $now,
+    ];
+    if ($enabled && $eta !== null && $eta > 0 && $next['started_at'] !== null) {
+        $startTs = strtotime($next['started_at']);
+        if ($startTs !== false) {
+            $next['ends_at'] = gmdate('c', $startTs + ($eta * 60));
+        }
+    }
+
+    if ($dryRun) {
+        return [
+            'success'    => true,
+            'dry_run'    => true,
+            'previous'   => $previous,
+            'next'       => $next,
+            'broadcast'  => ['planned' => $broadcast],
+        ];
+    }
+
+    maintenancePersistState($config, $next);
+
+    $broadcastResult = ['attempted' => false];
+    if ($broadcast) {
+        $msg = buildMaintenanceBroadcastMessage($next, !empty($previous['enabled']));
+        if ($msg !== null && $msg !== '') {
+            $broadcastResult['attempted'] = true;
+            try {
+                $sysRes = handleSendSystemMessageRequest($config, [
+                    'message'  => $msg,
+                    'kind'     => 'system',
+                    'priority' => 'high',
+                ]);
+                $broadcastResult['result'] = $sysRes;
+            } catch (Exception $e) {
+                // Nao falha a operacao toda — manutencao ja foi persistida.
+                $broadcastResult['error'] = $e->getMessage();
+            }
+        } else {
+            $broadcastResult['skipped_reason'] = 'no_state_change';
+        }
+    }
+
+    return [
+        'success'     => true,
+        'maintenance' => $next,
+        'previous'    => $previous,
+        'broadcast'   => $broadcastResult,
+    ];
+}
+
+function handleGetMaintenanceModeRequest(array $config)
+{
+    if (!truthyValue(array_value($config, 'maintenance_enabled_action', true))) {
+        throw new Exception('Endpoint de manutencao desabilitado nesta VPS');
+    }
+    return [
+        'success'     => true,
+        'maintenance' => maintenanceLoadState($config),
+    ];
+}
+
 function respondJson($payload, $status = 200)
 {
     http_response_code($status);
