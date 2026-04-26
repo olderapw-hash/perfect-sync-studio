@@ -34,18 +34,19 @@ export const UserPlanDialog = ({ userId, email, currentPlan, onClose, onSaved }:
   })();
   const [expiresAt, setExpiresAt] = useState<string>(defaultExpiry);
   const [noExpiry, setNoExpiry] = useState(false);
-  const [env, setEnv] = useState<"live" | "sandbox">("live");
   const [busy, setBusy] = useState(false);
 
   const save = async () => {
     setBusy(true);
     const expires =
       plan === "free" || noExpiry || !expiresAt ? null : new Date(expiresAt).toISOString();
+    // O RPC aplica o plano em ambos ambientes (sandbox + live) — `env` é
+    // ignorado mas precisa ser enviado pra satisfazer a assinatura.
     const { error } = await supabase.rpc("admin_set_user_plan", {
       target_user_id: userId,
       new_plan: plan,
       expires_at: expires,
-      env,
+      env: "live",
     });
     setBusy(false);
     if (error) {
@@ -93,24 +94,10 @@ export const UserPlanDialog = ({ userId, email, currentPlan, onClose, onSaved }:
             </div>
           </div>
 
-          <div>
-            <label className="mb-1 block text-xs font-semibold text-muted-foreground">Ambiente</label>
-            <div className="flex gap-2">
-              {(["live", "sandbox"] as const).map((e) => (
-                <button
-                  key={e}
-                  onClick={() => setEnv(e)}
-                  className={`flex-1 rounded-md border px-2 py-1.5 text-xs font-semibold capitalize ${
-                    env === e
-                      ? "border-primary bg-primary/15 text-primary"
-                      : "border-border bg-card/40 text-muted-foreground hover:border-primary/40"
-                  }`}
-                >
-                  {e === "live" ? "Live (produção)" : "Sandbox (teste)"}
-                </button>
-              ))}
-            </div>
-          </div>
+          <p className="rounded-md border border-primary/30 bg-primary/10 p-2 text-[11px] text-primary">
+            O plano será aplicado tanto no preview (teste) quanto na versão publicada (produção).
+          </p>
+
 
           {plan !== "free" && (
             <div>
