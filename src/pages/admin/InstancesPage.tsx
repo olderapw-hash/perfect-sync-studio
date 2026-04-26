@@ -109,6 +109,8 @@ export default function InstancesPage() {
   const [autoStartBusy, setAutoStartBusy] = useState<Set<string>>(new Set());
   const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm | null>(null);
   const [trackedOp, setTrackedOp] = useState<{ id: string; type?: string } | null>(null);
+  const [startDialogOpen, setStartDialogOpen] = useState(false);
+  const [startSelected, setStartSelected] = useState<Set<string>>(new Set());
 
   const canManage = isSuperadmin || can("manage_servers");
   const allowed = isSuperadmin || can("view");
