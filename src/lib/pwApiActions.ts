@@ -207,6 +207,25 @@ export class EndpointMissingError extends Error {
   }
 }
 
+/**
+ * Erro de ação que falhou na VPS (HTTP 4xx/5xx) MAS o corpo de resposta
+ * ainda traz dados estruturados úteis — ex.: Server Ops devolve
+ * `operation.id` mesmo quando uma etapa falha (exit != 0). O caller pode
+ * inspecionar `payload.operation` pra abrir o drawer de progresso e
+ * mostrar o log_file.
+ */
+export class PwApiActionError<T = unknown> extends Error {
+  constructor(
+    public action: string,
+    message: string,
+    public status: number,
+    public payload: T,
+  ) {
+    super(message);
+    this.name = "PwApiActionError";
+  }
+}
+
 async function callAction<T>(
   action: string,
   opts: { method: "GET" | "POST"; query?: Record<string, string | number>; body?: unknown },
@@ -231,6 +250,23 @@ async function callAction<T>(
     // como endpoint ausente para a UI mostrar a notice amigável.
     if ((status === 502 || status === 500) && /upstream\s+returned\s+non-json|endpoint\s+not\s+implemented/i.test(rawBody)) {
       throw new EndpointMissingError(action);
+    }
+    // Tenta extrair payload JSON estruturado do erro pra preservar campos
+    // úteis (ex.: operation.id em Server Ops).
+    let parsed: unknown = null;
+    try {
+      parsed = rawBody ? JSON.parse(rawBody) : null;
+    } catch {
+      parsed = null;
+    }
+    if (parsed && typeof parsed === "object") {
+      const p = parsed as { error?: string };
+      throw new PwApiActionError(
+        action,
+        p.error ?? error.message,
+        status ?? 0,
+        parsed,
+      );
     }
     throw new Error(rawBody ? `${error.message}\n\n${rawBody}` : error.message);
   }
