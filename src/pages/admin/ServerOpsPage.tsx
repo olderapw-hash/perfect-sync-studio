@@ -166,45 +166,80 @@ export default ServerOpsPage;
 
 /* -------------------------------------------------------------------------- */
 /* Status Tab (default — renderizada quando o path é /admin/server)           */
+/* Server Ops v3 — lista DINÂMICA via getManageableServices + ações em lote.  */
 /* -------------------------------------------------------------------------- */
 
-import { pwApi, EndpointMissingError, type ServiceInfo } from "@/lib/pwApiActions";
+import {
+  pwApi,
+  EndpointMissingError,
+  type ManageableService,
+  type ServiceControlPayload,
+  type ServiceControlResponse,
+} from "@/lib/pwApiActions";
 import { logAuditEvent } from "@/lib/auditLog";
 import { toast } from "sonner";
 
-const KNOWN_SERVICES: { key: string; label: string; port?: number; icon: typeof Database }[] = [
-  { key: "gamedbd", label: "Game DB Daemon", port: 29400, icon: Database },
-  { key: "gdeliveryd", label: "Delivery Daemon", port: 29100, icon: Truck },
-  { key: "gacd", label: "Account Daemon", port: 29000, icon: UserIcon },
-  { key: "glink", label: "Game Link", port: 29200, icon: Link2 },
-  { key: "authd", label: "Auth Daemon", port: 29300, icon: Shield },
-  { key: "uniquenamed", label: "Unique Name", port: 29500, icon: Fingerprint },
-  { key: "mysql", label: "MySQL/MariaDB", port: 3306, icon: Database },
-  { key: "httpd", label: "Web (Apache/httpd)", port: 80, icon: Globe },
-];
+/** Ícones temáticos por chave conhecida (apenas visual — a lista vem da API). */
+const SERVICE_ICONS: Record<string, typeof Database> = {
+  gamedbd: Database,
+  gdeliveryd: Truck,
+  gacd: UserIcon,
+  glink: Link2,
+  glinkd: Link2,
+  authd: Shield,
+  uniquenamed: Fingerprint,
+  mysql: Database,
+  mariadb: Database,
+  httpd: Globe,
+  apache: Globe,
+  nginx: Globe,
+};
 
-const ICON_BY_KEY = new Map(KNOWN_SERVICES.map((s) => [s.key, s.icon]));
+type ServerWideAction = "start" | "stop" | "restart";
+
+interface PendingConfirm {
+  scope: "selection" | "server";
+  action: ServerWideAction;
+  services?: string[];
+}
 
 function ServerStatusTab() {
   const { active } = useServers();
-  const [services, setServices] = useState<ServiceInfo[] | null>(null);
+  const { can } = useServerPermissions();
+  const { isSuperadmin } = useAuth();
+
+  const [services, setServices] = useState<ManageableService[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [collectedAt, setCollectedAt] = useState<string | number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [endpointMissing, setEndpointMissing] = useState(false);
+
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [dryRun, setDryRun] = useState(false);
+  const [acting, setActing] = useState(false);
+  const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm | null>(null);
+
+  const canManage = isSuperadmin || can("manage_servers");
 
   const load = async () => {
     setLoading(true);
     setError(null);
     setEndpointMissing(false);
     try {
-      const res = await pwApi.getServiceStatus();
+      const res = await pwApi.getManageableServices();
       setServices(res.services ?? []);
       setCollectedAt(res.collected_at ?? Date.now());
+      // Limpa seleção de serviços que sumiram da lista.
+      setSelected((prev) => {
+        const valid = new Set((res.services ?? []).map((s) => s.key));
+        const next = new Set<string>();
+        for (const k of prev) if (valid.has(k)) next.add(k);
+        return next;
+      });
       void logAuditEvent({
-        action: "server_ops.status_view",
+        action: "server_ops.manageable_view",
         tenantId: active?.id ?? null,
-        target: "getServiceStatus",
+        target: "getManageableServices",
         status: "ok",
         metadata: { count: res.services?.length ?? 0 },
       });
@@ -215,9 +250,9 @@ function ServerStatusTab() {
         setError(e instanceof Error ? e.message : String(e));
       }
       void logAuditEvent({
-        action: "server_ops.status_view",
+        action: "server_ops.manageable_view",
         tenantId: active?.id ?? null,
-        target: "getServiceStatus",
+        target: "getManageableServices",
         status: "error",
         error: e instanceof Error ? e.message : String(e),
       });
@@ -231,43 +266,191 @@ function ServerStatusTab() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active?.id]);
 
-  // Mescla a lista conhecida com o que veio da VPS (preserva ordem amigável).
-  const merged = useMemo<ServiceInfo[]>(() => {
-    const byKey = new Map<string, ServiceInfo>();
-    for (const s of services ?? []) {
-      // VPS responde com `key`; mantém compat se algum dia vier `name`.
-      const k = s?.key ?? (s as unknown as { name?: string })?.name;
-      if (!k) continue;
-      byKey.set(k.toLowerCase(), { ...s, key: k });
-    }
-    const result: ServiceInfo[] = [];
-    for (const known of KNOWN_SERVICES) {
-      const found = byKey.get(known.key);
-      result.push(
-        found ?? {
-          key: known.key,
-          label: known.label,
-          state: "unknown",
-          port: known.port ?? null,
-        },
-      );
-      byKey.delete(known.key);
-    }
-    // Quaisquer extras que a VPS reportar e não estão na lista padrão.
-    for (const extra of byKey.values()) result.push(extra);
-    return result;
-  }, [services]);
+  const list = services ?? [];
+  const onlineCount = list.filter((s) => s.state === "online").length;
+  const offlineCount = list.filter((s) => s.state === "offline").length;
+  const selectableKeys = useMemo(
+    () => list.filter((s) => s.selectable !== false).map((s) => s.key),
+    [list],
+  );
+  const allSelected =
+    selectableKeys.length > 0 && selectableKeys.every((k) => selected.has(k));
+  const someSelected = selected.size > 0 && !allSelected;
 
-  const onlineCount = merged.filter((s) => s.state === "online").length;
-  const offlineCount = merged.filter((s) => s.state === "offline").length;
+  function toggleAll() {
+    setSelected(allSelected ? new Set() : new Set(selectableKeys));
+  }
+
+  function toggleOne(key: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
+
+  function requestAction(scope: "selection" | "server", action: ServerWideAction) {
+    if (!canManage) {
+      toast.error("Sem permissão (manage_servers).");
+      return;
+    }
+    if (scope === "selection" && selected.size === 0) {
+      toast.error("Selecione ao menos um serviço.");
+      return;
+    }
+    // start em lote dispensa confirmação forte; stop/restart sempre confirma.
+    if (scope === "selection" && action === "start" && !dryRun) {
+      void runAction(scope, action);
+      return;
+    }
+    setPendingConfirm({
+      scope,
+      action,
+      services: scope === "selection" ? Array.from(selected) : undefined,
+    });
+  }
+
+  async function runAction(
+    scope: "selection" | "server",
+    action: ServerWideAction,
+    explicitServices?: string[],
+  ) {
+    setActing(true);
+    setPendingConfirm(null);
+    const payload: ServiceControlPayload = {
+      verify: true,
+      dry_run: dryRun,
+    };
+    if (scope === "selection") {
+      payload.services = explicitServices ?? Array.from(selected);
+    }
+    const fn =
+      action === "start"
+        ? pwApi.startService
+        : action === "stop"
+          ? pwApi.stopService
+          : pwApi.restartService;
+    const auditAction = `server_ops.${scope}_${action}`;
+    try {
+      const res: ServiceControlResponse = await fn(payload);
+      const okCount = (res.results ?? []).filter((r) => r.success).length;
+      const failCount = (res.results ?? []).filter((r) => !r.success).length;
+      const summary = res.results
+        ? `${okCount} ok${failCount > 0 ? ` · ${failCount} falha(s)` : ""}`
+        : res.message ?? "Concluído";
+      if (failCount > 0) {
+        toast.warning(
+          `${labelForAction(action)} parcial${dryRun ? " (dry-run)" : ""}: ${summary}`,
+        );
+      } else {
+        toast.success(
+          `${labelForAction(action)}${dryRun ? " (dry-run)" : ""}: ${summary}`,
+        );
+      }
+      void logAuditEvent({
+        action: auditAction,
+        tenantId: active?.id ?? null,
+        target: payload.services?.join(",") ?? "server",
+        status: failCount > 0 ? "error" : "ok",
+        metadata: {
+          dry_run: dryRun,
+          ok: okCount,
+          fail: failCount,
+          log_file: res.log_file ?? null,
+          results: res.results ?? null,
+        },
+      });
+      // Recarrega estado pós-ação (exceto dry-run, que não muda nada).
+      if (!dryRun) {
+        // Pequena espera pra serviços terminarem subir/cair antes do refresh.
+        setTimeout(() => void load(), 800);
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (e instanceof EndpointMissingError) {
+        setEndpointMissing(true);
+        toast.error(`Endpoint ${action}Service ausente nesta VPS.`);
+      } else {
+        toast.error(`Falha ao executar ${labelForAction(action)}: ${msg}`);
+      }
+      void logAuditEvent({
+        action: auditAction,
+        tenantId: active?.id ?? null,
+        target: payload.services?.join(",") ?? "server",
+        status: "error",
+        error: msg,
+      });
+    } finally {
+      setActing(false);
+    }
+  }
 
   return (
     <div className="space-y-4">
+      {/* ─── Painel de operação geral ─── */}
       <div className="rounded-2xl border border-border bg-card/60 backdrop-blur-md overflow-hidden">
-        <div className="flex items-center justify-between gap-3 border-l-2 border-primary px-5 py-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-l-2 border-primary px-5 py-4">
           <div className="min-w-0">
             <h2 className="text-base font-extrabold uppercase tracking-wider text-foreground">
-              Status dos serviços
+              Operação geral
+            </h2>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Ações sobre todo o conjunto de serviços do servidor PW.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-2 rounded-md border border-border bg-background/40 px-3 py-1.5">
+              <Switch
+                id="dry-run"
+                checked={dryRun}
+                onCheckedChange={setDryRun}
+                disabled={acting}
+              />
+              <Label
+                htmlFor="dry-run"
+                className="cursor-pointer text-[10px] font-bold uppercase tracking-wider text-muted-foreground"
+              >
+                Dry-run
+              </Label>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => requestAction("server", "start")}
+              disabled={acting || !canManage || endpointMissing}
+            >
+              <Power className="h-3.5 w-3.5" />
+              Iniciar servidor
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => requestAction("server", "restart")}
+              disabled={acting || !canManage || endpointMissing}
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              Reiniciar servidor
+            </Button>
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={() => requestAction("server", "stop")}
+              disabled={acting || !canManage || endpointMissing}
+            >
+              <PowerOff className="h-3.5 w-3.5" />
+              Parar servidor
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* ─── Lista de instâncias ─── */}
+      <div className="rounded-2xl border border-border bg-card/60 backdrop-blur-md overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-l-2 border-primary px-5 py-4">
+          <div className="min-w-0">
+            <h2 className="text-base font-extrabold uppercase tracking-wider text-foreground">
+              Instâncias do servidor
             </h2>
             <p className="mt-0.5 text-xs text-muted-foreground">
               {collectedAt ? (
@@ -284,29 +467,102 @@ function ServerStatusTab() {
               )}
               {!loading && services && (
                 <>
-                  {" "}· <span className="text-success font-semibold">{onlineCount} online</span>
+                  {" "}·{" "}
+                  <span className="text-success font-semibold">
+                    {onlineCount} online
+                  </span>
                   {offlineCount > 0 && (
-                    <> · <span className="text-destructive font-semibold">{offlineCount} offline</span></>
+                    <>
+                      {" "}·{" "}
+                      <span className="text-destructive font-semibold">
+                        {offlineCount} offline
+                      </span>
+                    </>
+                  )}
+                  {selected.size > 0 && (
+                    <>
+                      {" "}·{" "}
+                      <span className="text-primary font-semibold">
+                        {selected.size} selecionado(s)
+                      </span>
+                    </>
                   )}
                 </>
               )}
             </p>
           </div>
-          <Button size="sm" variant="outline" onClick={load} disabled={loading} className="shrink-0">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={load}
+            disabled={loading}
+            className="shrink-0"
+          >
             <RefreshCw className={cn("h-3.5 w-3.5", loading && "animate-spin")} />
             Atualizar
           </Button>
         </div>
 
+        {/* Toolbar de seleção */}
+        {selected.size > 0 && (
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border bg-primary/5 px-5 py-3">
+            <span className="text-xs font-semibold text-foreground">
+              {selected.size} serviço(s) selecionado(s)
+              {dryRun && (
+                <span className="ml-2 rounded-full border border-amber-500/50 bg-amber-500/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-500">
+                  dry-run
+                </span>
+              )}
+            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setSelected(new Set())}
+                disabled={acting}
+              >
+                Limpar
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => requestAction("selection", "start")}
+                disabled={acting || !canManage}
+              >
+                <Play className="h-3.5 w-3.5" />
+                Iniciar
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => requestAction("selection", "restart")}
+                disabled={acting || !canManage}
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+                Reiniciar
+              </Button>
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => requestAction("selection", "stop")}
+                disabled={acting || !canManage}
+              >
+                <Square className="h-3.5 w-3.5" />
+                Parar
+              </Button>
+            </div>
+          </div>
+        )}
+
         {endpointMissing && (
-          <div className="px-5 pb-4">
-            <EndpointMissingNotice action="getServiceStatus" />
+          <div className="px-5 pb-4 pt-2">
+            <EndpointMissingNotice action="getManageableServices" />
           </div>
         )}
 
         {error && (
           <div className="mx-5 mb-4 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">
-            <strong>Erro ao consultar status:</strong> {error}
+            <strong>Erro ao consultar instâncias:</strong> {error}
           </div>
         )}
 
@@ -314,6 +570,20 @@ function ServerStatusTab() {
           <Table>
             <TableHeader>
               <TableRow className="border-border hover:bg-transparent">
+                <TableHead className="h-10 w-10 pl-4">
+                  <Checkbox
+                    checked={
+                      allSelected
+                        ? true
+                        : someSelected
+                          ? "indeterminate"
+                          : false
+                    }
+                    onCheckedChange={toggleAll}
+                    disabled={selectableKeys.length === 0 || acting}
+                    aria-label="Selecionar todos"
+                  />
+                </TableHead>
                 <TableHead className="h-10 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                   Serviço
                 </TableHead>
@@ -326,34 +596,159 @@ function ServerStatusTab() {
                 <TableHead className="h-10 text-right text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                   Detalhes
                 </TableHead>
+                <TableHead className="h-10 text-right text-[10px] font-bold uppercase tracking-wider text-muted-foreground pr-4">
+                  Ações
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {merged.map((svc) => (
+              {!loading && list.length === 0 && !endpointMissing && (
+                <TableRow>
+                  <TableCell colSpan={6} className="py-8 text-center text-xs text-muted-foreground">
+                    Nenhum serviço retornado pela API.
+                  </TableCell>
+                </TableRow>
+              )}
+              {loading && list.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={6} className="py-8 text-center text-xs text-muted-foreground">
+                    <Loader2 className="inline h-4 w-4 animate-spin" /> Coletando instâncias...
+                  </TableCell>
+                </TableRow>
+              )}
+              {list.map((svc) => (
                 <ServiceRow
                   key={svc.key}
                   service={svc}
-                  loading={loading && !services}
+                  selected={selected.has(svc.key)}
+                  onToggle={() => toggleOne(svc.key)}
+                  onAction={(a) => {
+                    if (!canManage) {
+                      toast.error("Sem permissão (manage_servers).");
+                      return;
+                    }
+                    if (a === "start" && !dryRun) {
+                      void runAction("selection", a, [svc.key]);
+                      return;
+                    }
+                    setPendingConfirm({
+                      scope: "selection",
+                      action: a,
+                      services: [svc.key],
+                    });
+                  }}
+                  acting={acting}
+                  canManage={canManage}
                 />
               ))}
             </TableBody>
           </Table>
         </div>
       </div>
+
+      {/* ─── Confirmação forte ─── */}
+      <AlertDialog
+        open={pendingConfirm !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingConfirm(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Confirmar {pendingConfirm ? labelForAction(pendingConfirm.action) : ""}
+              {dryRun && (
+                <span className="ml-2 rounded-full border border-amber-500/50 bg-amber-500/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-500">
+                  dry-run
+                </span>
+              )}
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2 text-xs">
+                {pendingConfirm?.scope === "server" ? (
+                  <p>
+                    Esta operação afeta <strong>todo o servidor PW</strong>. Tem
+                    certeza?
+                  </p>
+                ) : (
+                  <>
+                    <p>
+                      Esta operação será aplicada aos serviços abaixo:
+                    </p>
+                    <ul className="list-disc pl-5 font-mono text-foreground">
+                      {(pendingConfirm?.services ?? []).map((s) => (
+                        <li key={s}>{s}</li>
+                      ))}
+                    </ul>
+                  </>
+                )}
+                {!dryRun && pendingConfirm?.action !== "start" && (
+                  <p className="text-destructive">
+                    ⚠ Esta ação interrompe processos em execução. Jogadores podem ser
+                    desconectados.
+                  </p>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={acting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (!pendingConfirm) return;
+                void runAction(
+                  pendingConfirm.scope,
+                  pendingConfirm.action,
+                  pendingConfirm.services,
+                );
+              }}
+              disabled={acting}
+              className={cn(
+                pendingConfirm?.action !== "start" &&
+                  !dryRun &&
+                  "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+              )}
+            >
+              {acting ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" /> Executando...
+                </>
+              ) : (
+                <>Confirmar</>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
 
+function labelForAction(a: ServerWideAction): string {
+  return a === "start" ? "Iniciar" : a === "stop" ? "Parar" : "Reiniciar";
+}
+
 function ServiceRow({
   service,
-  loading,
+  selected,
+  onToggle,
+  onAction,
+  acting,
+  canManage,
 }: {
-  service: ServiceInfo;
-  loading?: boolean;
+  service: ManageableService;
+  selected: boolean;
+  onToggle: () => void;
+  onAction: (action: ServerWideAction) => void;
+  acting: boolean;
+  canManage: boolean;
 }) {
-  const Icon = ICON_BY_KEY.get(service.key) ?? CircuitBoard;
+  const Icon = SERVICE_ICONS[service.key] ?? CircuitBoard;
   const isOnline = service.state === "online";
   const isOffline = service.state === "offline";
+  const supported = service.supported_actions ?? ["start", "stop", "restart"];
+  const selectable = service.selectable !== false;
 
   const statusTone = isOnline
     ? "border-success/50 bg-success/10 text-success"
@@ -361,7 +756,11 @@ function ServiceRow({
       ? "border-destructive/50 bg-destructive/10 text-destructive"
       : "border-border bg-muted/30 text-muted-foreground";
 
-  const dot = isOnline ? "bg-success" : isOffline ? "bg-destructive" : "bg-muted-foreground";
+  const dot = isOnline
+    ? "bg-success"
+    : isOffline
+      ? "bg-destructive"
+      : "bg-muted-foreground";
 
   const procTone = isOnline
     ? "border-success/50 bg-success/15 text-success"
@@ -376,7 +775,21 @@ function ServiceRow({
       : "border-border bg-muted/20 text-muted-foreground";
 
   return (
-    <TableRow className="border-border/60 hover:bg-muted/20">
+    <TableRow
+      className={cn(
+        "border-border/60 hover:bg-muted/20",
+        selected && "bg-primary/5",
+      )}
+    >
+      <TableCell className="pl-4">
+        <Checkbox
+          checked={selected}
+          onCheckedChange={onToggle}
+          disabled={!selectable || acting}
+          aria-label={`Selecionar ${service.key}`}
+        />
+      </TableCell>
+
       <TableCell className="py-3">
         <div className="flex items-center gap-3">
           <div
@@ -395,6 +808,11 @@ function ServiceRow({
               {service.process_name ?? service.key}
               {service.port != null && <> · :{service.port}</>}
             </p>
+            {service.aliases && service.aliases.length > 0 && (
+              <p className="mt-0.5 truncate font-mono text-[9px] text-muted-foreground/80">
+                aliases: {service.aliases.join(", ")}
+              </p>
+            )}
           </div>
         </div>
       </TableCell>
@@ -406,7 +824,7 @@ function ServiceRow({
             statusTone,
           )}
         >
-          <span className={cn("h-1.5 w-1.5 rounded-full", dot, loading && "animate-pulse")} />
+          <span className={cn("h-1.5 w-1.5 rounded-full", dot)} />
           {service.state}
         </span>
       </TableCell>
@@ -436,7 +854,8 @@ function ServiceRow({
           )}
           {service.systemd_state && (
             <span>
-              systemd <span className="font-mono text-foreground">{service.systemd_state}</span>
+              systemd{" "}
+              <span className="font-mono text-foreground">{service.systemd_state}</span>
             </span>
           )}
           {service.listening != null && (
@@ -455,6 +874,47 @@ function ServiceRow({
           {service.pid == null &&
             !service.systemd_state &&
             service.listening == null && <span>—</span>}
+        </div>
+      </TableCell>
+
+      <TableCell className="py-3 pr-4 text-right">
+        <div className="flex items-center justify-end gap-1">
+          {supported.includes("start") && (
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-7 w-7"
+              onClick={() => onAction("start")}
+              disabled={acting || !canManage || isOnline}
+              title="Iniciar"
+            >
+              <Play className="h-3.5 w-3.5 text-success" />
+            </Button>
+          )}
+          {supported.includes("restart") && (
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-7 w-7"
+              onClick={() => onAction("restart")}
+              disabled={acting || !canManage}
+              title="Reiniciar"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+            </Button>
+          )}
+          {supported.includes("stop") && (
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-7 w-7"
+              onClick={() => onAction("stop")}
+              disabled={acting || !canManage || !isOnline}
+              title="Parar"
+            >
+              <Square className="h-3.5 w-3.5 text-destructive" />
+            </Button>
+          )}
         </div>
       </TableCell>
     </TableRow>
