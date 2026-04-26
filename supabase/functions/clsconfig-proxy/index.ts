@@ -534,6 +534,10 @@ const NEW_ACTIONS_FALLBACK_MISSING = new Set([
   "sendSystemMessage",
   "getMaintenanceMode",
   "setMaintenanceMode",
+  "getManageableServices",
+  "startService",
+  "stopService",
+  "restartService",
 ]);
 
 async function relay(
