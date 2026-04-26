@@ -400,7 +400,81 @@ export const pwApi = {
     if (params.roleid != null) query.roleid = params.roleid;
     return callAction<SecurityHistoryResponse>("listSecurityHistory", { method: "GET", query });
   },
+  /* ─────────── Server Ops v3 — controle real de servicos ─────────── */
+  getManageableServices() {
+    return callAction<ManageableServicesResponse>("getManageableServices", { method: "GET" });
+  },
+  startService(body: ServiceControlPayload) {
+    return callAction<ServiceControlResponse>("startService", { method: "POST", body });
+  },
+  stopService(body: ServiceControlPayload) {
+    return callAction<ServiceControlResponse>("stopService", { method: "POST", body });
+  },
+  restartService(body: ServiceControlPayload) {
+    return callAction<ServiceControlResponse>("restartService", { method: "POST", body });
+  },
 };
+
+/* ─────────── Server Ops v3 — controle real de servicos ─────────── */
+
+export interface ManageableService {
+  key: string;
+  label?: string;
+  process_name?: string;
+  state: ServiceState;
+  pid?: number | null;
+  process_count?: number;
+  pids?: number[];
+  port?: number | null;
+  systemd_state?: string | null;
+  listening?: boolean | null;
+  aliases?: string[];
+  supported_actions?: Array<"start" | "stop" | "restart">;
+  selectable?: boolean;
+  message?: string | null;
+}
+
+export interface ManageableServicesResponse {
+  success: boolean;
+  count?: number;
+  collected_at?: string | number;
+  services: ManageableService[];
+  error?: string;
+}
+
+export interface ServiceControlPayload {
+  /** Lote (preferencial). */
+  services?: string[];
+  /** Single (alternativa). */
+  service?: string;
+  verify?: boolean;
+  dry_run?: boolean;
+}
+
+export interface ServiceControlResultEntry {
+  success: boolean;
+  service: string;
+  action: "start" | "stop" | "restart";
+  method?: string;
+  message?: string;
+  error?: string;
+  exit?: number;
+  post_state?: ServiceState;
+  post_pid?: number | null;
+  post_process_count?: number;
+}
+
+export interface ServiceControlResponse {
+  success: boolean;
+  dry_run?: boolean;
+  action?: "start" | "stop" | "restart";
+  services?: string[];
+  verify?: boolean;
+  results?: ServiceControlResultEntry[];
+  log_file?: string | null;
+  message?: string;
+  error?: string;
+}
 
 /* ─────────── Operação do Servidor v1 ─────────── */
 
