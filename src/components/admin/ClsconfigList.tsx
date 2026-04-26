@@ -369,27 +369,14 @@ const ClsList = ({
           background: `linear-gradient(135deg, hsl(${color} / 0.12), transparent)`,
         }}
       >
-        <div
-          className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg border text-xs font-extrabold text-white shadow"
-          style={{
-            background: `linear-gradient(135deg, hsl(${color} / 0.9), hsl(${color} / 0.55))`,
-            borderColor: `hsl(${color} / 0.6)`,
-          }}
-        >
-          {iconUrl ? (
-            <img
-              src={iconUrl}
-              alt={group.className}
-              className="h-full w-full object-cover"
-              loading="lazy"
-              onError={(e) => {
-                (e.currentTarget as HTMLImageElement).style.display = "none";
-              }}
-            />
-          ) : (
-            short
-          )}
-        </div>
+        <CharacterAvatar
+          cls={group.cls}
+          iconUrl={iconUrl}
+          fallbackText={short}
+          color={color}
+          alt={group.className}
+          className="h-10 w-10 text-xs"
+        />
         <div className="min-w-0 flex-1">
           <div className="text-sm font-extrabold" style={{ color: `hsl(${color})` }}>
             {group.className}
