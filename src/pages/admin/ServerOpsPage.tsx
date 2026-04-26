@@ -324,6 +324,17 @@ function ServerStatusTab() {
     };
     if (scope === "selection") {
       payload.services = explicitServices ?? Array.from(selected);
+    } else {
+      // "server" scope: a API exige a lista explícita de serviços.
+      // Mandamos todos os serviços selecionáveis carregados do getManageableServices.
+      payload.services = (services ?? [])
+        .filter((s) => s.selectable !== false)
+        .map((s) => s.key);
+    }
+    if (!payload.services || payload.services.length === 0) {
+      toast.error("Nenhum serviço disponível para esta ação.");
+      setActing(false);
+      return;
     }
     const fn =
       action === "start"
