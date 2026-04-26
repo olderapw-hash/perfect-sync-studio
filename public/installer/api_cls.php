@@ -8,6 +8,31 @@
  *   GET /apicls/api_cls.php?action=getRolesEditable&roleids=123,456&secret=SEU_SECRET
  *   POST /apicls/api_cls.php?action=exportClsconfig&secret=SEU_SECRET
  *   POST /apicls/api_cls.php?action=saveClsconfigTemplate&roleid=12345&secret=SEU_SECRET
+ *   POST /apicls/api_cls.php?action=sendMailItem&secret=SEU_SECRET
+ *   POST /apicls/api_cls.php?action=sendMailGold&secret=SEU_SECRET
+ *   POST /apicls/api_cls.php?action=sendSystemMessage&secret=SEU_SECRET
+ *   GET  /apicls/api_cls.php?action=getMaintenanceMode&secret=SEU_SECRET
+ *   GET  /apicls/api_cls.php?action=getManageableServices&secret=SEU_SECRET
+ *   GET  /apicls/api_cls.php?action=getManageableInstances&secret=SEU_SECRET
+ *   GET  /apicls/api_cls.php?action=getServerOperationStatus&secret=SEU_SECRET
+ *   GET  /apicls/api_cls.php?action=getServerOperationsHistory&secret=SEU_SECRET
+ *   POST /apicls/api_cls.php?action=setMaintenanceMode&secret=SEU_SECRET
+ *   POST /apicls/api_cls.php?action=setInstanceAutoStart&secret=SEU_SECRET
+ *   POST /apicls/api_cls.php?action=startInstance&secret=SEU_SECRET
+ *   POST /apicls/api_cls.php?action=startInstances&secret=SEU_SECRET
+ *   POST /apicls/api_cls.php?action=stopInstance&secret=SEU_SECRET
+ *   POST /apicls/api_cls.php?action=stopInstances&secret=SEU_SECRET
+ *   POST /apicls/api_cls.php?action=restartInstance&secret=SEU_SECRET
+ *   POST /apicls/api_cls.php?action=restartInstances&secret=SEU_SECRET
+ *   POST /apicls/api_cls.php?action=startServer&secret=SEU_SECRET
+ *   POST /apicls/api_cls.php?action=stopServer&secret=SEU_SECRET
+ *   POST /apicls/api_cls.php?action=restartServer&secret=SEU_SECRET
+ *   POST /apicls/api_cls.php?action=startService&secret=SEU_SECRET
+ *   POST /apicls/api_cls.php?action=stopService&secret=SEU_SECRET
+ *   POST /apicls/api_cls.php?action=restartService&secret=SEU_SECRET
+ *   POST /apicls/api_cls.php?action=kickRole&secret=SEU_SECRET
+ *   POST /apicls/api_cls.php?action=banAccount&secret=SEU_SECRET
+ *   POST /apicls/api_cls.php?action=unbanAccount&secret=SEU_SECRET
  *   GET  /apicls/api_cls.php?action=getBackupContent&name=roleid-...json&secret=SEU_SECRET
  *   POST /apicls/api_cls.php?action=restoreBackup&secret=SEU_SECRET
  */
@@ -32,6 +57,48 @@ $CONFIG = [
     'gamedbd_backup_command' => '/usr/bin/sudo -n /usr/local/sbin/backupgamedbd-api.sh',
     'gamedbd_backup_dir' => __DIR__ . '/backups/gamedbd',
     'gamedbd_backup_min_interval_seconds' => 300,
+    'gdeliveryd_ip' => '127.0.0.1',
+    'gdeliveryd_port' => 29100,
+    'mail_send_command' => '/usr/bin/sudo -n /usr/local/sbin/sendreward-api.sh',
+    'gacd_ip' => '127.0.0.1',
+    'gacd_port' => 29300,
+    'system_message_enabled' => true,
+    'system_message_default_channel' => 9,
+    'system_message_max_length' => 200,
+    'system_message_log_dir' => __DIR__ . '/backups/sysmsg-logs',
+    'maintenance_reason_max_length' => 240,
+    'maintenance_eta_max_minutes' => 1440,
+    'maintenance_state_file' => __DIR__ . '/backups/maintenance/state.json',
+    'maintenance_history_file' => __DIR__ . '/backups/maintenance/history.log',
+    'server_ops_log_dir' => __DIR__ . '/backups/server-ops',
+    'server_ops_start_command' => '/usr/bin/sudo -n /usr/local/sbin/panel_start.sh',
+    'server_ops_stop_command' => '/usr/bin/sudo -n /usr/local/sbin/panel_stop.sh',
+    'server_ops_restart_command' => '/usr/bin/sudo -n /usr/local/sbin/panel_restart.sh',
+    'server_ops_service_control_command' => '/usr/bin/sudo -n /usr/local/sbin/panel_service_control.sh',
+    'server_ops_restart_timeout_seconds' => 900,
+    'server_ops_service_timeout_seconds' => 300,
+    'server_ops_verify_timeout_seconds' => 45,
+    'server_ops_verify_poll_interval_seconds' => 2,
+    'server_ops_restart_countdown_marks' => [300, 180, 120, 60, 30, 10, 5, 4, 3, 2, 1],
+    'server_ops_verify_services' => ['logservice', 'uniquenamed', 'authd', 'gamedbd', 'gacd', 'gfactiond', 'gdeliveryd', 'glinkd', 'gamed', 'httpd'],
+    'server_ops_manageable_services' => ['logservice', 'uniquenamed', 'authd', 'gamedbd', 'gacd', 'gfactiond', 'gdeliveryd', 'glinkd', 'gamed'],
+    'pwadmin_instance_catalog_path' => '/home/pwadmin/instance.txt',
+    'pwadmin_autoinstance_path' => '/home/pwadmin/autoinstance.txt',
+    'gamed_gs_conf_path' => '/home/gamed/gs.conf',
+    'instance_ops_start_command' => '/usr/bin/sudo -n /usr/local/sbin/panel_instance_start.sh',
+    'instance_ops_stop_command' => '/usr/bin/sudo -n /usr/local/sbin/panel_instance_stop.sh',
+    'instance_ops_start_timeout_seconds' => 90,
+    'instance_ops_stop_timeout_seconds' => 90,
+    'instance_ops_verify_timeout_seconds' => 45,
+    'instance_ops_verify_poll_interval_seconds' => 2,
+    'instance_ops_server_autostart_initial_delay_seconds' => 5,
+    'instance_ops_server_autostart_per_instance_delay_seconds' => 2,
+    'security_kick_default_seconds' => 10,
+    'security_kick_max_seconds' => 600,
+    'security_unban_seconds' => 0,
+    'security_ban_permanent_seconds' => 2147483647,
+    'security_reason_min_length' => 3,
+    'security_log_dir' => __DIR__ . '/backups/security-logs',
     // Templates reais do painel antigo. Ignora placeholders vazios/level 1 do clsconfig.
     'clsconfig_template_roleids' => [16, 17, 18, 19, 20, 21, 22, 23, 24, 27, 28, 31],
     'item_catalog_paths' => [
@@ -40,71 +107,6 @@ $CONFIG = [
         '/home/gamedbd/valuables_list.txt',
         '/home/gamedbd/visibleid.txt',
     ],
-    // === Correio (sendMailItem / sendMailGold) ===
-    // O handler do PHP delega ao script externo, que usa gdeliveryd para
-    // entregar a mail+anexo. Com isso o api_cls.php nao precisa abrir
-    // nenhum socket de jogo direto — quem fala com gdeliveryd e o script.
-    'mail_send_enabled'        => true,
-    'mail_send_command'        => '/usr/bin/sudo -n /usr/local/sbin/sendreward-api.sh',
-    'mail_send_workdir'        => __DIR__,
-    'mail_send_default_subject' => 'PW Admin',
-    'mail_send_default_body'    => 'Mensagem do administrador.',
-    'mail_send_max_count'       => 9999,
-    'mail_send_max_amount'      => 2000000000,
-    'mail_send_log_dir'         => __DIR__ . '/backups/mail-logs',
-
-    // === Mensagem de sistema global (sendSystemMessage) ===
-    // Wrapper sudo dedicado, sem shell arbitrario. O PHP delega para
-    // /usr/local/sbin/sendsysmsg-api.sh, que executa
-    // /usr/local/bin/pw_send_system_message.php no contexto root e
-    // fala com o gdeliveryd (ou fallback de queue, igual ao mail).
-    'system_message_enabled'      => true,
-    'system_message_command'      => '/usr/bin/sudo -n /usr/local/sbin/sendsysmsg-api.sh',
-    'system_message_workdir'      => __DIR__,
-    'system_message_min_length'   => 1,
-    'system_message_max_length'   => 200,
-    'system_message_default_kind' => 'system',     // system | broadcast | tip
-    'system_message_log_dir'      => __DIR__ . '/backups/sysmsg-logs',
-
-    // === Modo manutencao (setMaintenanceMode / getMaintenanceMode) ===
-    // Estado persistido em backups/maintenance/state.json (legivel pelo
-    // usuario web). Quando ligado, opcionalmente dispara uma mensagem
-    // de sistema via o mesmo wrapper de sendSystemMessage.
-    'maintenance_enabled_action'  => true,
-    'maintenance_state_file'      => __DIR__ . '/backups/maintenance/state.json',
-    'maintenance_log_dir'         => __DIR__ . '/backups/maintenance',
-    'maintenance_max_reason_len'  => 240,
-    'maintenance_max_eta_minutes' => 24 * 60, // 24h teto sanitario
-
-    // === Gerencia de servicos (getManageableServices / startService / stopService / restartService) ===
-    // Wrapper sudo dedicado, sem shell arbitrario. O PHP delega para
-    // /usr/local/sbin/manageservice-api.sh, que aceita apenas servicos
-    // whitelisted e acoes whitelisted (start|stop|restart). Cada servico
-    // pode ser um daemon do PW (gamedbd, gdeliveryd, gacd, glink, authd,
-    // uniquenamed) ou um servico de sistema (mysql, httpd) — o wrapper
-    // resolve qual systemd unit / binario usar.
-    'manage_service_enabled'      => true,
-    'manage_service_command'      => '/usr/bin/sudo -n /usr/local/sbin/manageservice-api.sh',
-    'manage_service_workdir'      => __DIR__,
-    'manage_service_log_dir'      => __DIR__ . '/backups/service-actions',
-    'manage_service_max_batch'    => 16,
-
-    // === Eventos ingame (registerIngameParticipation) ===
-    // Ponte NPC -> VPS -> Supabase. O NPC NUNCA fala direto com o Supabase:
-    // ele chama este api_cls.php, que aqui repassa para a RPC
-    // `register_ingame_participation` usando a service_role key do Supabase.
-    //
-    // PREENCHA com os dados do seu projeto PW Admin (Lovable Cloud):
-    //   supabase_url               -> ex: https://abcd1234.supabase.co
-    //   supabase_service_role_key  -> service role key do projeto (NUNCA expor publicamente)
-    //   ingame_default_tenant_id   -> uuid do servidor cadastrado no painel
-    //                                 (usado quando o NPC nao envia tenant_id)
-    'ingame_enabled'              => true,
-    'supabase_url'                => '',
-    'supabase_service_role_key'   => '',
-    'ingame_default_tenant_id'    => '',
-    'ingame_log_dir'              => __DIR__ . '/backups/ingame-logs',
-    'ingame_request_timeout'      => 8,
 ];
 
 $CULTIVATION_MAP = [
@@ -218,6 +220,8 @@ class GamedProtocol
     const OP_PUT_ROLE_STOREHOUSE = 3026;
     const OP_PUT_ROLE_INVENTORY  = 3050;
     const OP_GET_RAW_TABLE       = 3055;
+    const OP_FORBID_ROLE         = 360;
+    const OP_FORBID_ACC          = 5035;
 
     private $struct_base = [
         'version' => 'byte',
@@ -447,6 +451,17 @@ class GamedProtocol
             'guid1' => 'int',
             'guid2' => 'int',
             'mask' => 'int',
+        ],
+    ];
+
+    private $struct_forbid_account_response = [
+        'retcode' => 'int',
+        'forbidcount' => 'cuint',
+        'forbid' => [
+            'type' => 'byte',
+            'time' => 'int',
+            'createtime' => 'int',
+            'reason' => 'name',
         ],
     ];
 
@@ -802,6 +817,140 @@ class GamedProtocol
             'packet_len' => strlen($response),
             'packet_prefix' => substr(bin2hex($response), 0, 256),
             'attempts' => $meta,
+        ];
+    }
+
+    public function sendToDelivery($data, $ip, $port)
+    {
+        if (!function_exists('socket_create')) {
+            throw new Exception('Extensao PHP sockets nao instalada.');
+        }
+
+        $fp = @fsockopen($ip, $port, $errno, $errstr, 2);
+        if (!$fp) {
+            throw new Exception("Nao foi possivel conectar ao gdeliveryd ($ip:$port): $errstr");
+        }
+
+        $sock = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
+        if (!$sock) {
+            fclose($fp);
+            throw new Exception('Falha ao criar socket para gdeliveryd');
+        }
+
+        socket_set_option($sock, SOL_SOCKET, SO_RCVTIMEO, ['sec' => 5, 'usec' => 0]);
+        socket_set_option($sock, SOL_SOCKET, SO_SNDTIMEO, ['sec' => 5, 'usec' => 0]);
+
+        if (!@socket_connect($sock, $ip, $port)) {
+            socket_close($sock);
+            fclose($fp);
+            throw new Exception('Falha ao conectar socket ao gdeliveryd');
+        }
+
+        $hello = '';
+        @socket_recv($sock, $hello, 8192, 0);
+
+        $sentBytes = @socket_send($sock, $data, strlen($data), 0);
+        if ($sentBytes === false) {
+            $err = socket_strerror(socket_last_error($sock));
+            socket_close($sock);
+            fclose($fp);
+            throw new Exception('Falha ao enviar pacote para gdeliveryd: ' . $err);
+        }
+
+        $response = '';
+        @socket_recv($sock, $response, 8192, 0);
+
+        socket_close($sock);
+        fclose($fp);
+
+        return [
+            'hello_len' => strlen($hello),
+            'sent_bytes' => intval($sentBytes),
+            'response_hex' => ($response !== '') ? bin2hex($response) : '',
+            'response_len' => strlen($response),
+        ];
+    }
+
+    public function forbidRole($roleid, $seconds, $reason, $ip, $port)
+    {
+        $pack = pack('N*', -1, 0, intval($roleid), intval($seconds)) . $this->packString((string) $reason);
+        return $this->sendToDelivery($this->createHeader(self::OP_FORBID_ROLE, $pack), $ip, $port);
+    }
+
+    public function forbidAccount($userid, $seconds, $reason, $ip, $port)
+    {
+        $pack = pack('N*', -1, 0, intval($userid), intval($seconds)) . $this->packString((string) $reason);
+        return $this->sendToDelivery($this->createHeader(self::OP_FORBID_ACC, $pack), $ip, $port);
+    }
+
+    public function accountForbidAction($provider, $userid, $seconds, $reason, $ip, $port)
+    {
+        $provider = intval($provider);
+        if (!in_array($provider, [0, 1, 2], true)) {
+            throw new Exception('provider de forbidAcc invalido');
+        }
+
+        $pack = pack(
+            'NCN*',
+            0xFFFFFFFF,
+            $provider,
+            0xFFFFFFFF,
+            0xFFFFFFFF,
+            intval($userid),
+            intval($seconds)
+        ) . $this->packString((string) $reason);
+
+        $wire = $this->sendToGamedBD($this->createHeader(self::OP_FORBID_ACC, $pack), $ip, $port);
+        $payload = $this->deleteHeader($wire);
+        $this->cycle = false;
+        $decoded = $this->unmarshal($payload, $this->struct_forbid_account_response);
+
+        if (!is_array($decoded) || !array_key_exists('retcode', $decoded)) {
+            throw new Exception('Falha ao interpretar resposta do forbidAcc');
+        }
+
+        $forbid = array_value($decoded, 'forbid', []);
+        $forbid = is_array($forbid) ? array_values($forbid) : [];
+
+        return [
+            'provider' => $provider,
+            'userid' => intval($userid),
+            'seconds' => intval($seconds),
+            'reason' => (string) $reason,
+            'retcode' => intval(array_value($decoded, 'retcode', -1)),
+            'forbid_count' => count($forbid),
+            'forbid' => $forbid,
+            'wire_prefix' => substr(bin2hex($wire), 0, 128),
+        ];
+    }
+
+    public function clearRoleForbid($roleid, $ip, $port)
+    {
+        $roleid = intval($roleid);
+        if ($roleid <= 0) {
+            throw new Exception('roleid invalido para limpeza de forbid');
+        }
+
+        $base = $this->getRoleBase($roleid, $ip, $port);
+        if (!is_array($base)) {
+            throw new Exception('Nao foi possivel ler base do roleid ' . $roleid);
+        }
+
+        $before = array_value($base, 'forbid', []);
+        $before = is_array($before) ? array_values($before) : [];
+
+        $base['forbid'] = [];
+        $this->putRoleBase($roleid, $base, $ip, $port);
+
+        $fresh = $this->getRoleBase($roleid, $ip, $port);
+        $after = is_array($fresh) ? array_value($fresh, 'forbid', []) : [];
+        $after = is_array($after) ? array_values($after) : [];
+
+        return [
+            'roleid' => $roleid,
+            'before' => $before,
+            'after' => $after,
+            'cleared' => empty($after),
         ];
     }
 
@@ -2882,6 +3031,413 @@ function wantsClsconfigExport(array $request)
     return false;
 }
 
+function firstArrayValue(array $source, array $keys, $default = null)
+{
+    foreach ($keys as $key) {
+        if (array_key_exists($key, $source)) {
+            return $source[$key];
+        }
+    }
+
+    return $default;
+}
+
+function mergeMailRequestPayload(array $request)
+{
+    $merged = $request;
+
+    foreach (['payload', 'mail', 'reward', 'item'] as $field) {
+        $candidate = array_value($request, $field, null);
+        if (is_array($candidate)) {
+            $merged = array_merge($merged, $candidate);
+        }
+    }
+
+    return $merged;
+}
+
+function truncateUtf8Text($value, $maxLength)
+{
+    $text = trim((string) $value);
+    $maxLength = max(0, intval($maxLength));
+
+    if ($text === '' || $maxLength === 0) {
+        return $text;
+    }
+
+    if (function_exists('mb_strlen') && function_exists('mb_substr')) {
+        return mb_strlen($text, 'UTF-8') <= $maxLength
+            ? $text
+            : mb_substr($text, 0, $maxLength, 'UTF-8');
+    }
+
+    return strlen($text) <= $maxLength ? $text : substr($text, 0, $maxLength);
+}
+
+function normalizeMailEnvelope(array $request, array $config, $defaultTitle, $defaultMessage)
+{
+    $merged = mergeMailRequestPayload($request);
+    $roleid = intval(firstArrayValue($merged, ['roleid', 'role_id', 'target_roleid', 'receiver_roleid'], 0));
+    if ($roleid <= 0) {
+        throw new InvalidArgumentException('roleid invalido');
+    }
+
+    $title = truncateUtf8Text(firstArrayValue($merged, ['title', 'subject', 'mail_title'], $defaultTitle), 120);
+    if ($title === '') {
+        $title = $defaultTitle;
+    }
+
+    $message = truncateUtf8Text(firstArrayValue($merged, ['message', 'body', 'content', 'mail_message'], $defaultMessage), 1000);
+    if ($message === '') {
+        $message = $defaultMessage;
+    }
+
+    return [
+        'request' => $merged,
+        'roleid' => $roleid,
+        'title' => $title,
+        'message' => $message,
+        'gdelivery_ip' => trim((string) array_value($config, 'gdeliveryd_ip', '127.0.0.1')),
+        'gdelivery_port' => max(1, intval(array_value($config, 'gdeliveryd_port', 29100))),
+        'dry_run' => truthyValue(firstArrayValue($merged, ['dry_run', 'dryRun'], false)),
+    ];
+}
+
+function buildSendMailItemPayload(array $request, array $config)
+{
+    $mail = normalizeMailEnvelope($request, $config, 'Recompensa do servidor', 'Voce recebeu um item no correio.');
+    $merged = $mail['request'];
+
+    $itemId = intval(firstArrayValue($merged, ['item_id', 'id'], 0));
+    if ($itemId <= 0) {
+        throw new InvalidArgumentException('item_id invalido');
+    }
+
+    $count = max(1, intval(firstArrayValue($merged, ['count', 'amount', 'quantity'], 1)));
+    $maxStack = intval(firstArrayValue($merged, ['max_stack', 'max_count'], $count));
+    if ($maxStack <= 0) {
+        $maxStack = $count;
+    }
+    if ($maxStack < $count) {
+        $maxStack = $count;
+    }
+
+    $dataHex = preg_replace('/[^0-9a-fA-F]/', '', (string) firstArrayValue($merged, ['data_hex', 'data', 'hex'], ''));
+    if ($dataHex !== '' && (strlen($dataHex) % 2) !== 0) {
+        throw new InvalidArgumentException('data/item hex invalido');
+    }
+
+    return [
+        'kind' => 'item',
+        'roleid' => $mail['roleid'],
+        'title' => $mail['title'],
+        'message' => $mail['message'],
+        'item_id' => $itemId,
+        'item_name' => truncateUtf8Text(firstArrayValue($merged, ['item_name', 'name'], ''), 120),
+        'count' => $count,
+        'max_stack' => $maxStack,
+        'data_hex' => strtolower($dataHex),
+        'proctype' => max(0, intval(firstArrayValue($merged, ['proctype'], 0))),
+        'expire_date' => max(0, intval(firstArrayValue($merged, ['expire_date', 'expire'], 0))),
+        'guid1' => max(0, intval(firstArrayValue($merged, ['guid1'], 0))),
+        'guid2' => max(0, intval(firstArrayValue($merged, ['guid2'], 0))),
+        'mask' => max(0, intval(firstArrayValue($merged, ['mask'], 0))),
+        'money' => max(0, intval(firstArrayValue($merged, ['money', 'gold', 'coins'], 0))),
+        'gdelivery_ip' => $mail['gdelivery_ip'],
+        'gdelivery_port' => $mail['gdelivery_port'],
+        'dry_run' => $mail['dry_run'],
+    ];
+}
+
+function buildSendMailGoldPayload(array $request, array $config)
+{
+    $mail = normalizeMailEnvelope($request, $config, 'Recompensa do servidor', 'Voce recebeu moedas no correio.');
+    $merged = $mail['request'];
+    $money = max(0, intval(firstArrayValue($merged, ['money', 'gold', 'coins', 'amount', 'value'], 0)));
+    if ($money <= 0) {
+        throw new InvalidArgumentException('money invalido');
+    }
+
+    return [
+        'kind' => 'gold',
+        'roleid' => $mail['roleid'],
+        'title' => $mail['title'],
+        'message' => $mail['message'],
+        'item_id' => 0,
+        'item_name' => '',
+        'count' => 0,
+        'max_stack' => 0,
+        'data_hex' => '',
+        'proctype' => 0,
+        'expire_date' => 0,
+        'guid1' => 0,
+        'guid2' => 0,
+        'mask' => 0,
+        'money' => $money,
+        'gdelivery_ip' => $mail['gdelivery_ip'],
+        'gdelivery_port' => $mail['gdelivery_port'],
+        'dry_run' => $mail['dry_run'],
+    ];
+}
+
+function mergedSecurityRequest(array $request)
+{
+    $merged = $request;
+
+    foreach (['payload', 'moderation', 'target', 'ban', 'kick'] as $field) {
+        $candidate = array_value($request, $field, null);
+        if (is_array($candidate)) {
+            $merged = array_merge($merged, $candidate);
+        }
+    }
+
+    return $merged;
+}
+
+function securityReasonFromRequest(array $request, array $config)
+{
+    $reason = truncateUtf8Text(firstArrayValue($request, ['reason', 'message', 'note', 'moderation_reason'], ''), 250);
+    $minLength = max(1, intval(array_value($config, 'security_reason_min_length', 3)));
+
+    $tooShort = function_exists('mb_strlen')
+        ? (mb_strlen($reason, 'UTF-8') < $minLength)
+        : (strlen($reason) < $minLength);
+
+    if ($reason === '' || $tooShort) {
+        throw new InvalidArgumentException('motivo obrigatorio (minimo ' . $minLength . ' caracteres)');
+    }
+
+    return $reason;
+}
+
+function securityResolveRoleId(array $request)
+{
+    return intval(firstArrayValue($request, ['roleid', 'role_id', 'target_roleid'], 0));
+}
+
+function securityResolveUserIdFromRole(GamedProtocol $proto, array $config, $roleid)
+{
+    $roleid = intval($roleid);
+    if ($roleid <= 0) {
+        throw new InvalidArgumentException('roleid invalido');
+    }
+
+    $base = $proto->getRoleBase($roleid, $config['gamedbd_ip'], $config['gamedbd_port']);
+    $userid = intval(array_value($base, 'userid', 0));
+    if ($userid <= 0) {
+        throw new Exception('Nao foi possivel resolver userid para o roleid ' . $roleid);
+    }
+
+    return [
+        'userid' => $userid,
+        'base' => $base,
+    ];
+}
+
+function securityDurationFromRequest(array $request)
+{
+    return max(0, intval(firstArrayValue($request, ['duration_seconds', 'durationSeconds', 'duration', 'seconds', 'time'], 0)));
+}
+
+function buildKickRolePayload(array $request, array $config)
+{
+    $merged = mergedSecurityRequest($request);
+    $roleid = securityResolveRoleId($merged);
+    if ($roleid <= 0) {
+        throw new InvalidArgumentException('roleid invalido');
+    }
+
+    $seconds = securityDurationFromRequest($merged);
+    if ($seconds <= 0) {
+        $seconds = max(1, intval(array_value($config, 'security_kick_default_seconds', 10)));
+    }
+
+    $maxSeconds = max(1, intval(array_value($config, 'security_kick_max_seconds', 600)));
+    if ($seconds > $maxSeconds) {
+        $seconds = $maxSeconds;
+    }
+
+    return [
+        'action' => 'kickRole',
+        'roleid' => $roleid,
+        'seconds' => $seconds,
+        'reason' => securityReasonFromRequest($merged, $config),
+        'dry_run' => truthyValue(firstArrayValue($merged, ['dry_run', 'dryRun'], false)),
+    ];
+}
+
+function buildBanAccountPayload(array $request, array $config, GamedProtocol $proto)
+{
+    $merged = mergedSecurityRequest($request);
+    $reason = securityReasonFromRequest($merged, $config);
+    $roleid = securityResolveRoleId($merged);
+    $userid = intval(firstArrayValue($merged, ['userid', 'user_id', 'account_id', 'accountId', 'target_userid'], 0));
+    $permanent = truthyValue(firstArrayValue($merged, ['permanent', 'is_permanent'], false))
+        || in_array(strtolower((string) firstArrayValue($merged, ['ban_type', 'type', 'mode'], '')), ['permanent', 'perm'], true);
+
+    if ($userid <= 0 && $roleid > 0) {
+        $resolved = securityResolveUserIdFromRole($proto, $config, $roleid);
+        $userid = intval(array_value($resolved, 'userid', 0));
+    }
+
+    if ($userid <= 0) {
+        throw new InvalidArgumentException('userid/account_id invalido');
+    }
+
+    $seconds = $permanent
+        ? max(1, intval(array_value($config, 'security_ban_permanent_seconds', 2147483647)))
+        : securityDurationFromRequest($merged);
+
+    if (!$permanent && $seconds <= 0) {
+        throw new InvalidArgumentException('duracao obrigatoria para ban temporario');
+    }
+
+    return [
+        'action' => 'banAccount',
+        'userid' => $userid,
+        'roleid' => $roleid,
+        'seconds' => $seconds,
+        'permanent' => $permanent,
+        'reason' => $reason,
+        'dry_run' => truthyValue(firstArrayValue($merged, ['dry_run', 'dryRun'], false)),
+    ];
+}
+
+function buildUnbanAccountPayload(array $request, array $config, GamedProtocol $proto)
+{
+    $merged = mergedSecurityRequest($request);
+    $roleid = securityResolveRoleId($merged);
+    $userid = intval(firstArrayValue($merged, ['userid', 'user_id', 'account_id', 'accountId', 'target_userid'], 0));
+
+    if ($userid <= 0 && $roleid > 0) {
+        $resolved = securityResolveUserIdFromRole($proto, $config, $roleid);
+        $userid = intval(array_value($resolved, 'userid', 0));
+    }
+
+    if ($userid <= 0) {
+        throw new InvalidArgumentException('userid/account_id invalido');
+    }
+
+    $seconds = securityDurationFromRequest($merged);
+    if ($seconds <= 0) {
+        $seconds = max(0, intval(array_value($config, 'security_unban_seconds', 0)));
+    }
+
+    return [
+        'action' => 'unbanAccount',
+        'userid' => $userid,
+        'roleid' => $roleid,
+        'seconds' => $seconds,
+        'reason' => securityReasonFromRequest($merged, $config),
+        'dry_run' => truthyValue(firstArrayValue($merged, ['dry_run', 'dryRun'], false)),
+    ];
+}
+
+function appendSecurityActionLog(array $config, array $entry)
+{
+    $dir = trim((string) array_value($config, 'security_log_dir', ''));
+    if ($dir === '') {
+        return null;
+    }
+
+    if (!is_dir($dir) && !@mkdir($dir, 0750, true)) {
+        return null;
+    }
+
+    $file = rtrim($dir, '/\\') . DIRECTORY_SEPARATOR . 'security-' . gmdate('Y-m-d') . '.jsonl';
+    $line = json_encode($entry, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n";
+    if ($line === false || @file_put_contents($file, $line, FILE_APPEND) === false) {
+        return null;
+    }
+
+    return $file;
+}
+
+function executeSecurityAction(array $config, array $payload)
+{
+    $proto = new GamedProtocol();
+
+    $result = [
+        'success' => true,
+        'action' => array_value($payload, 'action', ''),
+        'roleid' => intval(array_value($payload, 'roleid', 0)),
+        'userid' => intval(array_value($payload, 'userid', 0)),
+        'seconds' => intval(array_value($payload, 'seconds', 0)),
+        'reason' => array_value($payload, 'reason', ''),
+        'dry_run' => truthyValue(array_value($payload, 'dry_run', false)),
+    ];
+
+    if ($result['dry_run']) {
+        $result['message'] = 'Dry run de seguranca validado com sucesso';
+        $logFile = appendSecurityActionLog($config, array_merge($result, [
+            'created_at' => gmdate('c'),
+            'status' => 'dry_run',
+        ]));
+        if ($logFile) {
+            $result['log_file'] = $logFile;
+        }
+        return $result;
+    }
+
+    $delivery = null;
+    if ($result['action'] === 'kickRole') {
+        $delivery = $proto->forbidRole($result['roleid'], $result['seconds'], $result['reason'], $config['gdeliveryd_ip'], $config['gdeliveryd_port']);
+        $result['message'] = 'Kick aplicado com sucesso';
+    } elseif ($result['action'] === 'banAccount') {
+        $delivery = $proto->accountForbidAction(1, $result['userid'], $result['seconds'], $result['reason'], $config['gamedbd_ip'], $config['gamedbd_port']);
+        if (intval(array_value($delivery, 'retcode', -1)) !== 0) {
+            throw new Exception('Falha ao aplicar ban na conta (retcode ' . intval(array_value($delivery, 'retcode', -1)) . ')');
+        }
+        $result['message'] = truthyValue(array_value($payload, 'permanent', false))
+            ? 'Ban permanente aplicado com sucesso'
+            : 'Ban temporario aplicado com sucesso';
+        $result['permanent'] = truthyValue(array_value($payload, 'permanent', false));
+    } elseif ($result['action'] === 'unbanAccount') {
+        $accountDelivery = $proto->accountForbidAction(2, $result['userid'], $result['seconds'], $result['reason'], $config['gamedbd_ip'], $config['gamedbd_port']);
+        if (intval(array_value($accountDelivery, 'retcode', -1)) !== 0) {
+            throw new Exception('Falha ao liberar conta no gamedbd (retcode ' . intval(array_value($accountDelivery, 'retcode', -1)) . ')');
+        }
+        $accountState = $proto->accountForbidAction(0, $result['userid'], 0, '', $config['gamedbd_ip'], $config['gamedbd_port']);
+        $delivery = [
+            'account' => $accountDelivery,
+            'account_state' => $accountState,
+        ];
+        if ($result['roleid'] > 0) {
+            $delivery['role_clear'] = $proto->clearRoleForbid($result['roleid'], $config['gamedbd_ip'], $config['gamedbd_port']);
+        }
+
+        $accountStillForbidden = intval(array_value($accountState, 'retcode', -1)) !== 0
+            || intval(array_value($accountState, 'forbid_count', 0)) > 0;
+        $roleStillForbidden = $result['roleid'] > 0
+            && !truthyValue(array_value(array_value($delivery, 'role_clear', []), 'cleared', false));
+
+        if ($accountStillForbidden || $roleStillForbidden) {
+            $details = [];
+            if ($accountStillForbidden) {
+                $details[] = 'conta continua com bloqueios ativos';
+            }
+            if ($roleStillForbidden) {
+                $details[] = 'role ainda possui forbid na base';
+            }
+            throw new Exception('Falha ao liberar personagem: ' . implode('; ', $details));
+        }
+        $result['message'] = 'Conta liberada com sucesso';
+    } else {
+        throw new InvalidArgumentException('acao de seguranca invalida');
+    }
+
+    $result['delivery'] = $delivery;
+    $logFile = appendSecurityActionLog($config, array_merge($result, [
+        'created_at' => gmdate('c'),
+        'status' => 'success',
+    ]));
+    if ($logFile) {
+        $result['log_file'] = $logFile;
+    }
+
+    return $result;
+}
+
 function itemCatalogQueryFromRequest(array $request)
 {
     foreach (['q', 'query', 'search', 'term'] as $field) {
@@ -3507,7 +4063,7 @@ function latestGamedbdBackupInfo(array $config, $maxAgeSeconds)
     return backupFileInfo($latest, 'gamedbd_backup');
 }
 
-function parseBackupCommandOutput($output)
+function parseCommandJsonOutput($output)
 {
     $text = trim((string) $output);
     if ($text === '') {
@@ -3535,6 +4091,11 @@ function parseBackupCommandOutput($output)
     }
 
     return null;
+}
+
+function parseBackupCommandOutput($output)
+{
+    return parseCommandJsonOutput($output);
 }
 
 function createGamedbdSafetyBackup(array $config, $reason = 'manual', $force = false)
@@ -3606,6 +4167,64 @@ function createGamedbdSafetyBackup(array $config, $reason = 'manual', $force = f
     $parsed['mode'] = 'created';
     $parsed['reason'] = $safeReason;
     return $parsed;
+}
+
+function executeMailSendCommand(array $config, array $payload)
+{
+    $command = trim((string) array_value($config, 'mail_send_command', ''));
+    if ($command === '') {
+        throw new Exception('Comando de envio de correio nao configurado');
+    }
+
+    if (!function_exists('exec')) {
+        throw new Exception('exec() desabilitado no PHP');
+    }
+
+    $tempFile = @tempnam(sys_get_temp_dir(), 'pwmail_');
+    if ($tempFile === false || $tempFile === '') {
+        throw new Exception('Nao foi possivel criar arquivo temporario para envio de correio');
+    }
+
+    $json = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    if ($json === false || @file_put_contents($tempFile, $json) === false) {
+        @unlink($tempFile);
+        throw new Exception('Falha ao serializar payload de correio');
+    }
+
+    $output = [];
+    $exitCode = 0;
+    $cmd = $command . ' ' . escapeshellarg($tempFile);
+    @exec($cmd . ' 2>&1', $output, $exitCode);
+    @unlink($tempFile);
+
+    $rawOutput = trim(implode("\n", $output));
+    $parsed = parseCommandJsonOutput($rawOutput);
+
+    if ($exitCode !== 0) {
+        if (is_array($parsed)) {
+            $error = trim((string) array_value($parsed, 'error', array_value($parsed, 'message', '')));
+            if ($error !== '') {
+                throw new Exception('Envio de correio falhou: ' . $error);
+            }
+        }
+
+        throw new Exception('Envio de correio falhou (exit ' . $exitCode . '): ' . $rawOutput);
+    }
+
+    if (is_array($parsed)) {
+        if (array_key_exists('success', $parsed) && !truthyValue(array_value($parsed, 'success', false))) {
+            $error = trim((string) array_value($parsed, 'error', array_value($parsed, 'message', 'Falha ao enviar correio')));
+            throw new Exception($error !== '' ? $error : 'Falha ao enviar correio');
+        }
+
+        return $parsed;
+    }
+
+    return [
+        'success' => true,
+        'message' => 'Correio enviado com sucesso',
+        'stdout' => $rawOutput,
+    ];
 }
 
 function restoreRequestBackupName(array $request)
@@ -3950,1396 +4569,3459 @@ function getRoleJsonBackupContent(array $config, array $request)
     return $backup;
 }
 
-/**
- * Handler comum para sendMailItem / sendMailGold.
- *
- * Valida payload, chama o wrapper sudo (sendreward-api.sh) que executa
- * /usr/local/bin/pw_send_mail.php no contexto do usuario gamedbd e retorna
- * a resposta normalizada para o painel.
- *
- * Suporta { "dry_run": true } — nesse caso a validacao roda mas nao chama
- * o gdeliveryd; util para o "Testar conexao" do painel.
- */
-function handleSendMailRequest(array $config, $action, array $request)
+function serverOpsKnownServices()
 {
-    if (!truthyValue(array_value($config, 'mail_send_enabled', true))) {
-        throw new Exception('Envio de correio desabilitado nesta VPS');
-    }
-
-    $roleid = extractRoleIdFromRequest($request);
-    if ($roleid <= 0) {
-        throw new Exception('roleid invalido');
-    }
-
-    $subject = trim((string) array_value($request, 'subject', ''));
-    if ($subject === '') {
-        $subject = (string) array_value($config, 'mail_send_default_subject', 'PW Admin');
-    }
-
-    $body = trim((string) array_value($request, 'body', ''));
-    if ($body === '') {
-        $body = (string) array_value($config, 'mail_send_default_body', '');
-    }
-
-    $dryRun = truthyValue(array_value($request, 'dry_run', false));
-
-    if ($action === 'sendMailItem') {
-        $item = array_value($request, 'item', null);
-        if (!is_array($item)) {
-            throw new Exception('campo item ausente ou invalido');
-        }
-        $itemId = intval(array_value($item, 'item_id', 0));
-        $count  = intval(array_value($item, 'count', 0));
-        if ($itemId <= 0) {
-            throw new Exception('item.item_id invalido');
-        }
-        if ($count <= 0) {
-            throw new Exception('item.count deve ser > 0');
-        }
-        $maxCount = intval(array_value($config, 'mail_send_max_count', 9999));
-        if ($maxCount > 0 && $count > $maxCount) {
-            throw new Exception('item.count acima do limite (' . $maxCount . ')');
-        }
-
-        $kind = 'item';
-        $payload = [
-            'roleid'    => $roleid,
-            'subject'   => $subject,
-            'body'      => $body,
-            'kind'      => 'item',
-            'item_id'   => $itemId,
-            'count'     => $count,
-            'max_count' => intval(array_value($item, 'max_count', $count)),
-            'proctype'  => intval(array_value($item, 'proctype', 0)),
-            'expire_date' => intval(array_value($item, 'expire_date', 0)),
-            'mask'      => intval(array_value($item, 'mask', 0)),
-            'guid1'     => intval(array_value($item, 'guid1', 0)),
-            'guid2'     => intval(array_value($item, 'guid2', 0)),
-            'data'      => (string) array_value($item, 'data', ''),
-        ];
-    } else {
-        $amount = intval(array_value($request, 'amount', 0));
-        if ($amount <= 0) {
-            throw new Exception('amount deve ser > 0');
-        }
-        $maxAmount = intval(array_value($config, 'mail_send_max_amount', 2000000000));
-        if ($maxAmount > 0 && $amount > $maxAmount) {
-            throw new Exception('amount acima do limite (' . $maxAmount . ')');
-        }
-
-        $kind = 'gold';
-        $payload = [
-            'roleid'  => $roleid,
-            'subject' => $subject,
-            'body'    => $body,
-            'kind'    => 'gold',
-            'amount'  => $amount,
-        ];
-    }
-
-    if ($dryRun) {
-        return [
-            'success'   => true,
-            'dry_run'   => true,
-            'roleid'    => $roleid,
-            'kind'      => $kind,
-            'validated' => true,
-            'payload'   => $payload,
-        ];
-    }
-
-    $logDir = trim((string) array_value($config, 'mail_send_log_dir', ''));
-    if ($logDir !== '' && !is_dir($logDir)) {
-        @mkdir($logDir, 0750, true);
-    }
-
-    $command = trim((string) array_value($config, 'mail_send_command', ''));
-    if ($command === '') {
-        throw new Exception('Comando de envio de correio nao configurado');
-    }
-
-    $json = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-    if ($json === false) {
-        throw new Exception('Falha ao serializar payload do correio');
-    }
-
-    // O wrapper sh recebe o JSON via stdin para evitar quoting fragil.
-    $descriptors = [
-        0 => ['pipe', 'r'],
-        1 => ['pipe', 'w'],
-        2 => ['pipe', 'w'],
-    ];
-    $cwd = (string) array_value($config, 'mail_send_workdir', __DIR__);
-    $process = @proc_open($command, $descriptors, $pipes, $cwd);
-    if (!is_resource($process)) {
-        throw new Exception('Nao foi possivel iniciar comando de envio de correio');
-    }
-
-    fwrite($pipes[0], $json);
-    fclose($pipes[0]);
-    $stdout = stream_get_contents($pipes[1]);
-    fclose($pipes[1]);
-    $stderr = stream_get_contents($pipes[2]);
-    fclose($pipes[2]);
-    $exitCode = proc_close($process);
-
-    if ($logDir !== '' && is_dir($logDir) && is_writable($logDir)) {
-        $logName = $logDir . '/' . gmdate('Ymd-His') . '-' . $kind . '-' . $roleid . '.json';
-        @file_put_contents($logName, json_encode([
-            'sent_at_utc' => gmdate('c'),
-            'action'      => $action,
-            'request'     => $payload,
-            'exit_code'   => $exitCode,
-            'stdout'      => $stdout,
-            'stderr'      => $stderr,
-        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT));
-    }
-
-    if ($exitCode !== 0) {
-        $msg = trim((string) $stderr);
-        if ($msg === '') {
-            $msg = trim((string) $stdout);
-        }
-        if ($msg === '') {
-            $msg = 'Falha ao enviar correio (exit ' . $exitCode . ')';
-        }
-        throw new Exception($msg);
-    }
-
-    $decoded = json_decode((string) $stdout, true);
-    if (!is_array($decoded)) {
-        return [
-            'success'   => true,
-            'roleid'    => $roleid,
-            'mail_id'   => null,
-            'delivered' => true,
-            'raw'       => trim((string) $stdout),
-        ];
-    }
-
-    if (!array_key_exists('success', $decoded)) {
-        $decoded['success'] = true;
-    }
-    if (!array_key_exists('roleid', $decoded)) {
-        $decoded['roleid'] = $roleid;
-    }
-    if (!array_key_exists('delivered', $decoded)) {
-        $decoded['delivered'] = (bool) $decoded['success'];
-    }
-
-    return $decoded;
-}
-
-/**
- * Handler de sendSystemMessage.
- *
- * Envia uma mensagem global/system ao servidor PW via wrapper sudo
- * dedicado. Valida tamanho/tipo, suporta dry_run, registra log JSON
- * em backups/sysmsg-logs e devolve resposta JSON consistente.
- *
- * Payload aceito:
- *   {
- *     "message":  "texto da mensagem (1..max_length)",
- *     "kind":     "system" | "broadcast" | "tip"   (opcional, default = system_message_default_kind)
- *     "priority": "low" | "normal" | "high"        (opcional, default normal — repassado ao wrapper)
- *     "channel":  "world" | "system" | "tip"       (opcional, alias de kind para compat)
- *     "dry_run":  true|false                       (opcional)
- *   }
- *
- * Resposta:
- *   { success, dry_run?, kind, priority, message, delivered?, method?, log_file? }
- */
-function handleSendSystemMessageRequest(array $config, array $request)
-{
-    if (!truthyValue(array_value($config, 'system_message_enabled', true))) {
-        throw new Exception('Envio de mensagem de sistema desabilitado nesta VPS');
-    }
-
-    $message = isset($request['message']) ? trim((string) $request['message']) : '';
-    if ($message === '') {
-        throw new Exception('campo message obrigatorio');
-    }
-
-    $minLen = intval(array_value($config, 'system_message_min_length', 1));
-    $maxLen = intval(array_value($config, 'system_message_max_length', 200));
-    $len = function_exists('mb_strlen') ? mb_strlen($message, 'UTF-8') : strlen($message);
-    if ($minLen > 0 && $len < $minLen) {
-        throw new Exception('message muito curta (minimo ' . $minLen . ')');
-    }
-    if ($maxLen > 0 && $len > $maxLen) {
-        throw new Exception('message acima do limite (' . $maxLen . ' caracteres)');
-    }
-
-    // Bloqueia caracteres de controle perigosos (mantem \n e \t).
-    if (preg_match('/[\x00-\x08\x0B\x0C\x0E-\x1F]/', $message)) {
-        throw new Exception('message contem caracteres de controle invalidos');
-    }
-
-    $kind = strtolower(trim((string) array_value($request, 'kind',
-        array_value($request, 'channel', array_value($config, 'system_message_default_kind', 'system')))));
-    $allowedKinds = ['system', 'broadcast', 'tip', 'world'];
-    if (!in_array($kind, $allowedKinds, true)) {
-        throw new Exception('kind invalido (use: ' . implode(', ', $allowedKinds) . ')');
-    }
-
-    $priority = strtolower(trim((string) array_value($request, 'priority', 'normal')));
-    $allowedPriorities = ['low', 'normal', 'high'];
-    if (!in_array($priority, $allowedPriorities, true)) {
-        $priority = 'normal';
-    }
-
-    $dryRun = truthyValue(array_value($request, 'dry_run', false));
-
-    $payload = [
-        'message'  => $message,
-        'kind'     => $kind,
-        'priority' => $priority,
-        'length'   => $len,
-    ];
-
-    if ($dryRun) {
-        return [
-            'success'   => true,
-            'dry_run'   => true,
-            'validated' => true,
-            'message'   => $message,
-            'kind'      => $kind,
-            'priority'  => $priority,
-            'length'    => $len,
-        ];
-    }
-
-    $command = trim((string) array_value($config, 'system_message_command', ''));
-    if ($command === '') {
-        throw new Exception('Comando de envio de mensagem de sistema nao configurado');
-    }
-
-    $logDir = trim((string) array_value($config, 'system_message_log_dir', ''));
-    if ($logDir !== '' && !is_dir($logDir)) {
-        @mkdir($logDir, 0750, true);
-    }
-
-    $json = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-    if ($json === false) {
-        throw new Exception('Falha ao serializar payload da mensagem');
-    }
-
-    $descriptors = [
-        0 => ['pipe', 'r'],
-        1 => ['pipe', 'w'],
-        2 => ['pipe', 'w'],
-    ];
-    $cwd = (string) array_value($config, 'system_message_workdir', __DIR__);
-    $process = @proc_open($command, $descriptors, $pipes, $cwd);
-    if (!is_resource($process)) {
-        throw new Exception('Nao foi possivel iniciar comando de envio de mensagem');
-    }
-
-    fwrite($pipes[0], $json);
-    fclose($pipes[0]);
-    $stdout = stream_get_contents($pipes[1]);
-    fclose($pipes[1]);
-    $stderr = stream_get_contents($pipes[2]);
-    fclose($pipes[2]);
-    $exitCode = proc_close($process);
-
-    $logFile = null;
-    if ($logDir !== '' && is_dir($logDir) && is_writable($logDir)) {
-        $logFile = $logDir . '/' . gmdate('Ymd-His') . '-' . $kind . '.json';
-        @file_put_contents($logFile, json_encode([
-            'sent_at_utc' => gmdate('c'),
-            'request'     => $payload,
-            'exit_code'   => $exitCode,
-            'stdout'      => $stdout,
-            'stderr'      => $stderr,
-        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT));
-    }
-
-    if ($exitCode !== 0) {
-        $msg = trim((string) $stderr);
-        if ($msg === '') $msg = trim((string) $stdout);
-        if ($msg === '') $msg = 'Falha ao enviar mensagem (exit ' . $exitCode . ')';
-        throw new Exception($msg);
-    }
-
-    $decoded = json_decode((string) $stdout, true);
-    if (!is_array($decoded)) {
-        return [
-            'success'   => true,
-            'kind'      => $kind,
-            'priority'  => $priority,
-            'message'   => $message,
-            'delivered' => true,
-            'raw'       => trim((string) $stdout),
-            'log_file'  => $logFile,
-        ];
-    }
-
-    if (!array_key_exists('success', $decoded))   $decoded['success']   = true;
-    if (!array_key_exists('delivered', $decoded)) $decoded['delivered'] = (bool) $decoded['success'];
-    $decoded['kind']     = $kind;
-    $decoded['priority'] = $priority;
-    $decoded['message']  = $message;
-    if ($logFile !== null && !array_key_exists('log_file', $decoded)) {
-        $decoded['log_file'] = $logFile;
-    }
-
-    return $decoded;
-}
-
-/**
- * Handlers de Maintenance Mode.
- *
- * Estado persistido em $CONFIG[maintenance_state_file] (JSON). Estrutura:
- *   {
- *     "enabled":      bool,
- *     "reason":       "texto livre|null",
- *     "eta_minutes":  int|null,
- *     "started_at":   "ISO 8601 UTC|null",
- *     "ends_at":      "ISO 8601 UTC|null",  (started_at + eta_minutes quando aplicavel)
- *     "updated_by":   "string|null",
- *     "updated_at":   "ISO 8601 UTC"
- *   }
- *
- * Sem schema novo no DB, sem shell arbitrario. Idempotente.
- */
-function maintenanceLoadState(array $config)
-{
-    $file = (string) array_value($config, 'maintenance_state_file', '');
-    if ($file === '' || !file_exists($file)) {
-        return [
-            'enabled'      => false,
-            'reason'       => null,
-            'eta_minutes'  => null,
-            'started_at'   => null,
-            'ends_at'      => null,
-            'updated_by'   => null,
-            'updated_at'   => null,
-        ];
-    }
-    $raw = @file_get_contents($file);
-    if ($raw === false || $raw === '') {
-        return [
-            'enabled' => false, 'reason' => null, 'eta_minutes' => null,
-            'started_at' => null, 'ends_at' => null,
-            'updated_by' => null, 'updated_at' => null,
-        ];
-    }
-    $decoded = json_decode($raw, true);
-    if (!is_array($decoded)) {
-        return [
-            'enabled' => false, 'reason' => null, 'eta_minutes' => null,
-            'started_at' => null, 'ends_at' => null,
-            'updated_by' => null, 'updated_at' => null,
-        ];
-    }
     return [
-        'enabled'      => !empty($decoded['enabled']),
-        'reason'       => isset($decoded['reason']) ? (string) $decoded['reason'] : null,
-        'eta_minutes'  => isset($decoded['eta_minutes']) ? (int) $decoded['eta_minutes'] : null,
-        'started_at'   => isset($decoded['started_at']) ? (string) $decoded['started_at'] : null,
-        'ends_at'      => isset($decoded['ends_at']) ? (string) $decoded['ends_at'] : null,
-        'updated_by'   => isset($decoded['updated_by']) ? (string) $decoded['updated_by'] : null,
-        'updated_at'   => isset($decoded['updated_at']) ? (string) $decoded['updated_at'] : null,
+        [
+            'key' => 'logservice',
+            'label' => 'Log Service',
+            'display_process' => 'logservice',
+            'process_names' => ['logservice'],
+            'systemd_units' => ['logservice'],
+            'port' => 0,
+        ],
+        [
+            'key' => 'gamedbd',
+            'label' => 'Game DB Daemon',
+            'display_process' => 'gamedbd',
+            'process_names' => ['gamedbd'],
+            'systemd_units' => ['gamedbd'],
+            'port' => 29400,
+        ],
+        [
+            'key' => 'gdeliveryd',
+            'label' => 'Delivery Daemon',
+            'display_process' => 'gdeliveryd',
+            'process_names' => ['gdeliveryd'],
+            'systemd_units' => ['gdeliveryd'],
+            'port' => 29100,
+        ],
+        [
+            'key' => 'gacd',
+            'label' => 'Account Daemon',
+            'display_process' => 'gacd',
+            'process_names' => ['gacd'],
+            'systemd_units' => ['gacd'],
+            'port' => 29000,
+        ],
+        [
+            'key' => 'glinkd',
+            'label' => 'Game Link',
+            'display_process' => 'glink',
+            'process_names' => ['glinkd', 'glink'],
+            'systemd_units' => ['glinkd', 'glink'],
+            'port' => 29200,
+        ],
+        [
+            'key' => 'authd',
+            'label' => 'Auth Daemon',
+            'display_process' => 'authd',
+            'process_names' => ['authd', 'gauthd'],
+            'systemd_units' => ['authd', 'gauthd'],
+            'port' => 29300,
+        ],
+        [
+            'key' => 'uniquenamed',
+            'label' => 'Unique Name',
+            'display_process' => 'uniquenamed',
+            'process_names' => ['uniquenamed'],
+            'systemd_units' => ['uniquenamed'],
+            'port' => 29500,
+        ],
+        [
+            'key' => 'gfactiond',
+            'label' => 'Faction Daemon',
+            'display_process' => 'gfactiond',
+            'process_names' => ['gfactiond'],
+            'systemd_units' => ['gfactiond'],
+            'port' => 0,
+        ],
+        [
+            'key' => 'gamed',
+            'label' => 'World',
+            'display_process' => 'gs',
+            'process_names' => ['gs', 'gamed'],
+            'systemd_units' => ['gamed', 'gs'],
+            'port' => 0,
+        ],
+        [
+            'key' => 'mysql',
+            'label' => 'MySQL/MariaDB',
+            'display_process' => 'mysql',
+            'process_names' => ['mariadbd', 'mysqld', 'mysqld_safe', 'mysql'],
+            'systemd_units' => ['mariadb', 'mysqld', 'mysql'],
+            'port' => 3306,
+        ],
+        [
+            'key' => 'httpd',
+            'label' => 'Web (Apache/httpd)',
+            'display_process' => 'httpd',
+            'process_names' => ['httpd', 'apache2'],
+            'systemd_units' => ['httpd', 'apache2'],
+            'port' => 80,
+        ],
     ];
 }
 
-function maintenancePersistState(array $config, array $state)
+function serverOpsShellAvailable()
 {
-    $file = (string) array_value($config, 'maintenance_state_file', '');
-    if ($file === '') {
-        throw new Exception('maintenance_state_file nao configurado');
-    }
-    $dir = dirname($file);
-    if ($dir !== '' && !is_dir($dir)) {
-        @mkdir($dir, 0750, true);
-    }
-    $json = json_encode($state, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
-    if ($json === false) {
-        throw new Exception('Falha ao serializar estado de manutencao');
-    }
-    if (@file_put_contents($file, $json, LOCK_EX) === false) {
-        throw new Exception('Falha ao gravar estado de manutencao em ' . $file);
+    if (!function_exists('shell_exec')) {
+        return false;
     }
 
-    // Append append-only de auditoria local (best-effort).
-    $logDir = (string) array_value($config, 'maintenance_log_dir', $dir);
-    if ($logDir !== '' && is_dir($logDir) && is_writable($logDir)) {
-        @file_put_contents(
-            $logDir . '/history.log',
-            '[' . gmdate('c') . '] ' . $json . "\n",
-            FILE_APPEND | LOCK_EX
-        );
+    $disabled = ini_get('disable_functions');
+    if (!is_string($disabled) || trim($disabled) === '') {
+        return true;
     }
+
+    $parts = array_map('trim', explode(',', $disabled));
+    return !in_array('shell_exec', $parts, true);
 }
 
-function buildMaintenanceBroadcastMessage(array $state, $previouslyEnabled)
+function serverOpsRun($command)
 {
-    $turningOn  = !empty($state['enabled']) && !$previouslyEnabled;
-    $turningOff = empty($state['enabled']) && $previouslyEnabled;
+    if (!serverOpsShellAvailable()) {
+        return '';
+    }
 
-    if ($turningOn) {
-        $msg = 'Atencao: o servidor entrara em modo manutencao';
-        if (!empty($state['eta_minutes']) && intval($state['eta_minutes']) > 0) {
-            $msg .= ' em aproximadamente ' . intval($state['eta_minutes']) . ' minuto(s)';
-        }
-        $msg .= '.';
-        if (!empty($state['reason'])) {
-            $msg .= ' Motivo: ' . $state['reason'];
-        }
-        return $msg;
-    }
-    if ($turningOff) {
-        return 'Modo manutencao encerrado. Boas aventuras a todos!';
-    }
-    // Atualizacao de motivo/eta sem mudar o estado.
-    if (!empty($state['enabled'])) {
-        $msg = 'Atualizacao do modo manutencao em andamento.';
-        if (!empty($state['eta_minutes']) && intval($state['eta_minutes']) > 0) {
-            $msg .= ' Tempo estimado restante: ' . intval($state['eta_minutes']) . ' min.';
-        }
-        if (!empty($state['reason'])) {
-            $msg .= ' Motivo: ' . $state['reason'];
-        }
-        return $msg;
-    }
-    return null;
+    $output = @shell_exec($command);
+    return is_string($output) ? $output : '';
 }
 
-function handleSetMaintenanceModeRequest(array $config, array $request)
+function serverOpsParsePidList($output)
 {
-    if (!truthyValue(array_value($config, 'maintenance_enabled_action', true))) {
-        throw new Exception('Endpoint de manutencao desabilitado nesta VPS');
-    }
-    if (!array_key_exists('enabled', $request)) {
-        throw new Exception('campo enabled obrigatorio (true|false)');
+    $output = is_string($output) ? trim($output) : '';
+    if ($output === '') {
+        return [];
     }
 
-    $enabled = truthyValue($request['enabled']);
-    $reason  = isset($request['reason']) ? trim((string) $request['reason']) : '';
-    $eta     = array_key_exists('eta_minutes', $request) && $request['eta_minutes'] !== ''
-        ? intval($request['eta_minutes']) : null;
-    $broadcast = truthyValue(array_value($request, 'broadcast', true));
-    $dryRun    = truthyValue(array_value($request, 'dry_run', false));
+    $pids = preg_split('/\s+/', $output);
+    $pids = array_values(array_unique(array_filter(array_map('intval', $pids), function ($pid) {
+        return $pid > 0;
+    })));
 
-    $maxReason = intval(array_value($config, 'maintenance_max_reason_len', 240));
-    if ($maxReason > 0 && strlen($reason) > $maxReason) {
-        throw new Exception('reason acima do limite (' . $maxReason . ' chars)');
-    }
-    if (preg_match('/[\x00-\x08\x0B\x0C\x0E-\x1F]/', $reason)) {
-        throw new Exception('reason contem caracteres de controle invalidos');
-    }
-    $maxEta = intval(array_value($config, 'maintenance_max_eta_minutes', 1440));
-    if ($eta !== null && ($eta < 0 || ($maxEta > 0 && $eta > $maxEta))) {
-        throw new Exception('eta_minutes fora do intervalo (0..' . $maxEta . ')');
+    sort($pids);
+    return $pids;
+}
+
+function serverOpsPidState($pid)
+{
+    $pid = intval($pid);
+    if ($pid <= 0) {
+        return '';
     }
 
-    $previous = maintenanceLoadState($config);
-    $now = gmdate('c');
+    $output = trim(serverOpsRun('ps -o stat= -p ' . $pid . ' 2>/dev/null'));
+    if ($output === '') {
+        return '';
+    }
 
-    $next = [
-        'enabled'      => $enabled,
-        'reason'       => $reason !== '' ? $reason : null,
-        'eta_minutes'  => $eta,
-        'started_at'   => $enabled
-            ? ($previous['enabled'] && !empty($previous['started_at'])
-                ? $previous['started_at']
-                : $now)
-            : null,
-        'ends_at'      => null,
-        'updated_by'   => isset($_SERVER['REMOTE_ADDR']) ? (string) $_SERVER['REMOTE_ADDR'] : null,
-        'updated_at'   => $now,
+    return strtoupper(substr($output, 0, 1));
+}
+
+function serverOpsPidIsActive($pid)
+{
+    $state = serverOpsPidState($pid);
+    if ($state === '') {
+        return false;
+    }
+
+    return !in_array($state, ['Z', 'X', 'T'], true);
+}
+
+function serverOpsCollectPids(array $processNames)
+{
+    $all = [];
+
+    foreach ($processNames as $name) {
+        $name = trim((string) $name);
+        if ($name === '') {
+            continue;
+        }
+
+        $exact = serverOpsRun('pgrep -x ' . escapeshellarg($name) . ' 2>/dev/null');
+        $all = array_merge($all, serverOpsParsePidList($exact));
+
+        if (empty($all)) {
+            $fuzzy = serverOpsRun('pgrep -f ' . escapeshellarg($name) . ' 2>/dev/null');
+            $all = array_merge($all, serverOpsParsePidList($fuzzy));
+        }
+    }
+
+    $all = array_values(array_unique(array_filter(array_map('intval', $all), function ($pid) {
+        return $pid > 0;
+    })));
+    $all = array_values(array_filter($all, function ($pid) {
+        return serverOpsPidIsActive($pid);
+    }));
+    sort($all);
+
+    return $all;
+}
+
+function serverOpsPortListening($port)
+{
+    $port = intval($port);
+    if ($port <= 0) {
+        return false;
+    }
+
+    $checks = [
+        'ss -lnt 2>/dev/null',
+        'netstat -lnt 2>/dev/null',
     ];
-    if ($enabled && $eta !== null && $eta > 0 && $next['started_at'] !== null) {
-        $startTs = strtotime($next['started_at']);
-        if ($startTs !== false) {
-            $next['ends_at'] = gmdate('c', $startTs + ($eta * 60));
+
+    foreach ($checks as $command) {
+        $output = serverOpsRun($command);
+        if ($output === '') {
+            continue;
+        }
+
+        if (preg_match('/[:.]' . preg_quote((string) $port, '/') . '\b/', $output)) {
+            return true;
         }
     }
 
-    if ($dryRun) {
-        return [
-            'success'    => true,
-            'dry_run'    => true,
-            'previous'   => $previous,
-            'next'       => $next,
-            'broadcast'  => ['planned' => $broadcast],
+    return false;
+}
+
+function serverOpsSystemctlState(array $units)
+{
+    foreach ($units as $unit) {
+        $unit = trim((string) $unit);
+        if ($unit === '') {
+            continue;
+        }
+
+        $state = trim(serverOpsRun('systemctl is-active ' . escapeshellarg($unit) . ' 2>/dev/null'));
+        if ($state !== '') {
+            return $state;
+        }
+    }
+
+    return '';
+}
+
+function serverOpsCollectService(array $config, array $service)
+{
+    $key = trim((string) array_value($service, 'key', ''));
+    $pids = serverOpsCollectPids(array_value($service, 'process_names', []));
+    $port = intval(array_value($service, 'port', 0));
+    $listening = serverOpsPortListening($port);
+    $systemdState = serverOpsSystemctlState(array_value($service, 'systemd_units', []));
+
+    if ($key === 'gamed') {
+        $instancesSnapshot = getManageableInstancesSnapshot($config);
+        $worldIndex = [];
+        foreach ((array) array_value($instancesSnapshot, 'instances', []) as $instance) {
+            $code = trim((string) array_value($instance, 'code', ''));
+            if ($code !== '') {
+                $worldIndex[$code] = $instance;
+            }
+        }
+
+        $world = array_value($worldIndex, 'gs01', []);
+        if (!empty($world)) {
+            $port = intval(array_value($world, 'listen_port', $port));
+            $listening = truthyValue(array_value($world, 'listening', false));
+            $pids = array_values(array_filter(array_map('intval', (array) array_value($world, 'pids', [])), function ($pid) {
+                return $pid > 0;
+            }));
+            sort($pids);
+        }
+    }
+
+    $state = 'unknown';
+    if ($systemdState === 'active') {
+        $state = 'online';
+    } elseif ($port > 0) {
+        $state = $listening ? 'online' : 'offline';
+    } elseif (!empty($pids)) {
+        $state = 'online';
+    } elseif (in_array($systemdState, ['inactive', 'failed', 'dead'], true)) {
+        $state = 'offline';
+    } elseif (empty($pids)) {
+        $state = 'offline';
+    }
+
+    return [
+        'key' => array_value($service, 'key', ''),
+        'label' => array_value($service, 'label', ''),
+        'process_name' => array_value($service, 'display_process', ''),
+        'port' => $port,
+        'state' => $state,
+        'pid' => !empty($pids) ? intval($pids[0]) : null,
+        'process_count' => count($pids),
+        'pids' => $pids,
+        'systemd_state' => $systemdState,
+        'listening' => $listening,
+    ];
+}
+
+function getServiceStatusSnapshot(array $config)
+{
+    $services = [];
+    foreach (serverOpsKnownServices() as $service) {
+        $services[] = serverOpsCollectService($config, $service);
+    }
+
+    return [
+        'success' => true,
+        'services' => $services,
+        'collected_at' => gmdate('c'),
+    ];
+}
+
+function getManageableServicesSnapshot(array $config)
+{
+    $known = [];
+    foreach (serverOpsKnownServices() as $service) {
+        $key = trim((string) array_value($service, 'key', ''));
+        if ($key !== '') {
+            $known[$key] = $service;
+        }
+    }
+
+    $aliasesByKey = [];
+    foreach (serverOpsServiceAliases() as $alias => $key) {
+        if (!isset($aliasesByKey[$key])) {
+            $aliasesByKey[$key] = [];
+        }
+        $aliasesByKey[$key][] = (string) $alias;
+    }
+
+    $status = getServiceStatusSnapshot($config);
+    $statusIndex = [];
+    foreach (array_value($status, 'services', []) as $item) {
+        $key = trim((string) array_value($item, 'key', ''));
+        if ($key !== '') {
+            $statusIndex[$key] = $item;
+        }
+    }
+
+    $manageable = [];
+    foreach (serverOpsManageableServiceKeys($config) as $key) {
+        $meta = isset($known[$key]) ? $known[$key] : ['key' => $key, 'label' => $key, 'display_process' => $key, 'port' => 0];
+        $item = isset($statusIndex[$key]) ? $statusIndex[$key] : ['state' => 'unknown', 'pid' => null, 'process_count' => 0, 'pids' => [], 'systemd_state' => '', 'listening' => false];
+        $manageable[] = [
+            'key' => $key,
+            'label' => array_value($meta, 'label', $key),
+            'process_name' => array_value($meta, 'display_process', $key),
+            'port' => intval(array_value($item, 'port', array_value($meta, 'port', 0))),
+            'state' => array_value($item, 'state', 'unknown'),
+            'pid' => array_value($item, 'pid', null),
+            'process_count' => intval(array_value($item, 'process_count', 0)),
+            'pids' => array_value($item, 'pids', []),
+            'systemd_state' => array_value($item, 'systemd_state', ''),
+            'listening' => truthyValue(array_value($item, 'listening', false)),
+            'aliases' => array_values(array_unique(array_value($aliasesByKey, $key, []))),
+            'supported_actions' => ['start', 'stop', 'restart'],
+            'selectable' => true,
         ];
     }
 
-    maintenancePersistState($config, $next);
+    return [
+        'success' => true,
+        'services' => $manageable,
+        'count' => count($manageable),
+        'collected_at' => array_value($status, 'collected_at', gmdate('c')),
+    ];
+}
 
-    $broadcastResult = ['attempted' => false];
-    if ($broadcast) {
-        $msg = buildMaintenanceBroadcastMessage($next, !empty($previous['enabled']));
-        if ($msg !== null && $msg !== '') {
-            $broadcastResult['attempted'] = true;
-            try {
-                $sysRes = handleSendSystemMessageRequest($config, [
-                    'message'  => $msg,
-                    'kind'     => 'system',
-                    'priority' => 'high',
-                ]);
-                $broadcastResult['result'] = $sysRes;
-            } catch (Exception $e) {
-                // Nao falha a operacao toda — manutencao ja foi persistida.
-                $broadcastResult['error'] = $e->getMessage();
+function instanceControlNormalizeCode($code)
+{
+    return strtolower(trim((string) $code));
+}
+
+function instanceControlCatalogPath(array $config)
+{
+    return trim((string) array_value($config, 'pwadmin_instance_catalog_path', '/home/pwadmin/instance.txt'));
+}
+
+function instanceControlAutostartPath(array $config)
+{
+    return trim((string) array_value($config, 'pwadmin_autoinstance_path', '/home/pwadmin/autoinstance.txt'));
+}
+
+function instanceControlGsConfPath(array $config)
+{
+    return trim((string) array_value($config, 'gamed_gs_conf_path', '/home/gamed/gs.conf'));
+}
+
+function instanceControlReadLines($path)
+{
+    $path = trim((string) $path);
+    if ($path === '' || !is_file($path) || !is_readable($path)) {
+        return [];
+    }
+
+    $lines = @file($path, FILE_IGNORE_NEW_LINES);
+    return is_array($lines) ? $lines : [];
+}
+
+function instanceControlReadCatalog($path)
+{
+    $catalog = [];
+    $order = 0;
+
+    foreach (instanceControlReadLines($path) as $line) {
+        $line = trim((string) $line);
+        if ($line === '' || strpos($line, '#') === 0 || strpos($line, ';') === 0) {
+            continue;
+        }
+
+        $parts = explode('=', $line, 2);
+        $code = instanceControlNormalizeCode(array_value($parts, 0, ''));
+        if ($code === '') {
+            continue;
+        }
+
+        $name = trim((string) array_value($parts, 1, ''));
+        $catalog[$code] = [
+            'code' => $code,
+            'name' => ($name !== '') ? $name : strtoupper($code),
+            'order' => $order++,
+        ];
+    }
+
+    return $catalog;
+}
+
+function instanceControlReadAutostart($path)
+{
+    $codes = [];
+    $order = 0;
+    foreach (instanceControlReadLines($path) as $line) {
+        $line = trim((string) $line);
+        if ($line === '' || strpos($line, '#') === 0 || strpos($line, ';') === 0) {
+            continue;
+        }
+
+        $code = instanceControlNormalizeCode($line);
+        if ($code !== '') {
+            $codes[$code] = $order++;
+        }
+    }
+
+    return $codes;
+}
+
+function instanceControlSplitCodeList($value)
+{
+    $value = trim((string) $value);
+    if ($value === '') {
+        return [];
+    }
+
+    $tokens = preg_split('/[;,\s]+/', $value);
+    $codes = [];
+    foreach ((array) $tokens as $token) {
+        $code = instanceControlNormalizeCode($token);
+        if ($code !== '') {
+            $codes[] = $code;
+        }
+    }
+
+    return array_values(array_unique($codes));
+}
+
+function instanceControlReadGsConf($path)
+{
+    $result = [
+        'world_servers' => [],
+        'instance_servers' => [],
+        'section_types' => [],
+        'details' => [],
+    ];
+
+    $currentSectionType = '';
+    $currentCode = '';
+
+    foreach (instanceControlReadLines($path) as $line) {
+        $trimmed = trim((string) $line);
+        if ($trimmed === '' || strpos($trimmed, '#') === 0 || strpos($trimmed, ';') === 0) {
+            continue;
+        }
+
+        if (preg_match('/^(world_servers|instance_servers)\s*=\s*(.+)$/i', $trimmed, $matches)) {
+            $key = strtolower(trim((string) $matches[1]));
+            $result[$key] = instanceControlSplitCodeList(array_value($matches, 2, ''));
+            continue;
+        }
+
+        if (preg_match('/^\[([A-Za-z]+)_([A-Za-z0-9]+)\]$/', $trimmed, $matches)) {
+            $currentSectionType = strtolower(trim((string) $matches[1]));
+            $currentCode = instanceControlNormalizeCode(array_value($matches, 2, ''));
+            if ($currentCode !== '') {
+                if (!isset($result['section_types'][$currentCode])) {
+                    $result['section_types'][$currentCode] = [];
+                }
+                if (!in_array($currentSectionType, $result['section_types'][$currentCode], true)) {
+                    $result['section_types'][$currentCode][] = $currentSectionType;
+                }
+            }
+            continue;
+        }
+
+        if ($currentCode !== '' && strpos($trimmed, '=') !== false) {
+            $parts = explode('=', $trimmed, 2);
+            $key = strtolower(trim((string) array_value($parts, 0, '')));
+            $value = trim((string) array_value($parts, 1, ''));
+            if (in_array($key, ['instance_capacity', 'player_per_instance', 'effect_player_per_instance', 'listen_addr'], true)) {
+                if (!isset($result['details'][$currentCode])) {
+                    $result['details'][$currentCode] = [];
+                }
+                if (!isset($result['details'][$currentCode][$key])) {
+                    $result['details'][$currentCode][$key] = $value;
+                }
+                if (!isset($result['details'][$currentCode]['section_type']) && $currentSectionType !== '') {
+                    $result['details'][$currentCode]['section_type'] = $currentSectionType;
+                }
+            }
+        }
+    }
+
+    return $result;
+}
+
+function instanceControlPreferredSectionType(array $sectionTypes)
+{
+    $normalized = array_values(array_unique(array_filter(array_map(function ($value) {
+        return strtolower(trim((string) $value));
+    }, $sectionTypes), function ($value) {
+        return $value !== '';
+    })));
+
+    foreach (['instance', 'world', 'terrain', 'msgreceivertcp', 'msgreceiverunix'] as $preferred) {
+        if (in_array($preferred, $normalized, true)) {
+            return $preferred;
+        }
+    }
+
+    return !empty($normalized) ? (string) $normalized[0] : '';
+}
+
+function instanceControlPortFromListenAddr($listenAddr)
+{
+    $listenAddr = trim((string) $listenAddr);
+    if ($listenAddr === '') {
+        return 0;
+    }
+
+    if (preg_match('/:(\d+)$/', $listenAddr, $matches)) {
+        return intval($matches[1]);
+    }
+
+    return 0;
+}
+
+function instanceControlCodeCategory($code)
+{
+    $code = instanceControlNormalizeCode($code);
+    if (preg_match('/^gs\d+$/i', $code)) {
+        return 'world';
+    }
+    if (preg_match('/^arena\d+$/i', $code)) {
+        return 'arena';
+    }
+    if (preg_match('/^bg\d+$/i', $code)) {
+        return 'battle';
+    }
+    if (preg_match('/^is\d+$/i', $code)) {
+        return 'instance';
+    }
+    if (preg_match('/^rand\d+$/i', $code)) {
+        return 'random';
+    }
+    if (preg_match('/^q\d+$/i', $code)) {
+        return 'quest';
+    }
+    if (preg_match('/^b\d+$/i', $code)) {
+        return 'special';
+    }
+    return 'other';
+}
+
+function instanceControlIsCodeToken($token)
+{
+    return preg_match('/^(gs\d+|is\d+|arena\d+|bg\d+|rand\d+|q\d+|b\d+)$/i', (string) $token) === 1;
+}
+
+function instanceControlExtractRunningCodesFromArgs($args)
+{
+    $args = trim((string) $args);
+    if ($args === '') {
+        return [];
+    }
+
+    $tokens = preg_split('/\s+/', $args);
+    $binaryIndex = -1;
+    foreach ((array) $tokens as $idx => $token) {
+        $token = trim((string) $token, "\"'");
+        if ($token === 'gs' || $token === './gs' || preg_match('/(^|[\/\\\\])gs$/i', $token)) {
+            $binaryIndex = intval($idx);
+            break;
+        }
+    }
+
+    if ($binaryIndex < 0) {
+        return [];
+    }
+
+    $codes = [];
+    for ($i = $binaryIndex + 1; $i < count($tokens); $i++) {
+        $token = trim((string) $tokens[$i], "\"'");
+        if ($token === '' || preg_match('/\.conf$/i', $token)) {
+            continue;
+        }
+        if (instanceControlIsCodeToken($token)) {
+            $codes[] = instanceControlNormalizeCode($token);
+        }
+    }
+
+    return array_values(array_unique($codes));
+}
+
+function instanceControlRunningIndex()
+{
+    $output = serverOpsRun('ps -eo pid=,args= 2>/dev/null');
+    if ($output === '') {
+        return [];
+    }
+
+    $index = [];
+    $lines = preg_split("/\r\n|\n|\r/", trim($output));
+    foreach ((array) $lines as $line) {
+        $line = trim((string) $line);
+        if ($line === '' || !preg_match('/^(\d+)\s+(.+)$/', $line, $matches)) {
+            continue;
+        }
+
+        $pid = intval($matches[1]);
+        $args = trim((string) $matches[2]);
+        $codes = instanceControlExtractRunningCodesFromArgs($args);
+        if (empty($codes)) {
+            continue;
+        }
+
+        $batchSize = count($codes);
+        foreach ($codes as $code) {
+            if (!isset($index[$code])) {
+                $index[$code] = [
+                    'running' => true,
+                    'pids' => [],
+                    'command_excerpt' => $args,
+                    'batch_size' => $batchSize,
+                ];
+            }
+            $index[$code]['pids'][] = $pid;
+            if ($batchSize > intval(array_value($index[$code], 'batch_size', 0))) {
+                $index[$code]['batch_size'] = $batchSize;
+            }
+        }
+    }
+
+    foreach ($index as $code => $item) {
+        $pids = array_values(array_unique(array_filter(array_map('intval', array_value($item, 'pids', [])), function ($pid) {
+            return $pid > 0;
+        })));
+        sort($pids);
+        $index[$code]['pids'] = $pids;
+        $index[$code]['process_count'] = count($pids);
+    }
+
+    return $index;
+}
+
+function getManageableInstancesSnapshot(array $config)
+{
+    $catalogPath = instanceControlCatalogPath($config);
+    $autostartPath = instanceControlAutostartPath($config);
+    $gsConfPath = instanceControlGsConfPath($config);
+
+    $catalog = instanceControlReadCatalog($catalogPath);
+    $autostart = instanceControlReadAutostart($autostartPath);
+    $gsConf = instanceControlReadGsConf($gsConfPath);
+    $runningIndex = instanceControlRunningIndex();
+
+    $allCodes = [];
+    foreach ([$catalog, $autostart, array_flip(array_value($gsConf, 'world_servers', [])), array_flip(array_value($gsConf, 'instance_servers', [])), array_value($gsConf, 'section_types', []), $runningIndex] as $source) {
+        foreach ((array) $source as $code => $value) {
+            $normalized = instanceControlNormalizeCode($code);
+            if ($normalized !== '') {
+                $allCodes[$normalized] = true;
+            }
+        }
+    }
+
+    $worldIndex = array_fill_keys(array_value($gsConf, 'world_servers', []), true);
+    $instanceIndex = array_fill_keys(array_value($gsConf, 'instance_servers', []), true);
+    $instances = [];
+
+    foreach (array_keys($allCodes) as $code) {
+        $catalogItem = array_value($catalog, $code, []);
+        $details = array_value(array_value($gsConf, 'details', []), $code, []);
+        $sectionTypes = array_values(array_unique(array_value(array_value($gsConf, 'section_types', []), $code, [])));
+        $sectionType = instanceControlPreferredSectionType($sectionTypes);
+        $running = array_value($runningIndex, $code, []);
+        $configured = isset($worldIndex[$code]) || isset($instanceIndex[$code]) || !empty($sectionTypes);
+        $scope = isset($worldIndex[$code]) ? 'world_server' : (isset($instanceIndex[$code]) ? 'instance_server' : 'unassigned');
+        $listenAddr = (is_array($details) && array_key_exists('listen_addr', $details)) ? trim((string) $details['listen_addr']) : '';
+        $listenPort = instanceControlPortFromListenAddr($listenAddr);
+        $portListening = ($listenPort > 0) ? serverOpsPortListening($listenPort) : false;
+        $hasProcessMatch = truthyValue(array_value($running, 'running', false));
+        $isRunning = $hasProcessMatch || $portListening;
+        $autoStartOrder = array_key_exists($code, $autostart) ? intval($autostart[$code]) : null;
+
+        $supportedActions = ['start'];
+        if ($configured && $listenPort > 0) {
+            $supportedActions = ['start', 'stop', 'restart'];
+        }
+
+        $instances[] = [
+            'code' => $code,
+            'key' => $code,
+            'name' => trim((string) array_value($catalogItem, 'name', strtoupper($code))),
+            'category' => instanceControlCodeCategory($code),
+            'scope' => $scope,
+            'configured' => $configured,
+            'auto_start' => array_key_exists($code, $autostart),
+            'auto_start_order' => $autoStartOrder,
+            'running' => $isRunning,
+            'state' => $isRunning ? 'running' : 'stopped',
+            'running_source' => $hasProcessMatch ? 'process' : ($portListening ? 'listen_port' : 'none'),
+            'pid' => !empty(array_value($running, 'pids', [])) ? intval(array_value(array_value($running, 'pids', []), 0, 0)) : null,
+            'process_count' => intval(array_value($running, 'process_count', 0)),
+            'pids' => array_value($running, 'pids', []),
+            'command_excerpt' => trim((string) array_value($running, 'command_excerpt', '')),
+            'batch_size' => intval(array_value($running, 'batch_size', 0)),
+            'section_types' => $sectionTypes,
+            'section_type' => $sectionType,
+            'player_per_instance' => ($details !== [] && array_key_exists('player_per_instance', $details)) ? intval($details['player_per_instance']) : null,
+            'effect_player_per_instance' => ($details !== [] && array_key_exists('effect_player_per_instance', $details)) ? intval($details['effect_player_per_instance']) : null,
+            'instance_capacity' => ($details !== [] && array_key_exists('instance_capacity', $details)) ? intval($details['instance_capacity']) : null,
+            'listen_addr' => $listenAddr,
+            'listen_port' => $listenPort,
+            'listening' => $portListening,
+            'supported_actions' => $supportedActions,
+            'selectable' => $configured,
+            'order' => intval(array_value($catalogItem, 'order', 1000000)),
+        ];
+    }
+
+    usort($instances, function ($a, $b) {
+        $orderCompare = intval(array_value($a, 'order', 1000000)) <=> intval(array_value($b, 'order', 1000000));
+        if ($orderCompare !== 0) {
+            return $orderCompare;
+        }
+        return strnatcasecmp((string) array_value($a, 'code', ''), (string) array_value($b, 'code', ''));
+    });
+
+    $runningCount = 0;
+    $autoStartCount = 0;
+    foreach ($instances as $item) {
+        if (!empty($item['running'])) {
+            $runningCount++;
+        }
+        if (!empty($item['auto_start'])) {
+            $autoStartCount++;
+        }
+    }
+
+    $instances = array_map(function ($item) {
+        unset($item['order']);
+        return $item;
+    }, $instances);
+
+    return [
+        'success' => true,
+        'instances' => $instances,
+        'count' => count($instances),
+        'running_count' => $runningCount,
+        'auto_start_count' => $autoStartCount,
+        'collected_at' => gmdate('c'),
+        'source_files' => [
+            'catalog' => $catalogPath,
+            'autostart' => $autostartPath,
+            'gs_conf' => $gsConfPath,
+        ],
+    ];
+}
+
+function normalizeInstanceControlCodeListValue($value)
+{
+    $codes = [];
+    $push = function ($candidate) use (&$codes) {
+        $code = instanceControlNormalizeCode($candidate);
+        if ($code !== '' && !in_array($code, $codes, true)) {
+            $codes[] = $code;
+        }
+    };
+
+    $walk = null;
+    $walk = function ($item) use (&$walk, $push) {
+        if (is_array($item)) {
+            foreach (['code', 'key', 'instance', 'value'] as $field) {
+                if (array_key_exists($field, $item)) {
+                    $push(array_value($item, $field, ''));
+                    return;
+                }
+            }
+
+            foreach ($item as $nested) {
+                $walk($nested);
+            }
+            return;
+        }
+
+        foreach (preg_split('/[\s,;]+/', trim((string) $item)) as $part) {
+            $part = trim((string) $part);
+            if ($part !== '') {
+                $push($part);
+            }
+        }
+    };
+
+    $walk($value);
+    return $codes;
+}
+
+function instanceControlAutostartCodesFromMap(array $autostart)
+{
+    asort($autostart, SORT_NUMERIC);
+    return array_keys($autostart);
+}
+
+function validateInstanceAutoStartCodes(array $codes, array $instancesByCode)
+{
+    $validated = [];
+    foreach ($codes as $code) {
+        $code = instanceControlNormalizeCode($code);
+        if ($code === '') {
+            continue;
+        }
+
+        if (!isset($instancesByCode[$code])) {
+            throw new InvalidArgumentException('instance invalida: ' . $code);
+        }
+
+        $instance = $instancesByCode[$code];
+        if (empty($instance['configured']) || empty($instance['selectable'])) {
+            throw new InvalidArgumentException('instance nao configurada para auto-start: ' . $code);
+        }
+
+        if (!in_array($code, $validated, true)) {
+            $validated[] = $code;
+        }
+    }
+
+    return $validated;
+}
+
+function normalizeInstanceAutoStartRequest(array $request)
+{
+    $replaceFields = ['codes', 'instances', 'auto_start_codes', 'autoStartCodes'];
+    $addFields = ['add', 'enabled_codes', 'enabledCodes'];
+    $removeFields = ['remove', 'disabled_codes', 'disabledCodes'];
+
+    $replaceRequested = false;
+    $replaceCodes = [];
+    foreach ($replaceFields as $field) {
+        if (!array_key_exists($field, $request)) {
+            continue;
+        }
+        $replaceRequested = true;
+        $replaceCodes = array_merge($replaceCodes, normalizeInstanceControlCodeListValue(array_value($request, $field, [])));
+    }
+
+    $addCodes = [];
+    foreach ($addFields as $field) {
+        if (!array_key_exists($field, $request)) {
+            continue;
+        }
+        $addCodes = array_merge($addCodes, normalizeInstanceControlCodeListValue(array_value($request, $field, [])));
+    }
+    $addCodes = array_values(array_unique($addCodes));
+
+    $removeCodes = [];
+    foreach ($removeFields as $field) {
+        if (!array_key_exists($field, $request)) {
+            continue;
+        }
+        $removeCodes = array_merge($removeCodes, normalizeInstanceControlCodeListValue(array_value($request, $field, [])));
+    }
+    $removeCodes = array_values(array_unique($removeCodes));
+
+    $toggleRequested = false;
+    $toggleCode = '';
+    foreach (['code', 'instance', 'key'] as $field) {
+        if (!array_key_exists($field, $request)) {
+            continue;
+        }
+
+        $toggleRequested = true;
+        $codes = normalizeInstanceControlCodeListValue(array_value($request, $field, ''));
+        if (count($codes) !== 1) {
+            throw new InvalidArgumentException('code invalido');
+        }
+        $toggleCode = $codes[0];
+        break;
+    }
+
+    if ($toggleRequested && !array_key_exists('enabled', $request)) {
+        throw new InvalidArgumentException('enabled obrigatorio para code');
+    }
+
+    $clearRequested = array_key_exists('clear', $request) && truthyValue(array_value($request, 'clear', false));
+
+    $modeCount = 0;
+    if ($replaceRequested || $clearRequested) {
+        $modeCount++;
+    }
+    if (!empty($addCodes) || !empty($removeCodes)) {
+        $modeCount++;
+    }
+    if ($toggleRequested) {
+        $modeCount++;
+    }
+
+    if ($modeCount === 0) {
+        throw new InvalidArgumentException('Informe codes, add/remove ou code + enabled');
+    }
+    if ($modeCount > 1) {
+        throw new InvalidArgumentException('Use somente um modo por vez: codes, add/remove ou code + enabled');
+    }
+
+    $conflicts = array_values(array_intersect($addCodes, $removeCodes));
+    if (!empty($conflicts)) {
+        throw new InvalidArgumentException('add/remove conflitantes para: ' . implode(', ', $conflicts));
+    }
+
+    $dryRun = truthyValue(array_value($request, 'dry_run', array_value($request, 'dryRun', false)));
+
+    if ($replaceRequested || $clearRequested) {
+        return [
+            'mode' => 'replace',
+            'codes' => $clearRequested ? [] : array_values(array_unique($replaceCodes)),
+            'dry_run' => $dryRun,
+        ];
+    }
+
+    if (!empty($addCodes) || !empty($removeCodes)) {
+        return [
+            'mode' => 'patch',
+            'add' => $addCodes,
+            'remove' => $removeCodes,
+            'dry_run' => $dryRun,
+        ];
+    }
+
+    return [
+        'mode' => 'toggle',
+        'code' => $toggleCode,
+        'enabled' => truthyValue(array_value($request, 'enabled', false)),
+        'dry_run' => $dryRun,
+    ];
+}
+
+function persistInstanceAutoStartCodes($path, array $codes)
+{
+    $contents = empty($codes) ? '' : (implode(PHP_EOL, $codes) . PHP_EOL);
+    writeAtomicFile($path, $contents);
+    return $path;
+}
+
+function setInstanceAutoStartHandler(array $config, array $request)
+{
+    $payload = normalizeInstanceAutoStartRequest($request);
+    $snapshot = getManageableInstancesSnapshot($config);
+    $instancesByCode = [];
+    foreach ((array) array_value($snapshot, 'instances', []) as $item) {
+        $code = instanceControlNormalizeCode(array_value($item, 'code', ''));
+        if ($code !== '') {
+            $instancesByCode[$code] = $item;
+        }
+    }
+
+    $autostartPath = instanceControlAutostartPath($config);
+    $currentCodes = instanceControlAutostartCodesFromMap(instanceControlReadAutostart($autostartPath));
+
+    if ($payload['mode'] === 'replace') {
+        $targetCodes = validateInstanceAutoStartCodes(array_value($payload, 'codes', []), $instancesByCode);
+    } elseif ($payload['mode'] === 'patch') {
+        $removeSet = array_fill_keys(validateInstanceAutoStartCodes(array_value($payload, 'remove', []), $instancesByCode), true);
+        $targetCodes = [];
+        foreach ($currentCodes as $code) {
+            if (!isset($removeSet[$code])) {
+                $targetCodes[] = $code;
+            }
+        }
+        foreach (validateInstanceAutoStartCodes(array_value($payload, 'add', []), $instancesByCode) as $code) {
+            if (!in_array($code, $targetCodes, true)) {
+                $targetCodes[] = $code;
+            }
+        }
+    } else {
+        $code = validateInstanceAutoStartCodes([array_value($payload, 'code', '')], $instancesByCode)[0];
+        $isCurrentlyEnabled = in_array($code, $currentCodes, true);
+        if (!empty($payload['enabled'])) {
+            $targetCodes = $isCurrentlyEnabled ? $currentCodes : array_merge($currentCodes, [$code]);
+        } else {
+            $targetCodes = $isCurrentlyEnabled ? array_values(array_filter($currentCodes, function ($currentCode) use ($code) {
+                return $currentCode !== $code;
+            })) : $currentCodes;
+        }
+    }
+
+    $added = array_values(array_filter($targetCodes, function ($code) use ($currentCodes) {
+        return !in_array($code, $currentCodes, true);
+    }));
+    $removed = array_values(array_filter($currentCodes, function ($code) use ($targetCodes) {
+        return !in_array($code, $targetCodes, true);
+    }));
+    $changed = ($currentCodes !== $targetCodes);
+
+    if (empty($payload['dry_run']) && $changed) {
+        persistInstanceAutoStartCodes($autostartPath, $targetCodes);
+    }
+
+    $selectedInstances = [];
+    foreach ($targetCodes as $order => $code) {
+        $item = array_value($instancesByCode, $code, []);
+        $selectedInstances[] = [
+            'code' => $code,
+            'name' => trim((string) array_value($item, 'name', strtoupper($code))),
+            'category' => trim((string) array_value($item, 'category', 'instance')),
+            'scope' => trim((string) array_value($item, 'scope', 'unassigned')),
+            'configured' => !empty($item['configured']),
+            'selectable' => !empty($item['selectable']),
+            'auto_start_order' => $order,
+        ];
+    }
+
+    return [
+        'success' => true,
+        'mode' => $payload['mode'],
+        'dry_run' => !empty($payload['dry_run']),
+        'changed' => $changed,
+        'auto_start_codes' => $targetCodes,
+        'auto_start_count' => count($targetCodes),
+        'auto_start_instances' => $selectedInstances,
+        'added' => $added,
+        'removed' => $removed,
+        'previous_codes' => $currentCodes,
+        'autostart_file' => $autostartPath,
+    ];
+}
+
+function instanceControlIndexByCode(array $config)
+{
+    $snapshot = getManageableInstancesSnapshot($config);
+    $index = [];
+    foreach ((array) array_value($snapshot, 'instances', []) as $item) {
+        if (!is_array($item)) {
+            continue;
+        }
+        $code = instanceControlNormalizeCode(array_value($item, 'code', ''));
+        if ($code !== '') {
+            $index[$code] = $item;
+        }
+    }
+    return $index;
+}
+
+function normalizeInstanceOperationRequest(array $request, $allowMultiple = false, $singularAction = 'startInstance')
+{
+    $raw = [];
+    foreach (['code', 'instance', 'key'] as $field) {
+        if (array_key_exists($field, $request)) {
+            $raw = array_merge($raw, normalizeInstanceControlCodeListValue(array_value($request, $field, '')));
+        }
+    }
+    foreach (['codes', 'instances', 'keys'] as $field) {
+        if (array_key_exists($field, $request)) {
+            $raw = array_merge($raw, normalizeInstanceControlCodeListValue(array_value($request, $field, [])));
+        }
+    }
+
+    $codes = array_values(array_unique($raw));
+    if (empty($codes)) {
+        throw new InvalidArgumentException('Informe code ou codes');
+    }
+    if (!$allowMultiple && count($codes) !== 1) {
+        throw new InvalidArgumentException($singularAction . ' aceita apenas um code');
+    }
+
+    return [
+        'codes' => $codes,
+        'dry_run' => truthyValue(array_value($request, 'dry_run', array_value($request, 'dryRun', false))),
+        'verify' => !array_key_exists('verify', $request) || truthyValue(array_value($request, 'verify', true)),
+    ];
+}
+
+function validateInstanceCodesForAction(array $codes, array $instancesByCode, $action = 'start', $requiresListenPort = false)
+{
+    $validated = [];
+    foreach ($codes as $code) {
+        $code = instanceControlNormalizeCode($code);
+        if ($code === '') {
+            continue;
+        }
+        if (!isset($instancesByCode[$code])) {
+            throw new InvalidArgumentException('instance invalida: ' . $code);
+        }
+
+        $instance = $instancesByCode[$code];
+        if (empty($instance['configured']) || empty($instance['selectable'])) {
+            throw new InvalidArgumentException('instance nao configurada para ' . $action . ': ' . $code);
+        }
+
+        if ($requiresListenPort && intval(array_value($instance, 'listen_port', 0)) <= 0) {
+            throw new InvalidArgumentException('instance sem listen_port para ' . $action . ': ' . $code);
+        }
+
+        if (!in_array($code, $validated, true)) {
+            $validated[] = $code;
+        }
+    }
+    return $validated;
+}
+
+function buildInstancePortSpecs(array $codes, array $instancesByCode, $action = 'stop')
+{
+    $specs = [];
+    foreach ($codes as $code) {
+        $code = instanceControlNormalizeCode($code);
+        if ($code === '') {
+            continue;
+        }
+        $instance = array_value($instancesByCode, $code, []);
+        $listenPort = intval(array_value($instance, 'listen_port', 0));
+        if ($listenPort <= 0) {
+            throw new InvalidArgumentException('instance sem listen_port para ' . $action . ': ' . $code);
+        }
+        $specs[] = [
+            'code' => $code,
+            'listen_port' => $listenPort,
+            'argument' => $code . ':' . $listenPort,
+        ];
+    }
+    return $specs;
+}
+
+function verifyInstanceCodesState(array $config, array $wanted, $expectRunning = true)
+{
+    $index = instanceControlIndexByCode($config);
+    $selected = [];
+    $ok = true;
+
+    foreach ($wanted as $code) {
+        $code = instanceControlNormalizeCode($code);
+        $item = isset($index[$code]) ? $index[$code] : [
+            'code' => $code,
+            'name' => strtoupper($code),
+            'state' => 'unknown',
+            'running' => false,
+            'listen_port' => 0,
+            'listening' => false,
+            'scope' => 'unassigned',
+            'category' => 'instance',
+        ];
+
+        $running = truthyValue(array_value($item, 'running', false));
+        $selected[] = [
+            'code' => $code,
+            'name' => trim((string) array_value($item, 'name', strtoupper($code))),
+            'state' => trim((string) array_value($item, 'state', $running ? 'running' : 'stopped')),
+            'running' => $running,
+            'scope' => trim((string) array_value($item, 'scope', 'unassigned')),
+            'category' => trim((string) array_value($item, 'category', 'instance')),
+            'listen_port' => intval(array_value($item, 'listen_port', 0)),
+            'listening' => truthyValue(array_value($item, 'listening', false)),
+        ];
+
+        if ($expectRunning) {
+            if (!$running) {
+                $ok = false;
             }
         } else {
-            $broadcastResult['skipped_reason'] = 'no_state_change';
+            if ($running) {
+                $ok = false;
+            }
         }
     }
 
     return [
-        'success'     => true,
-        'maintenance' => $next,
-        'previous'    => $previous,
-        'broadcast'   => $broadcastResult,
+        'requested' => true,
+        'expect_running' => !empty($expectRunning),
+        'success' => $ok,
+        'instances' => $selected,
+        'collected_at' => gmdate('c'),
     ];
 }
 
-function handleGetMaintenanceModeRequest(array $config)
+function waitForInstanceCodesState(array $config, array $wanted, $expectRunning = true)
 {
-    if (!truthyValue(array_value($config, 'maintenance_enabled_action', true))) {
-        throw new Exception('Endpoint de manutencao desabilitado nesta VPS');
+    $timeoutSeconds = max(5, intval(array_value($config, 'instance_ops_verify_timeout_seconds', 45)));
+    $intervalSeconds = max(1, intval(array_value($config, 'instance_ops_verify_poll_interval_seconds', 2)));
+    $deadline = time() + $timeoutSeconds;
+    $last = verifyInstanceCodesState($config, $wanted, $expectRunning);
+    while (time() < $deadline) {
+        if (!empty($last['success'])) {
+            return $last;
+        }
+        sleep($intervalSeconds);
+        $last = verifyInstanceCodesState($config, $wanted, $expectRunning);
     }
+    return $last;
+}
+
+function executeInstanceStartCommand(array $config, array $codes)
+{
+    $command = trim((string) array_value($config, 'instance_ops_start_command', ''));
+    if ($command === '') {
+        throw new Exception('Comando de start de instancia nao configurado');
+    }
+
+    $args = array_map(function ($code) {
+        return escapeshellarg((string) $code);
+    }, $codes);
+
+    return executeServerOpsCommand(
+        $command . ' ' . implode(' ', $args),
+        intval(array_value($config, 'instance_ops_start_timeout_seconds', 90))
+    );
+}
+
+function executeInstanceStopCommand(array $config, array $specs)
+{
+    $command = trim((string) array_value($config, 'instance_ops_stop_command', ''));
+    if ($command === '') {
+        throw new Exception('Comando de stop de instancia nao configurado');
+    }
+
+    $args = array_map(function ($item) {
+        return escapeshellarg((string) array_value($item, 'argument', ''));
+    }, $specs);
+
+    return executeServerOpsCommand(
+        $command . ' ' . implode(' ', $args),
+        intval(array_value($config, 'instance_ops_stop_timeout_seconds', 90))
+    );
+}
+
+function serverAutostartTimingConfig(array $config)
+{
     return [
-        'success'     => true,
-        'maintenance' => maintenanceLoadState($config),
+        'initial_delay_seconds' => max(0, intval(array_value($config, 'instance_ops_server_autostart_initial_delay_seconds', 5))),
+        'per_instance_delay_seconds' => max(0, intval(array_value($config, 'instance_ops_server_autostart_per_instance_delay_seconds', 2))),
     ];
 }
 
-function respondJson($payload, $status = 200)
+function handleStartInstanceRequest(array $config, array $request, $allowMultiple = false)
 {
-    http_response_code($status);
+    $payload = normalizeInstanceOperationRequest($request, $allowMultiple, 'startInstance');
+    $instancesByCode = instanceControlIndexByCode($config);
+    $codes = validateInstanceCodesForAction(array_value($payload, 'codes', []), $instancesByCode, 'start', false);
+
+    $alreadyRunning = [];
+    $pending = [];
+    foreach ($codes as $code) {
+        if (truthyValue(array_value(array_value($instancesByCode, $code, []), 'running', false))) {
+            $alreadyRunning[] = $code;
+        } else {
+            $pending[] = $code;
+        }
+    }
+
+    $type = $allowMultiple ? 'startInstances' : 'startInstance';
+    $operation = [
+        'id' => buildOperationId($allowMultiple ? 'start-instances' : 'start-instance'),
+        'type' => $type,
+        'success' => false,
+        'stage' => 'validated',
+        'action' => 'start',
+        'instances' => $codes,
+        'dry_run' => !empty($payload['dry_run']),
+        'verify' => !empty($payload['verify']),
+        'created_at' => gmdate('c'),
+        'already_running' => $alreadyRunning,
+        'pending_instances' => $pending,
+        'results' => [],
+    ];
+    $operation['log_file'] = writeRestartOperationSnapshot($config, $operation);
+
+    if (!empty($payload['dry_run'])) {
+        $operation['success'] = true;
+        $operation['changed'] = !empty($pending);
+        $operation['would_execute'] = trim((string) array_value($config, 'instance_ops_start_command', ''));
+        $operation['would_start_instances'] = $pending;
+        $operation['would_skip_running'] = $alreadyRunning;
+        $operation['log_file'] = writeRestartOperationLog($config, $operation);
+        return ['success' => true, 'dry_run' => true, 'operation' => $operation];
+    }
+
+    try {
+        if (empty($pending)) {
+            $operation['stage'] = 'noop';
+            $operation['changed'] = false;
+            $operation['verification'] = !empty($payload['verify'])
+                ? verifyInstanceCodesState($config, $codes, true)
+                : ['requested' => false];
+            $operation['success'] = true;
+            $operation['completed_at'] = gmdate('c');
+            $operation['log_file'] = writeRestartOperationLog($config, $operation);
+            return ['success' => true, 'operation' => $operation];
+        }
+
+        $operation['stage'] = 'start';
+        $operation['result'] = executeInstanceStartCommand($config, $pending);
+        $operation['results'][] = [
+            'instances' => $pending,
+            'result' => $operation['result'],
+        ];
+        $operation['log_file'] = writeRestartOperationSnapshot($config, $operation);
+        if (empty($operation['result']['success'])) {
+            throw new Exception('Wrapper de startInstance falhou (exit ' . intval(array_value($operation['result'], 'exit_code', 1)) . ')');
+        }
+
+        if (!empty($payload['verify'])) {
+            $operation['stage'] = 'verify';
+            $operation['verification'] = waitForInstanceCodesState($config, $codes, true);
+            $operation['log_file'] = writeRestartOperationSnapshot($config, $operation);
+            if (empty($operation['verification']['success'])) {
+                throw new Exception('Verificacao apos start falhou para uma ou mais instancias');
+            }
+        } else {
+            $operation['verification'] = ['requested' => false];
+        }
+
+        $operation['stage'] = 'done';
+        $operation['changed'] = true;
+        $operation['success'] = true;
+        $operation['completed_at'] = gmdate('c');
+        $operation['log_file'] = writeRestartOperationLog($config, $operation);
+        return ['success' => true, 'operation' => $operation];
+    } catch (Exception $e) {
+        $operation['success'] = false;
+        $operation['error'] = $e->getMessage();
+        $operation['completed_at'] = gmdate('c');
+        $operation['log_file'] = writeRestartOperationLog($config, $operation);
+        return [
+            'success' => false,
+            'error' => $e->getMessage(),
+            'operation' => [
+                'id' => $operation['id'],
+                'stage' => $operation['stage'],
+                'log_file' => $operation['log_file'],
+            ],
+        ];
+    }
+}
+
+function handleStopInstanceRequest(array $config, array $request, $allowMultiple = false)
+{
+    $payload = normalizeInstanceOperationRequest($request, $allowMultiple, 'stopInstance');
+    $instancesByCode = instanceControlIndexByCode($config);
+    $codes = validateInstanceCodesForAction(array_value($payload, 'codes', []), $instancesByCode, 'stop', true);
+
+    $alreadyStopped = [];
+    $pending = [];
+    foreach ($codes as $code) {
+        if (truthyValue(array_value(array_value($instancesByCode, $code, []), 'running', false))) {
+            $pending[] = $code;
+        } else {
+            $alreadyStopped[] = $code;
+        }
+    }
+
+    $type = $allowMultiple ? 'stopInstances' : 'stopInstance';
+    $operation = [
+        'id' => buildOperationId($allowMultiple ? 'stop-instances' : 'stop-instance'),
+        'type' => $type,
+        'success' => false,
+        'stage' => 'validated',
+        'action' => 'stop',
+        'instances' => $codes,
+        'dry_run' => !empty($payload['dry_run']),
+        'verify' => !empty($payload['verify']),
+        'created_at' => gmdate('c'),
+        'already_stopped' => $alreadyStopped,
+        'pending_instances' => $pending,
+        'results' => [],
+    ];
+    $operation['log_file'] = writeRestartOperationSnapshot($config, $operation);
+
+    if (!empty($payload['dry_run'])) {
+        $operation['success'] = true;
+        $operation['changed'] = !empty($pending);
+        $operation['would_execute'] = trim((string) array_value($config, 'instance_ops_stop_command', ''));
+        $operation['would_stop_instances'] = $pending;
+        $operation['would_skip_stopped'] = $alreadyStopped;
+        $operation['log_file'] = writeRestartOperationLog($config, $operation);
+        return ['success' => true, 'dry_run' => true, 'operation' => $operation];
+    }
+
+    try {
+        if (empty($pending)) {
+            $operation['stage'] = 'noop';
+            $operation['changed'] = false;
+            $operation['verification'] = !empty($payload['verify'])
+                ? verifyInstanceCodesState($config, $codes, false)
+                : ['requested' => false];
+            $operation['success'] = true;
+            $operation['completed_at'] = gmdate('c');
+            $operation['log_file'] = writeRestartOperationLog($config, $operation);
+            return ['success' => true, 'operation' => $operation];
+        }
+
+        $specs = buildInstancePortSpecs($pending, $instancesByCode, 'stop');
+        $operation['stage'] = 'stop';
+        $operation['result'] = executeInstanceStopCommand($config, $specs);
+        $operation['results'][] = [
+            'instances' => $pending,
+            'result' => $operation['result'],
+        ];
+        $operation['log_file'] = writeRestartOperationSnapshot($config, $operation);
+        if (empty($operation['result']['success'])) {
+            throw new Exception('Wrapper de stopInstance falhou (exit ' . intval(array_value($operation['result'], 'exit_code', 1)) . ')');
+        }
+
+        if (!empty($payload['verify'])) {
+            $operation['stage'] = 'verify';
+            $operation['verification'] = waitForInstanceCodesState($config, $codes, false);
+            $operation['log_file'] = writeRestartOperationSnapshot($config, $operation);
+            if (empty($operation['verification']['success'])) {
+                throw new Exception('Verificacao apos stop falhou para uma ou mais instancias');
+            }
+        } else {
+            $operation['verification'] = ['requested' => false];
+        }
+
+        $operation['stage'] = 'done';
+        $operation['changed'] = true;
+        $operation['success'] = true;
+        $operation['completed_at'] = gmdate('c');
+        $operation['log_file'] = writeRestartOperationLog($config, $operation);
+        return ['success' => true, 'operation' => $operation];
+    } catch (Exception $e) {
+        $operation['success'] = false;
+        $operation['error'] = $e->getMessage();
+        $operation['completed_at'] = gmdate('c');
+        $operation['log_file'] = writeRestartOperationLog($config, $operation);
+        return [
+            'success' => false,
+            'error' => $e->getMessage(),
+            'operation' => [
+                'id' => $operation['id'],
+                'stage' => $operation['stage'],
+                'log_file' => $operation['log_file'],
+            ],
+        ];
+    }
+}
+
+function handleRestartInstanceRequest(array $config, array $request, $allowMultiple = false)
+{
+    $payload = normalizeInstanceOperationRequest($request, $allowMultiple, 'restartInstance');
+    $instancesByCode = instanceControlIndexByCode($config);
+    $codes = validateInstanceCodesForAction(array_value($payload, 'codes', []), $instancesByCode, 'restart', true);
+
+    $alreadyStopped = [];
+    $alreadyRunning = [];
+    foreach ($codes as $code) {
+        if (truthyValue(array_value(array_value($instancesByCode, $code, []), 'running', false))) {
+            $alreadyRunning[] = $code;
+        } else {
+            $alreadyStopped[] = $code;
+        }
+    }
+
+    $type = $allowMultiple ? 'restartInstances' : 'restartInstance';
+    $operation = [
+        'id' => buildOperationId($allowMultiple ? 'restart-instances' : 'restart-instance'),
+        'type' => $type,
+        'success' => false,
+        'stage' => 'validated',
+        'action' => 'restart',
+        'instances' => $codes,
+        'dry_run' => !empty($payload['dry_run']),
+        'verify' => !empty($payload['verify']),
+        'created_at' => gmdate('c'),
+        'already_running' => $alreadyRunning,
+        'already_stopped' => $alreadyStopped,
+        'stop_instances' => $alreadyRunning,
+        'start_instances' => $codes,
+        'results' => [],
+    ];
+    $operation['log_file'] = writeRestartOperationSnapshot($config, $operation);
+
+    if (!empty($payload['dry_run'])) {
+        $operation['success'] = true;
+        $operation['changed'] = true;
+        $operation['would_execute_stop'] = trim((string) array_value($config, 'instance_ops_stop_command', ''));
+        $operation['would_execute_start'] = trim((string) array_value($config, 'instance_ops_start_command', ''));
+        $operation['would_stop_instances'] = $alreadyRunning;
+        $operation['would_start_instances'] = $codes;
+        $operation['would_skip_stop'] = $alreadyStopped;
+        $operation['log_file'] = writeRestartOperationLog($config, $operation);
+        return ['success' => true, 'dry_run' => true, 'operation' => $operation];
+    }
+
+    try {
+        if (!empty($alreadyRunning)) {
+            $stopSpecs = buildInstancePortSpecs($alreadyRunning, $instancesByCode, 'restart');
+            $operation['stage'] = 'stop';
+            $operation['stop_result'] = executeInstanceStopCommand($config, $stopSpecs);
+            $operation['results'][] = [
+                'instances' => $alreadyRunning,
+                'result' => $operation['stop_result'],
+            ];
+            $operation['log_file'] = writeRestartOperationSnapshot($config, $operation);
+            if (empty($operation['stop_result']['success'])) {
+                throw new Exception('Wrapper de restartInstance falhou na etapa de stop (exit ' . intval(array_value($operation['stop_result'], 'exit_code', 1)) . ')');
+            }
+
+            $operation['stage'] = 'wait_stop';
+            $operation['stop_verification'] = waitForInstanceCodesState($config, $alreadyRunning, false);
+            $operation['log_file'] = writeRestartOperationSnapshot($config, $operation);
+            if (empty($operation['stop_verification']['success'])) {
+                throw new Exception('Verificacao da etapa de stop falhou para uma ou mais instancias');
+            }
+        } else {
+            $operation['stop_verification'] = ['requested' => false, 'success' => true, 'instances' => []];
+        }
+
+        $operation['stage'] = 'start';
+        $operation['start_result'] = executeInstanceStartCommand($config, $codes);
+        $operation['result'] = $operation['start_result'];
+        $operation['results'][] = [
+            'instances' => $codes,
+            'result' => $operation['start_result'],
+        ];
+        $operation['log_file'] = writeRestartOperationSnapshot($config, $operation);
+        if (empty($operation['start_result']['success'])) {
+            throw new Exception('Wrapper de restartInstance falhou na etapa de start (exit ' . intval(array_value($operation['start_result'], 'exit_code', 1)) . ')');
+        }
+
+        if (!empty($payload['verify'])) {
+            $operation['stage'] = 'verify';
+            $operation['verification'] = waitForInstanceCodesState($config, $codes, true);
+            $operation['log_file'] = writeRestartOperationSnapshot($config, $operation);
+            if (empty($operation['verification']['success'])) {
+                throw new Exception('Verificacao apos restart falhou para uma ou mais instancias');
+            }
+        } else {
+            $operation['verification'] = ['requested' => false];
+        }
+
+        $operation['stage'] = 'done';
+        $operation['changed'] = true;
+        $operation['success'] = true;
+        $operation['completed_at'] = gmdate('c');
+        $operation['log_file'] = writeRestartOperationLog($config, $operation);
+        return ['success' => true, 'operation' => $operation];
+    } catch (Exception $e) {
+        $operation['success'] = false;
+        $operation['error'] = $e->getMessage();
+        $operation['completed_at'] = gmdate('c');
+        $operation['log_file'] = writeRestartOperationLog($config, $operation);
+        return [
+            'success' => false,
+            'error' => $e->getMessage(),
+            'operation' => [
+                'id' => $operation['id'],
+                'stage' => $operation['stage'],
+                'log_file' => $operation['log_file'],
+            ],
+        ];
+    }
+}
+
+function normalizeServerStartInstanceSelectionRequest(array $request, array $config)
+{
+    $explicitRequested = false;
+    $rawCodes = [];
+    foreach (['instances', 'instance_codes', 'instanceCodes', 'start_instances', 'startInstances', 'selected_instances', 'selectedInstances'] as $field) {
+        if (!array_key_exists($field, $request)) {
+            continue;
+        }
+        $fieldCodes = normalizeInstanceControlCodeListValue(array_value($request, $field, []));
+        if (!empty($fieldCodes)) {
+            $explicitRequested = true;
+        }
+        $rawCodes = array_merge($rawCodes, $fieldCodes);
+    }
+
+    $hasUseAutoStartFlag = array_key_exists('use_auto_start', $request) || array_key_exists('useAutoStart', $request);
+    $useAutoStart = $hasUseAutoStartFlag
+        ? truthyValue(array_value($request, 'use_auto_start', array_value($request, 'useAutoStart', false)))
+        : !$explicitRequested;
+    if (!$explicitRequested && !$useAutoStart) {
+        return [
+            'requested' => false,
+            'use_auto_start' => false,
+            'source' => 'none',
+            'codes' => [],
+        ];
+    }
+
+    $codes = [];
+    if ($useAutoStart) {
+        $codes = array_merge($codes, instanceControlAutostartCodesFromMap(instanceControlReadAutostart(instanceControlAutostartPath($config))));
+    }
+    $codes = array_merge($codes, $rawCodes);
+    $codes = array_values(array_unique(array_filter(array_map('strval', $codes), function ($value) {
+        return trim($value) !== '';
+    })));
+
+    $instancesByCode = instanceControlIndexByCode($config);
+    $validatedCodes = validateInstanceCodesForAction($codes, $instancesByCode, 'start', false);
+
+    return [
+        'requested' => true,
+        'use_auto_start' => $useAutoStart,
+        'source' => ($explicitRequested && $useAutoStart) ? 'manual_plus_auto_start' : ($useAutoStart ? 'auto_start' : 'manual'),
+        'codes' => $validatedCodes,
+    ];
+}
+
+function executeServerSelectedInstanceStart(array $config, array &$operation, array $selection, $verify = true)
+{
+    $codes = array_values(array_map('strval', array_value($selection, 'codes', [])));
+    $operation['instances'] = $codes;
+    $operation['instance_selection'] = [
+        'requested' => !empty($selection['requested']),
+        'use_auto_start' => !empty($selection['use_auto_start']),
+        'source' => trim((string) array_value($selection, 'source', 'none')),
+    ];
+
+    if (empty($selection['requested'])) {
+        $operation['instance_verification'] = ['requested' => false];
+        return;
+    }
+
+    $instancesByCode = instanceControlIndexByCode($config);
+    $alreadyRunning = [];
+    $pending = [];
+    foreach ($codes as $code) {
+        if (truthyValue(array_value(array_value($instancesByCode, $code, []), 'running', false))) {
+            $alreadyRunning[] = $code;
+        } else {
+            $pending[] = $code;
+        }
+    }
+
+    $operation['already_running_instances'] = $alreadyRunning;
+    $operation['pending_instances'] = $pending;
+
+    if (empty($pending)) {
+        $operation['instance_start_result'] = [
+            'success' => true,
+            'skipped' => true,
+            'already_running' => $alreadyRunning,
+            'pending_instances' => [],
+        ];
+        $operation['instance_verification'] = $verify
+            ? verifyInstanceCodesState($config, $codes, true)
+            : ['requested' => false];
+        if ($verify && empty($operation['instance_verification']['success'])) {
+            throw new Exception('Verificacao das instancias selecionadas falhou');
+        }
+        return;
+    }
+
+    $timing = serverAutostartTimingConfig($config);
+    $operation['instance_start_strategy'] = 'sequential';
+    $operation['instance_start_timing'] = $timing;
+
+    if (intval($timing['initial_delay_seconds']) > 0) {
+        $operation['stage'] = 'wait_instances_initial';
+        $operation['log_file'] = writeRestartOperationSnapshot($config, $operation);
+        sleep(intval($timing['initial_delay_seconds']));
+    }
+
+    $aggregatedParsedInstances = [];
+    $operation['results'] = is_array(array_value($operation, 'results', null)) ? $operation['results'] : [];
+    foreach (array_values($pending) as $idx => $code) {
+        if ($idx > 0 && intval($timing['per_instance_delay_seconds']) > 0) {
+            $operation['stage'] = 'wait_instance_' . $code;
+            $operation['log_file'] = writeRestartOperationSnapshot($config, $operation);
+            sleep(intval($timing['per_instance_delay_seconds']));
+        }
+
+        $operation['stage'] = 'start_instance_' . $code;
+        $operation['log_file'] = writeRestartOperationSnapshot($config, $operation);
+        $singleResult = executeInstanceStartCommand($config, [$code]);
+        $operation['results'][] = [
+            'instances' => [$code],
+            'result' => $singleResult,
+        ];
+        foreach ((array) array_value(array_value($singleResult, 'parsed', []), 'instances', []) as $parsedInstance) {
+            if (is_array($parsedInstance)) {
+                $aggregatedParsedInstances[] = $parsedInstance;
+            }
+        }
+        $operation['log_file'] = writeRestartOperationSnapshot($config, $operation);
+        if (empty($singleResult['success'])) {
+            throw new Exception('Wrapper de start da instancia ' . $code . ' falhou (exit ' . intval(array_value($singleResult, 'exit_code', 1)) . ')');
+        }
+
+        if ($verify) {
+            $operation['stage'] = 'verify_instance_' . $code;
+            $operation['log_file'] = writeRestartOperationSnapshot($config, $operation);
+            $stepVerification = waitForInstanceCodesState($config, [$code], true);
+            if (empty($stepVerification['success'])) {
+                $operation['instance_step_verification'] = $stepVerification;
+                $operation['log_file'] = writeRestartOperationSnapshot($config, $operation);
+                throw new Exception('Verificacao da instancia ' . $code . ' falhou durante o auto-start');
+            }
+        }
+    }
+
+    $operation['instance_start_result'] = [
+        'success' => true,
+        'sequential' => true,
+        'count' => count($pending),
+        'already_running' => $alreadyRunning,
+        'pending_instances' => $pending,
+        'instances' => $aggregatedParsedInstances,
+    ];
+    $operation['log_file'] = writeRestartOperationSnapshot($config, $operation);
+
+    if ($verify) {
+        $operation['stage'] = 'verify_instances';
+        $operation['instance_verification'] = verifyInstanceCodesState($config, $codes, true);
+        $operation['log_file'] = writeRestartOperationSnapshot($config, $operation);
+        if (empty($operation['instance_verification']['success'])) {
+            throw new Exception('Verificacao das instancias selecionadas falhou');
+        }
+    } else {
+        $operation['instance_verification'] = ['requested' => false];
+    }
+}
+
+function serverOpsLogSources(array $config)
+{
+    $exportDir = trim((string) array_value($config, 'clsconfig_export_log_dir', ''));
+    $securityDir = trim((string) array_value($config, 'security_log_dir', ''));
+
+    return [
+        'gamedbd' => [
+            '/root/logs/gamedbd*_err.log',
+            '/root/logs/gamedbd*_std.log',
+            '/home/logs/gamedbd*_err.log',
+            '/home/logs/gamedbd*_std.log',
+            '/var/log/gamedbd*.log',
+        ],
+        'exportclsconfig' => array_filter([
+            ($exportDir !== '') ? rtrim($exportDir, '/\\') . DIRECTORY_SEPARATOR . '*.log' : '',
+            ($exportDir !== '') ? rtrim($exportDir, '/\\') . DIRECTORY_SEPARATOR . '*.txt' : '',
+        ]),
+        'httpd' => [
+            '/var/log/httpd/error_log',
+            '/var/log/httpd/access_log',
+            '/var/log/apache2/error.log',
+            '/var/log/apache2/access.log',
+        ],
+        'mail' => [
+            __DIR__ . '/backups/mail*.log',
+            __DIR__ . '/backups/mail*.jsonl',
+        ],
+        'apicls' => array_filter([
+            ($securityDir !== '') ? rtrim($securityDir, '/\\') . DIRECTORY_SEPARATOR . '*.jsonl' : '',
+            __DIR__ . '/backups/*.log',
+        ]),
+    ];
+}
+
+function serverOpsResolveLogFile($source, array $config)
+{
+    $source = strtolower(trim((string) $source));
+    $sources = serverOpsLogSources($config);
+    if (!isset($sources[$source])) {
+        throw new InvalidArgumentException('source de log invalido: ' . $source);
+    }
+
+    $candidates = [];
+    foreach ($sources[$source] as $pattern) {
+        $pattern = trim((string) $pattern);
+        if ($pattern === '') {
+            continue;
+        }
+
+        if (strpbrk($pattern, '*?[]') !== false) {
+            $matches = @glob($pattern);
+            if (is_array($matches)) {
+                foreach ($matches as $match) {
+                    if (is_file($match) && is_readable($match)) {
+                        $candidates[] = $match;
+                    }
+                }
+            }
+        } elseif (is_file($pattern) && is_readable($pattern)) {
+            $candidates[] = $pattern;
+        }
+    }
+
+    if (empty($candidates)) {
+        return '';
+    }
+
+    usort($candidates, function ($a, $b) {
+        return (@filemtime($b) ?: 0) <=> (@filemtime($a) ?: 0);
+    });
+
+    return $candidates[0];
+}
+
+function serverOpsTailFile($file, $lines)
+{
+    $file = trim((string) $file);
+    $lines = max(1, min(500, intval($lines)));
+
+    if ($file === '' || !is_file($file) || !is_readable($file)) {
+        throw new Exception('Arquivo de log nao encontrado ou sem leitura');
+    }
+
+    $size = @filesize($file);
+    if ($size !== false && $size > (5 * 1024 * 1024) && serverOpsShellAvailable()) {
+        $output = serverOpsRun('tail -n ' . $lines . ' ' . escapeshellarg($file) . ' 2>/dev/null');
+        if ($output !== '') {
+            return preg_split("/\r\n|\n|\r/", trim($output));
+        }
+    }
+
+    $content = @file($file, FILE_IGNORE_NEW_LINES);
+    if (!is_array($content)) {
+        throw new Exception('Falha ao ler arquivo de log');
+    }
+
+    return array_slice($content, -1 * $lines);
+}
+
+function serverOpsGuessLevel($line)
+{
+    $line = strtolower((string) $line);
+    if (strpos($line, 'fatal') !== false || strpos($line, 'error') !== false || strpos($line, 'erro') !== false) {
+        return 'error';
+    }
+    if (strpos($line, 'warn') !== false || strpos($line, 'warning') !== false || strpos($line, 'aviso') !== false) {
+        return 'warning';
+    }
+    return 'info';
+}
+
+function getServerLogsSnapshot(array $config, $source, $lines = 100, $query = '')
+{
+    $source = strtolower(trim((string) $source));
+    $lines = max(1, min(500, intval($lines)));
+    $query = trim((string) $query);
+    $file = serverOpsResolveLogFile($source, $config);
+
+    if ($file === '') {
+        return [
+            'success' => true,
+            'source' => $source,
+            'file' => '',
+            'entries' => [],
+            'warning' => 'Arquivo de log nao encontrado para a origem selecionada',
+            'collected_at' => gmdate('c'),
+        ];
+    }
+
+    $rawLines = serverOpsTailFile($file, $lines);
+    $entries = [];
+    $lineNo = 0;
+
+    foreach ($rawLines as $line) {
+        $lineNo++;
+        $text = rtrim((string) $line);
+        if ($text === '') {
+            continue;
+        }
+        if ($query !== '' && stripos($text, $query) === false) {
+            continue;
+        }
+
+        $entries[] = [
+            'line_no' => $lineNo,
+            'level' => serverOpsGuessLevel($text),
+            'line' => $text,
+        ];
+    }
+
+    return [
+        'success' => true,
+        'source' => $source,
+        'file' => $file,
+        'entries' => $entries,
+        'warning' => '',
+        'collected_at' => gmdate('c'),
+    ];
+}
+
+function safeJsonEncode($payload)
+{
     $flags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES;
     if (defined('JSON_INVALID_UTF8_SUBSTITUTE')) {
         $flags |= JSON_INVALID_UTF8_SUBSTITUTE;
     }
 
     $json = json_encode($payload, $flags);
-    if ($json === false) {
-        $fallback = [
-            'success' => false,
-            'error' => 'Falha ao gerar JSON',
-            'json_error' => function_exists('json_last_error_msg') ? json_last_error_msg() : 'json_encode falhou',
-        ];
-        $json = json_encode($fallback, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    if ($json !== false) {
+        return $json;
     }
 
-    echo $json;
+    return json_encode([
+        'success' => false,
+        'error' => 'Falha ao gerar JSON',
+        'json_error' => function_exists('json_last_error_msg') ? json_last_error_msg() : 'json_encode falhou',
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 }
 
-/**
- * registerIngameParticipation
- * --------------------------------------------------------------
- * Recebe payload do NPC/script ingame e repassa para a RPC
- * `register_ingame_participation` no Supabase (Lovable Cloud).
- *
- * Payload aceito (JSON ou form):
- *   - event_id      (uuid)   OU event_code (alias do mesmo uuid)  [obrigatorio]
- *   - tenant_id     (uuid)   [opcional - default ingame_default_tenant_id]
- *   - roleid        (int)    [obrigatorio]
- *   - role_name     (string) [opcional]
- *   - userid        (int)    [opcional]
- *   - npc_id        (int)    [opcional - vai pro metadata]
- *   - map_id        (int)    [opcional - vai pro metadata]
- *   - source        (string) [opcional - rotulo no metadata]
- *
- * Resposta:
- *   { success, status, message, id?, duplicate? }
- *   status in: registered | duplicate | not_found | not_active
- *            | unauthorized | invalid_payload | upstream_error
- */
-function registerIngameParticipationHandler(array $config)
+function ensureWritableDirectory($dir, $mode = 0750)
 {
-    if (empty($config['ingame_enabled'])) {
-        return [
-            'http' => 503,
-            'body' => [
-                'success' => false,
-                'status'  => 'upstream_error',
-                'message' => 'Endpoint ingame desativado em $CONFIG[ingame_enabled]',
-            ],
-        ];
+    $dir = trim((string) $dir);
+    if ($dir === '') {
+        throw new Exception('Diretorio nao configurado');
     }
 
-    $url  = isset($config['supabase_url']) ? trim((string)$config['supabase_url']) : '';
-    $skey = isset($config['supabase_service_role_key']) ? trim((string)$config['supabase_service_role_key']) : '';
-    if ($url === '' || $skey === '') {
-        return [
-            'http' => 500,
-            'body' => [
-                'success' => false,
-                'status'  => 'upstream_error',
-                'message' => 'supabase_url ou supabase_service_role_key nao configurados em api_cls.php',
-            ],
-        ];
+    if (!is_dir($dir) && !@mkdir($dir, $mode, true)) {
+        throw new Exception('Nao foi possivel criar diretorio: ' . $dir);
     }
 
-    $request = readRequestPayload();
-
-    // event_id / event_code (uuid). Aceita ambos.
-    $eventId = '';
-    if (isset($request['event_id']) && is_string($request['event_id'])) {
-        $eventId = trim($request['event_id']);
-    } elseif (isset($request['event_code']) && is_string($request['event_code'])) {
-        $eventId = trim($request['event_code']);
+    if (!is_dir($dir) || !is_writable($dir)) {
+        throw new Exception('Diretorio sem permissao de escrita: ' . $dir);
     }
 
-    $tenantId = isset($request['tenant_id']) && is_string($request['tenant_id'])
-        ? trim($request['tenant_id'])
-        : (string)($config['ingame_default_tenant_id'] ?? '');
-
-    $roleid   = isset($request['roleid']) ? intval($request['roleid']) : 0;
-    $roleName = isset($request['role_name']) ? (string)$request['role_name'] : null;
-    $userid   = isset($request['userid']) ? intval($request['userid']) : 0;
-
-    if ($eventId === '' || $tenantId === '' || $roleid <= 0) {
-        return [
-            'http' => 400,
-            'body' => [
-                'success' => false,
-                'status'  => 'invalid_payload',
-                'message' => 'event_id (ou event_code), tenant_id e roleid sao obrigatorios',
-            ],
-        ];
-    }
-
-    // Metadata opcional (npc_id, map_id, source)
-    $metadata = [];
-    if (isset($request['npc_id'])) { $metadata['npc_id'] = intval($request['npc_id']); }
-    if (isset($request['map_id'])) { $metadata['map_id'] = intval($request['map_id']); }
-    if (isset($request['source'])) { $metadata['source_label'] = (string)$request['source']; }
-
-    $rpcUrl = rtrim($url, '/') . '/rest/v1/rpc/register_ingame_participation';
-    $body = [
-        '_event_id'  => $eventId,
-        '_tenant_id' => $tenantId,
-        '_roleid'    => $roleid,
-        '_role_name' => $roleName,
-        '_userid'    => $userid > 0 ? $userid : null,
-        '_metadata'  => empty($metadata) ? null : $metadata,
-    ];
-    $bodyJson = json_encode($body, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-
-    $ch = curl_init($rpcUrl);
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_POST           => true,
-        CURLOPT_POSTFIELDS     => $bodyJson,
-        CURLOPT_TIMEOUT        => intval($config['ingame_request_timeout'] ?? 8),
-        CURLOPT_HTTPHEADER     => [
-            'Content-Type: application/json',
-            'Accept: application/json',
-            'apikey: ' . $skey,
-            'Authorization: Bearer ' . $skey,
-        ],
-    ]);
-    $rawResponse = curl_exec($ch);
-    $httpCode    = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $curlErr     = curl_error($ch);
-    curl_close($ch);
-
-    // Log best-effort (nao quebra fluxo)
-    if (!empty($config['ingame_log_dir'])) {
-        @mkdir($config['ingame_log_dir'], 0775, true);
-        $logFile = rtrim($config['ingame_log_dir'], '/') . '/' . date('Y-m-d') . '.log';
-        $logLine = sprintf(
-            "[%s] roleid=%d event=%s tenant=%s http=%d resp=%s\n",
-            date('c'),
-            $roleid,
-            $eventId,
-            $tenantId,
-            $httpCode,
-            is_string($rawResponse) ? substr($rawResponse, 0, 500) : 'null'
-        );
-        @file_put_contents($logFile, $logLine, FILE_APPEND);
-    }
-
-    if ($rawResponse === false) {
-        return [
-            'http' => 502,
-            'body' => [
-                'success' => false,
-                'status'  => 'upstream_error',
-                'message' => 'Falha ao contatar Supabase: ' . $curlErr,
-            ],
-        ];
-    }
-
-    $decoded = json_decode($rawResponse, true);
-
-    // Erro do PostgREST/RPC: { message, code, details, hint }
-    if ($httpCode >= 400 || !is_array($decoded)) {
-        $msg = is_array($decoded) && isset($decoded['message'])
-            ? (string)$decoded['message']
-            : (is_string($rawResponse) ? substr($rawResponse, 0, 300) : 'erro desconhecido');
-
-        $status = 'upstream_error';
-        $lower  = strtolower($msg);
-        if ($httpCode === 401 || $httpCode === 403) {
-            $status = 'unauthorized';
-        } elseif (strpos($lower, 'event not found') !== false) {
-            $status = 'not_found';
-        } elseif (strpos($lower, 'not active') !== false
-                || strpos($lower, 'has not started') !== false
-                || strpos($lower, 'already ended') !== false) {
-            $status = 'not_active';
-        }
-
-        return [
-            'http' => $httpCode >= 400 ? $httpCode : 502,
-            'body' => [
-                'success' => false,
-                'status'  => $status,
-                'message' => $msg,
-            ],
-        ];
-    }
-
-    // Sucesso: { id, duplicate }
-    $duplicate = !empty($decoded['duplicate']);
-    return [
-        'http' => 200,
-        'body' => [
-            'success'   => true,
-            'status'    => $duplicate ? 'duplicate' : 'registered',
-            'message'   => $duplicate
-                ? 'Participacao ja registrada anteriormente'
-                : 'Participacao registrada com sucesso',
-            'id'        => isset($decoded['id']) ? $decoded['id'] : null,
-            'duplicate' => $duplicate,
-        ],
-    ];
+    return $dir;
 }
 
+function writeAtomicFile($path, $contents)
+{
+    $path = trim((string) $path);
+    if ($path === '') {
+        throw new Exception('Arquivo de destino nao configurado');
+    }
 
-/* ============================================================
- * Operação do Servidor v1 — getServiceStatus / getServerLogs
- * Apenas LEITURA: pgrep + tail. Sem start/stop/kill.
- * ============================================================ */
+    $dir = dirname($path);
+    ensureWritableDirectory($dir);
+    $tmp = tempnam($dir, 'apicls_');
+    if ($tmp === false || $tmp === '') {
+        throw new Exception('Nao foi possivel criar arquivo temporario em ' . $dir);
+    }
 
-function serverOpsKnownServices()
+    if (@file_put_contents($tmp, $contents) === false) {
+        @unlink($tmp);
+        throw new Exception('Falha ao gravar arquivo temporario em ' . $dir);
+    }
+
+    if (!@rename($tmp, $path)) {
+        @unlink($tmp);
+        throw new Exception('Falha ao mover arquivo temporario para ' . $path);
+    }
+
+    @chmod($path, 0640);
+}
+
+function appendLogLine($path, $line)
+{
+    $path = trim((string) $path);
+    if ($path === '') {
+        throw new Exception('Arquivo de log nao configurado');
+    }
+
+    ensureWritableDirectory(dirname($path));
+    if (@file_put_contents($path, $line . PHP_EOL, FILE_APPEND | LOCK_EX) === false) {
+        throw new Exception('Falha ao gravar log em ' . $path);
+    }
+    @chmod($path, 0640);
+}
+
+function containsControlChars($text)
+{
+    return preg_match('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', (string) $text) === 1;
+}
+
+function trimOneLineText($text)
+{
+    $text = preg_replace('/\s+/', ' ', trim((string) $text));
+    return is_string($text) ? $text : '';
+}
+
+function buildOperationId($prefix)
+{
+    $prefix = preg_replace('/[^a-z0-9_-]+/i', '-', trim((string) $prefix));
+    $prefix = trim((string) $prefix, '-');
+    if ($prefix === '') {
+        $prefix = 'op';
+    }
+
+    try {
+        $rand = bin2hex(random_bytes(4));
+    } catch (Exception $e) {
+        $rand = substr(sha1(uniqid('', true)), 0, 8);
+    }
+
+    return strtolower($prefix . '-' . gmdate('Ymd-His') . '-' . $rand);
+}
+
+function excerptText($text, $maxLen = 1200)
+{
+    $text = trim((string) $text);
+    $maxLen = max(0, intval($maxLen));
+    if ($maxLen === 0 || strlen($text) <= $maxLen) {
+        return $text;
+    }
+    return substr($text, 0, $maxLen) . '...';
+}
+
+function sysmsgCuint($value)
+{
+    $value = intval($value);
+    if ($value < 64) {
+        return strrev(pack('C', $value));
+    } elseif ($value < 16384) {
+        return strrev(pack('S', ($value | 0x8000)));
+    } elseif ($value < 536870912) {
+        return strrev(pack('I', ($value | 0xC0000000)));
+    }
+    return strrev(pack('c', -32) . pack('i', $value));
+}
+
+function sysmsgPackString($data)
+{
+    $encoded = @iconv('UTF-8', 'UTF-16LE//IGNORE', (string) $data);
+    if ($encoded === false) {
+        $encoded = (string) $data;
+    }
+    return sysmsgCuint(strlen($encoded)) . $encoded;
+}
+
+function sysmsgPackOctet($data)
+{
+    $data = preg_replace('/[^0-9a-fA-F]/', '', (string) $data);
+    if ($data === '') {
+        return sysmsgCuint(0);
+    }
+    return sysmsgCuint(strlen($data) / 2) . pack('H*', $data);
+}
+
+function sysmsgCreateHeader($opcode, $data)
+{
+    return sysmsgCuint(intval($opcode)) . sysmsgCuint(strlen($data)) . $data;
+}
+
+function systemMessageKinds()
 {
     return [
-        ['gamedbd',     'Game DB Daemon',     29400],
-        ['gdeliveryd',  'Delivery Daemon',    29100],
-        ['gacd',        'Account Daemon',     29000],
-        ['glink',       'Game Link',          29200],
-        ['authd',       'Auth Daemon',        29300],
-        ['uniquenamed', 'Unique Name',        29500],
-        ['mysql',       'MySQL/MariaDB',      3306],
-        ['httpd',       'Web (Apache/httpd)', 80],
+        'system' => ['channel' => 9],
+        'broadcast' => ['channel' => 9],
+        'tip' => ['channel' => 9],
+        'world' => ['channel' => 9],
     ];
 }
 
-/** Aliases por serviço — múltiplos nomes de processo aceitáveis. */
-function serverOpsProcessAliases($name)
+function normalizeSystemMessageRequest(array $request, array $config)
 {
-    $map = [
-        'mysql' => ['mariadbd', 'mysqld', 'mysqld_safe', 'mysql'],
-        'httpd' => ['httpd', 'apache2'],
-    ];
-    return isset($map[$name]) ? $map[$name] : [$name];
-}
-
-/** Lista PIDs vivos para um nome de processo (pgrep -x). */
-function serverOpsPidsByName($procName, &$exit = 0)
-{
-    $output = [];
-    $exit = 0;
-    @exec('pgrep -x ' . escapeshellarg($procName) . ' 2>/dev/null', $output, $exit);
-    $pids = [];
-    foreach ($output as $line) {
-        $pid = intval(trim($line));
-        if ($pid > 0) $pids[] = $pid;
+    $message = trimOneLineText(array_value($request, 'message', ''));
+    if ($message === '') {
+        throw new InvalidArgumentException('message obrigatoria');
     }
-    return $pids;
-}
-
-/** Verifica se uma porta TCP está em LISTEN (ss → netstat fallback). */
-function serverOpsPortListening($port)
-{
-    if ($port <= 0) return false;
-    $port = intval($port);
-
-    // ss -lnt (mais rápido e moderno).
-    $out = [];
-    $exit = 127;
-    @exec('ss -lnt 2>/dev/null', $out, $exit);
-    if ($exit === 0 && !empty($out)) {
-        foreach ($out as $line) {
-            if (preg_match('/[:.]' . $port . '\s/', $line)) return true;
-        }
-        return false;
+    if (containsControlChars($message)) {
+        throw new InvalidArgumentException('message contem caracteres de controle invalidos');
     }
 
-    // Fallback: netstat -lnt.
-    $out = [];
-    @exec('netstat -lnt 2>/dev/null', $out, $exit);
-    if ($exit === 0 && !empty($out)) {
-        foreach ($out as $line) {
-            if (preg_match('/[:.]' . $port . '\s/', $line)) return true;
-        }
-    }
-    return false;
-}
-
-/** systemctl is-active <unit> — retorna true/false/null (indisponível). */
-function serverOpsSystemctlActive($unit)
-{
-    $out = [];
-    $exit = 127;
-    @exec('systemctl is-active ' . escapeshellarg($unit) . ' 2>/dev/null', $out, $exit);
-    if ($exit === 127) return null; // systemctl ausente
-    $val = trim(implode('', $out));
-    if ($val === 'active') return true;
-    if ($val === '' || $val === 'unknown') return null;
-    return false;
-}
-
-function serverOpsCollectService($name, $label, $port)
-{
-    $service = [
-        'name'          => $name,
-        'label'         => $label,
-        'state'         => 'unknown',
-        'pid'           => null,
-        'process_count' => 0,
-        'port'          => $port,
-        'message'       => null,
-    ];
-
-    $needsFullMatch = in_array($name, ['gamedbd', 'gdeliveryd', 'gacd', 'glink', 'authd', 'uniquenamed'], true);
-
-    if ($needsFullMatch) {
-        $output = [];
-        $exit = 0;
-        @exec('pgrep -f ' . escapeshellarg($name) . ' 2>/dev/null', $output, $exit);
-        $pids = [];
-        foreach ($output as $line) {
-            $pid = intval(trim($line));
-            if ($pid > 0) $pids[] = $pid;
-        }
-        if (!empty($pids)) {
-            $service['state']         = 'online';
-            $service['pid']           = $pids[0];
-            $service['process_count'] = count($pids);
-        } elseif ($exit > 1) {
-            $service['message'] = 'pgrep falhou (exit ' . $exit . ')';
-        } else {
-            $service['state'] = 'offline';
-        }
-        return $service;
+    $maxLength = max(1, intval(array_value($config, 'system_message_max_length', 200)));
+    if (strlen($message) > $maxLength) {
+        throw new InvalidArgumentException('message excede o limite de ' . $maxLength . ' caracteres');
     }
 
-    // Detecção multi-estratégia para serviços de sistema (mysql/httpd).
-    $aliases = serverOpsProcessAliases($name);
-    $allPids = [];
-    $matchedAlias = null;
-    $pgrepFailed = false;
-    foreach ($aliases as $alias) {
-        $exit = 0;
-        $pids = serverOpsPidsByName($alias, $exit);
-        if ($exit > 1) { $pgrepFailed = true; continue; }
-        if (!empty($pids)) {
-            if ($matchedAlias === null) $matchedAlias = $alias;
-            foreach ($pids as $p) $allPids[] = $p;
-        }
+    $kind = strtolower(trim((string) array_value($request, 'kind', 'system')));
+    $kinds = systemMessageKinds();
+    if (!isset($kinds[$kind])) {
+        throw new InvalidArgumentException('kind invalido. Use: system, broadcast, tip ou world');
     }
 
-    if (!empty($allPids)) {
-        $allPids = array_values(array_unique($allPids));
-        $service['state']         = 'online';
-        $service['pid']           = $allPids[0];
-        $service['process_count'] = count($allPids);
-        if ($matchedAlias && $matchedAlias !== $name) {
-            $service['message'] = 'Detectado via ' . $matchedAlias;
-        }
-        return $service;
+    $priority = strtolower(trim((string) array_value($request, 'priority', 'normal')));
+    if (!in_array($priority, ['low', 'normal', 'high'], true)) {
+        throw new InvalidArgumentException('priority invalida. Use: low, normal ou high');
     }
 
-    // Fallback 1: porta escutando.
-    if (serverOpsPortListening($port)) {
-        $service['state']   = 'online';
-        $service['message'] = 'Detectado via porta :' . $port;
-        return $service;
-    }
-
-    // Fallback 2: systemctl is-active (mysql/mariadb/httpd/apache2).
-    if ($name === 'mysql') {
-        foreach (['mariadb', 'mysql', 'mysqld'] as $unit) {
-            $active = serverOpsSystemctlActive($unit);
-            if ($active === true) {
-                $service['state']   = 'online';
-                $service['message'] = 'Detectado via systemctl ' . $unit;
-                return $service;
-            }
-        }
-    } elseif ($name === 'httpd') {
-        foreach (['httpd', 'apache2'] as $unit) {
-            $active = serverOpsSystemctlActive($unit);
-            if ($active === true) {
-                $service['state']   = 'online';
-                $service['message'] = 'Detectado via systemctl ' . $unit;
-                return $service;
-            }
-        }
-    }
-
-    if ($pgrepFailed) {
-        $service['message'] = 'pgrep falhou em todos os aliases';
-    } else {
-        $service['state'] = 'offline';
-    }
-    return $service;
-}
-
-function getServiceStatusSnapshot()
-{
-    $services = [];
-    foreach (serverOpsKnownServices() as $svc) {
-        list($name, $label, $port) = $svc;
-        $services[] = serverOpsCollectService($name, $label, $port);
-    }
-    return [
-        'success'      => true,
-        'collected_at' => time(),
-        'services'     => $services,
-    ];
-}
-
-/* ============================================================
- * Server Ops v3 — getManageableServices + start/stop/restart
- *
- * Lista enriquecida (state + aliases + supported_actions + selectable)
- * para alimentar o painel sem hardcode no frontend. As acoes destrutivas
- * passam por wrapper sudo whitelisted (manageservice-api.sh).
- * ============================================================ */
-
-/** Quais acoes sao suportadas por servico. */
-function serverOpsSupportedActions($name)
-{
-    // Lista intencionalmente curta. Qualquer servico nao listado caira no
-    // default (start/stop/restart) — seguro porque o wrapper bash tambem
-    // filtra por whitelist.
-    $map = [
-        'gamedbd'     => ['start', 'stop', 'restart'],
-        'gdeliveryd'  => ['start', 'stop', 'restart'],
-        'gacd'        => ['start', 'stop', 'restart'],
-        'glink'       => ['start', 'stop', 'restart'],
-        'authd'       => ['start', 'stop', 'restart'],
-        'uniquenamed' => ['start', 'stop', 'restart'],
-        'mysql'       => ['start', 'stop', 'restart'],
-        'httpd'       => ['start', 'stop', 'restart'],
-    ];
-    return isset($map[$name]) ? $map[$name] : ['start', 'stop', 'restart'];
-}
-
-/** True quando o servico pode ser controlado por start/stop/restart. */
-function serverOpsServiceSelectable($name)
-{
-    $allowed = ['gamedbd','gdeliveryd','gacd','glink','authd','uniquenamed','mysql','httpd'];
-    return in_array($name, $allowed, true);
-}
-
-function getManageableServicesSnapshot()
-{
-    $services = [];
-    foreach (serverOpsKnownServices() as $svc) {
-        list($name, $label, $port) = $svc;
-        $base = serverOpsCollectService($name, $label, $port);
-
-        // Re-mapear `name` -> `key` no shape esperado pelo painel novo
-        // (mantemos `name` tambem para compat com getServiceStatus).
-        $entry = [
-            'key'           => $name,
-            'label'         => $label,
-            'process_name'  => $name,
-            'state'         => isset($base['state']) ? $base['state'] : 'unknown',
-            'pid'           => isset($base['pid']) ? $base['pid'] : null,
-            'process_count' => isset($base['process_count']) ? intval($base['process_count']) : 0,
-            'pids'          => isset($base['pid']) && $base['pid'] ? [intval($base['pid'])] : [],
-            'port'          => $port > 0 ? intval($port) : null,
-            'systemd_state' => null,
-            'listening'     => $port > 0 ? serverOpsPortListening($port) : null,
-            'aliases'       => array_values(array_diff(serverOpsProcessAliases($name), [$name])),
-            'supported_actions' => serverOpsSupportedActions($name),
-            'selectable'    => serverOpsServiceSelectable($name),
-            'message'       => isset($base['message']) ? $base['message'] : null,
-        ];
-
-        // systemd state (best-effort — null quando systemctl ausente).
-        if ($name === 'mysql') {
-            foreach (['mariadb','mysql','mysqld'] as $unit) {
-                $active = serverOpsSystemctlActive($unit);
-                if ($active === true) { $entry['systemd_state'] = 'active'; break; }
-                if ($active === false) { $entry['systemd_state'] = 'inactive'; }
-            }
-        } elseif ($name === 'httpd') {
-            foreach (['httpd','apache2'] as $unit) {
-                $active = serverOpsSystemctlActive($unit);
-                if ($active === true) { $entry['systemd_state'] = 'active'; break; }
-                if ($active === false) { $entry['systemd_state'] = 'inactive'; }
-            }
-        } else {
-            $active = serverOpsSystemctlActive($name);
-            if ($active === true) $entry['systemd_state'] = 'active';
-            elseif ($active === false) $entry['systemd_state'] = 'inactive';
-            else $entry['systemd_state'] = 'unknown';
-        }
-
-        $services[] = $entry;
-    }
+    $dryRun = truthyValue(array_value($request, 'dry_run', array_value($request, 'dryRun', false)));
 
     return [
-        'success'      => true,
-        'count'        => count($services),
-        'collected_at' => gmdate('c'),
-        'services'     => $services,
+        'message' => $message,
+        'kind' => $kind,
+        'priority' => $priority,
+        'channel' => intval(array_value($kinds[$kind], 'channel', array_value($config, 'system_message_default_channel', 9))),
+        'host' => trim((string) array_value($config, 'gacd_ip', '127.0.0.1')),
+        'port' => max(1, intval(array_value($config, 'gacd_port', 29300))),
+        'dry_run' => $dryRun,
     ];
 }
 
-/** Aceita {service:"x"} OU {services:["x","y"]} e devolve lista normalizada. */
-function serverOpsExtractServiceList(array $request, array $config)
+function logSystemMessage(array $config, array $entry)
 {
-    $list = [];
-    if (isset($request['services']) && is_array($request['services'])) {
-        foreach ($request['services'] as $s) {
-            $s = strtolower(trim((string) $s));
-            if ($s !== '') $list[] = $s;
-        }
-    }
-    if (isset($request['service']) && is_string($request['service'])) {
-        $s = strtolower(trim($request['service']));
-        if ($s !== '') $list[] = $s;
-    }
-    $list = array_values(array_unique($list));
-    if (empty($list)) {
-        throw new Exception('Informe ao menos um servico (campo `service` ou `services`)');
-    }
-    $max = intval(array_value($config, 'manage_service_max_batch', 16));
-    if ($max > 0 && count($list) > $max) {
-        throw new Exception('Lote acima do limite (' . $max . ' servicos).');
-    }
-    foreach ($list as $name) {
-        if (!serverOpsServiceSelectable($name)) {
-            throw new Exception('Servico nao suportado: ' . $name);
-        }
-    }
-    return $list;
+    $logDir = ensureWritableDirectory(array_value($config, 'system_message_log_dir', __DIR__ . '/backups/sysmsg-logs'));
+    $logFile = rtrim($logDir, '/\\') . DIRECTORY_SEPARATOR . 'sysmsg-' . gmdate('Y-m-d') . '.jsonl';
+    appendLogLine($logFile, safeJsonEncode($entry));
+    return $logFile;
 }
 
-/**
- * Executa start/stop/restart em 1+ servicos via wrapper sudo.
- * Cada servico vira uma chamada individual ao wrapper (mais simples
- * de auditar e isolar falhas que um payload em batch).
- */
-function handleServiceControlRequest(array $config, $action, array $request)
+function dispatchSystemMessage(array $payload)
 {
-    if (!truthyValue(array_value($config, 'manage_service_enabled', true))) {
-        throw new Exception('Controle de servicos desabilitado nesta VPS');
-    }
-    $allowed = ['startService' => 'start', 'stopService' => 'stop', 'restartService' => 'restart'];
-    if (!isset($allowed[$action])) {
-        throw new Exception('Acao invalida (use startService|stopService|restartService)');
-    }
-    $verb = $allowed[$action];
+    $pack = pack('CCN', intval($payload['channel']), 0, 0) . sysmsgPackString($payload['message']) . sysmsgPackOctet('');
+    $packet = sysmsgCreateHeader(120, $pack);
 
-    $services = serverOpsExtractServiceList($request, $config);
-    $dryRun   = truthyValue(array_value($request, 'dry_run', false));
-    $verify   = truthyValue(array_value($request, 'verify', true));
+    $sock = @fsockopen($payload['host'], intval($payload['port']), $errno, $errstr, 5);
+    if (!$sock) {
+        throw new Exception('Falha ao conectar no gacd (' . $payload['host'] . ':' . $payload['port'] . ') - ' . $errno . ': ' . $errstr);
+    }
 
-    if ($dryRun) {
+    @stream_set_timeout($sock, 2);
+    $sent = @fwrite($sock, $packet);
+    if ($sent === false) {
+        @fclose($sock);
+        throw new Exception('Falha ao enviar pacote de broadcast para o gacd');
+    }
+
+    $response = @fread($sock, 4096);
+    @fclose($sock);
+
+    return [
+        'host' => $payload['host'],
+        'port' => intval($payload['port']),
+        'channel' => intval($payload['channel']),
+        'sent_bytes' => intval($sent),
+        'response_hex' => is_string($response) ? bin2hex($response) : '',
+    ];
+}
+
+function handleSendSystemMessageRequest(array $config, array $request)
+{
+    if (!truthyValue(array_value($config, 'system_message_enabled', true))) {
+        throw new Exception('Envio de mensagens globais esta desabilitado na configuracao da API');
+    }
+
+    $payload = normalizeSystemMessageRequest($request, $config);
+    $entry = [
+        'type' => 'system_message',
+        'created_at' => gmdate('c'),
+        'message' => $payload['message'],
+        'kind' => $payload['kind'],
+        'priority' => $payload['priority'],
+        'channel' => intval($payload['channel']),
+        'dry_run' => !empty($payload['dry_run']),
+    ];
+
+    if (!empty($payload['dry_run'])) {
+        $entry['result'] = 'validated';
+        $logFile = logSystemMessage($config, $entry);
         return [
             'success' => true,
             'dry_run' => true,
-            'action'  => $verb,
-            'services' => $services,
-            'verify'  => $verify,
-            'message' => 'Validacao OK — nenhuma acao executada.',
+            'validated' => [
+                'message' => $payload['message'],
+                'kind' => $payload['kind'],
+                'priority' => $payload['priority'],
+                'channel' => intval($payload['channel']),
+            ],
+            'log_file' => $logFile,
         ];
     }
 
-    $command = trim((string) array_value($config, 'manage_service_command', ''));
-    if ($command === '') {
-        throw new Exception('Comando de controle de servico nao configurado');
-    }
-
-    $logDir = trim((string) array_value($config, 'manage_service_log_dir', ''));
-    if ($logDir !== '' && !is_dir($logDir)) {
-        @mkdir($logDir, 0750, true);
-    }
-
-    $results = [];
-    foreach ($services as $svc) {
-        $result = serverOpsInvokeWrapper($command, $verb, $svc, $config);
-        if ($verify) {
-            // Pequena pausa pro processo subir/cair antes de re-amostrar.
-            usleep(800000);
-            $known = null;
-            foreach (serverOpsKnownServices() as $row) {
-                if ($row[0] === $svc) { $known = $row; break; }
-            }
-            if ($known) {
-                $snap = serverOpsCollectService($known[0], $known[1], $known[2]);
-                $result['post_state'] = isset($snap['state']) ? $snap['state'] : 'unknown';
-                $result['post_pid']   = isset($snap['pid']) ? $snap['pid'] : null;
-                $result['post_process_count'] = isset($snap['process_count']) ? intval($snap['process_count']) : 0;
-            }
-        }
-        $results[] = $result;
-    }
-
-    $allOk = true;
-    foreach ($results as $r) { if (empty($r['success'])) { $allOk = false; break; } }
-
-    $logFile = null;
-    if ($logDir !== '' && is_dir($logDir) && is_writable($logDir)) {
-        $logFile = $logDir . '/' . gmdate('Ymd-His') . '-' . $verb . '.json';
-        @file_put_contents($logFile, json_encode([
-            'sent_at_utc' => gmdate('c'),
-            'action'      => $verb,
-            'services'    => $services,
-            'verify'      => $verify,
-            'results'     => $results,
-        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT));
-    }
+    $delivery = dispatchSystemMessage($payload);
+    $entry['result'] = 'sent';
+    $entry['delivery'] = $delivery;
+    $logFile = logSystemMessage($config, $entry);
 
     return [
-        'success'  => $allOk,
-        'action'   => $verb,
-        'services' => $services,
-        'verify'   => $verify,
-        'results'  => $results,
+        'success' => true,
+        'message' => 'Broadcast enviado com sucesso',
+        'delivery' => $delivery,
         'log_file' => $logFile,
     ];
 }
 
-function serverOpsInvokeWrapper($command, $verb, $service, array $config)
+function tryHandleSendSystemMessageRequest(array $config, array $request)
 {
-    $descriptors = [
-        0 => ['pipe', 'r'],
-        1 => ['pipe', 'w'],
-        2 => ['pipe', 'w'],
+    try {
+        return handleSendSystemMessageRequest($config, $request);
+    } catch (Exception $e) {
+        return [
+            'success' => false,
+            'error' => $e->getMessage(),
+        ];
+    }
+}
+
+function maintenanceDefaultState()
+{
+    return [
+        'enabled' => false,
+        'reason' => '',
+        'eta_minutes' => 0,
+        'started_at' => null,
+        'ends_at' => null,
+        'updated_by' => '',
+        'updated_at' => null,
     ];
-    $cwd = (string) array_value($config, 'manage_service_workdir', __DIR__);
-    // Argumentos sao passados via STDIN como JSON pra evitar shell escape.
-    $payload = json_encode([
-        'action'  => $verb,
-        'service' => $service,
-    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+}
 
-    $process = @proc_open($command, $descriptors, $pipes, $cwd);
-    if (!is_resource($process)) {
-        return [
-            'success' => false,
-            'service' => $service,
-            'action'  => $verb,
-            'error'   => 'Nao foi possivel iniciar wrapper de servico',
-        ];
+function maintenanceStateFile(array $config)
+{
+    return trim((string) array_value($config, 'maintenance_state_file', __DIR__ . '/backups/maintenance/state.json'));
+}
+
+function maintenanceHistoryFile(array $config)
+{
+    return trim((string) array_value($config, 'maintenance_history_file', __DIR__ . '/backups/maintenance/history.log'));
+}
+
+function readMaintenanceState(array $config)
+{
+    $path = maintenanceStateFile($config);
+    if ($path === '' || !is_file($path) || !is_readable($path)) {
+        return maintenanceDefaultState();
     }
-    fwrite($pipes[0], $payload);
-    fclose($pipes[0]);
-    $stdout = stream_get_contents($pipes[1]); fclose($pipes[1]);
-    $stderr = stream_get_contents($pipes[2]); fclose($pipes[2]);
-    $exit   = proc_close($process);
 
-    $decoded = json_decode((string) $stdout, true);
-    if (is_array($decoded)) {
-        if (!array_key_exists('service', $decoded)) $decoded['service'] = $service;
-        if (!array_key_exists('action', $decoded))  $decoded['action']  = $verb;
-        if (!array_key_exists('success', $decoded)) $decoded['success'] = ($exit === 0);
-        if ($exit !== 0 && empty($decoded['error'])) {
-            $decoded['error'] = trim((string) $stderr) ?: ('exit ' . $exit);
+    $raw = @file_get_contents($path);
+    if (!is_string($raw) || trim($raw) === '') {
+        return maintenanceDefaultState();
+    }
+
+    $decoded = json_decode($raw, true);
+    if (json_last_error() !== JSON_ERROR_NONE || !is_array($decoded)) {
+        return maintenanceDefaultState();
+    }
+
+    return array_merge(maintenanceDefaultState(), $decoded);
+}
+
+function persistMaintenanceState(array $config, array $state, array $historyEntry)
+{
+    $stateFile = maintenanceStateFile($config);
+    $historyFile = maintenanceHistoryFile($config);
+    writeAtomicFile($stateFile, safeJsonEncode($state));
+    appendLogLine($historyFile, safeJsonEncode($historyEntry));
+    return [
+        'state_file' => $stateFile,
+        'history_file' => $historyFile,
+    ];
+}
+
+function normalizeMaintenanceRequest(array $request, array $config)
+{
+    if (!array_key_exists('enabled', $request)) {
+        throw new InvalidArgumentException('enabled obrigatorio');
+    }
+
+    $enabled = truthyValue(array_value($request, 'enabled', false));
+    $reason = trimOneLineText(array_value($request, 'reason', ''));
+    if (containsControlChars($reason)) {
+        throw new InvalidArgumentException('reason contem caracteres de controle invalidos');
+    }
+
+    $reasonMax = max(1, intval(array_value($config, 'maintenance_reason_max_length', 240)));
+    if (strlen($reason) > $reasonMax) {
+        throw new InvalidArgumentException('reason excede o limite de ' . $reasonMax . ' caracteres');
+    }
+
+    $etaMinutes = intval(array_value($request, 'eta_minutes', array_value($request, 'etaMinutes', 0)));
+    $etaMax = max(0, intval(array_value($config, 'maintenance_eta_max_minutes', 1440)));
+    if ($etaMinutes < 0 || $etaMinutes > $etaMax) {
+        throw new InvalidArgumentException('eta_minutes deve ficar entre 0 e ' . $etaMax);
+    }
+
+    return [
+        'enabled' => $enabled,
+        'reason' => $reason,
+        'eta_minutes' => $etaMinutes,
+        'broadcast' => !array_key_exists('broadcast', $request) || truthyValue(array_value($request, 'broadcast', true)),
+        'dry_run' => truthyValue(array_value($request, 'dry_run', array_value($request, 'dryRun', false))),
+        'updated_by' => trimOneLineText(array_value($request, 'updated_by', array_value($request, 'actor', 'api'))),
+    ];
+}
+
+function applyMaintenanceMode(array $config, array $payload)
+{
+    $previous = readMaintenanceState($config);
+    $now = gmdate('c');
+    $startedAt = $payload['enabled']
+        ? (!empty($previous['enabled']) && !empty($previous['started_at']) ? $previous['started_at'] : $now)
+        : null;
+    $endsAt = null;
+    if ($payload['enabled'] && intval($payload['eta_minutes']) > 0) {
+        $endsAt = gmdate('c', time() + (intval($payload['eta_minutes']) * 60));
+    }
+
+    $state = [
+        'enabled' => !empty($payload['enabled']),
+        'reason' => (string) $payload['reason'],
+        'eta_minutes' => intval($payload['eta_minutes']),
+        'started_at' => $startedAt,
+        'ends_at' => $endsAt,
+        'updated_by' => (string) $payload['updated_by'],
+        'updated_at' => $now,
+    ];
+
+    $historyEntry = [
+        'type' => 'maintenance',
+        'changed_at' => $now,
+        'previous' => $previous,
+        'current' => $state,
+        'dry_run' => !empty($payload['dry_run']),
+    ];
+
+    $broadcastResult = null;
+    if (empty($payload['dry_run']) && !empty($payload['broadcast'])) {
+        $message = $state['enabled']
+            ? ('Servidor entrara em manutencao' . ($state['eta_minutes'] > 0 ? (' em ' . $state['eta_minutes'] . ' min') : ' em instantes') . ($state['reason'] !== '' ? ('. Motivo: ' . $state['reason']) : '.'))
+            : 'Modo manutencao encerrado. Servidor liberado para operacao normal.';
+
+        try {
+            $broadcastResult = handleSendSystemMessageRequest($config, [
+                'message' => $message,
+                'kind' => 'system',
+                'priority' => 'high',
+                'dry_run' => false,
+            ]);
+        } catch (Exception $e) {
+            $broadcastResult = [
+                'success' => false,
+                'error' => $e->getMessage(),
+            ];
         }
-        return $decoded;
     }
 
-    if ($exit !== 0) {
-        $msg = trim((string) $stderr);
-        if ($msg === '') $msg = trim((string) $stdout);
-        if ($msg === '') $msg = 'Falha (exit ' . $exit . ')';
-        return [
-            'success' => false,
-            'service' => $service,
-            'action'  => $verb,
-            'error'   => $msg,
-            'exit'    => $exit,
-        ];
+    $files = [
+        'state_file' => maintenanceStateFile($config),
+        'history_file' => maintenanceHistoryFile($config),
+    ];
+
+    if (empty($payload['dry_run'])) {
+        $files = persistMaintenanceState($config, $state, $historyEntry);
     }
+
     return [
         'success' => true,
-        'service' => $service,
-        'action'  => $verb,
-        'raw'     => trim((string) $stdout),
+        'maintenance' => $state,
+        'broadcast' => $broadcastResult,
+        'dry_run' => !empty($payload['dry_run']),
+        'state_file' => $files['state_file'],
+        'history_file' => $files['history_file'],
     ];
 }
 
-
-function serverOpsLogSources($CONFIG)
+function getMaintenanceModeHandler(array $config)
 {
-    $apicls_dir = isset($CONFIG['clsconfig_export_log_dir'])
-        ? $CONFIG['clsconfig_export_log_dir']
-        : (__DIR__ . '/backups/clsconfig/export-logs');
-    $mail_dir = isset($CONFIG['mail_send_log_dir'])
-        ? $CONFIG['mail_send_log_dir']
-        : (__DIR__ . '/backups/mail-logs');
+    return [
+        'success' => true,
+        'maintenance' => readMaintenanceState($config),
+        'state_file' => maintenanceStateFile($config),
+        'history_file' => maintenanceHistoryFile($config),
+    ];
+}
+
+function setMaintenanceModeHandler(array $config, array $request)
+{
+    $payload = normalizeMaintenanceRequest($request, $config);
+    return applyMaintenanceMode($config, $payload);
+}
+
+function restartOperationLogFiles(array $config, $operationId)
+{
+    $dir = ensureWritableDirectory(array_value($config, 'server_ops_log_dir', __DIR__ . '/backups/server-ops'));
+    $id = preg_replace('/[^a-zA-Z0-9_.:-]+/', '-', (string) $operationId);
+    $id = trim((string) $id, '-');
+    if ($id === '') {
+        $id = buildOperationId('restart');
+    }
 
     return [
-        'gamedbd' => [
-            '/home/gamedbd/logs/gamedbd.log',
-            '/home/gamedbd/gamedbd.log',
-            '/var/log/gamedbd.log',
-        ],
-        'exportclsconfig' => [
-            $apicls_dir,
-        ],
-        'httpd' => [
-            '/var/log/httpd/error_log',
-            '/var/log/apache2/error.log',
-            '/var/log/nginx/error.log',
-        ],
-        'mail' => [
-            $mail_dir,
-        ],
-        'apicls' => [
-            __DIR__ . '/backups/api_cls.log',
-            '/var/log/api_cls.log',
-        ],
+        'dir' => $dir,
+        'json' => rtrim($dir, '/\\') . DIRECTORY_SEPARATOR . $id . '.json',
+        'history' => rtrim($dir, '/\\') . DIRECTORY_SEPARATOR . 'history.log',
     ];
 }
 
-function serverOpsResolveLogFile($candidates)
+function writeRestartOperationLog(array $config, array $operation)
 {
-    foreach ($candidates as $path) {
-        if (!is_string($path) || $path === '') continue;
-        if (is_dir($path)) {
-            $latest = null;
-            $latestTime = 0;
-            $dh = @opendir($path);
-            if ($dh) {
-                while (($entry = readdir($dh)) !== false) {
-                    if ($entry === '.' || $entry === '..') continue;
-                    $full = rtrim($path, '/') . '/' . $entry;
-                    if (!is_file($full)) continue;
-                    $mt = @filemtime($full);
-                    if ($mt !== false && $mt > $latestTime) {
-                        $latestTime = $mt;
-                        $latest = $full;
-                    }
-                }
-                closedir($dh);
+    $files = restartOperationLogFiles($config, array_value($operation, 'id', 'restart'));
+    writeAtomicFile($files['json'], safeJsonEncode($operation));
+    appendLogLine($files['history'], safeJsonEncode([
+        'id' => array_value($operation, 'id', ''),
+        'created_at' => gmdate('c'),
+        'success' => truthyValue(array_value($operation, 'success', false)),
+        'stage' => array_value($operation, 'stage', ''),
+        'reason' => array_value($operation, 'reason', ''),
+        'dry_run' => truthyValue(array_value($operation, 'dry_run', false)),
+    ]));
+    return $files['json'];
+}
+
+function writeRestartOperationSnapshot(array $config, array $operation)
+{
+    $files = restartOperationLogFiles($config, array_value($operation, 'id', 'restart'));
+    writeAtomicFile($files['json'], safeJsonEncode($operation));
+    return $files['json'];
+}
+
+function serverOpsLogDir(array $config)
+{
+    return trim((string) array_value($config, 'server_ops_log_dir', __DIR__ . '/backups/server-ops'));
+}
+
+function serverOpsListOperationFiles(array $config)
+{
+    $dir = serverOpsLogDir($config);
+    if ($dir === '' || !is_dir($dir)) {
+        return [];
+    }
+
+    $files = @glob(rtrim($dir, '/\\') . DIRECTORY_SEPARATOR . '*.json');
+    if (!is_array($files)) {
+        return [];
+    }
+
+    $files = array_values(array_filter($files, function ($file) {
+        return is_file($file) && is_readable($file);
+    }));
+
+    usort($files, function ($a, $b) {
+        return (@filemtime($b) ?: 0) <=> (@filemtime($a) ?: 0);
+    });
+
+    return $files;
+}
+
+function serverOpsReadOperationFile($file)
+{
+    $file = trim((string) $file);
+    if ($file === '' || !is_file($file) || !is_readable($file)) {
+        throw new Exception('Arquivo de operacao nao encontrado');
+    }
+
+    $raw = @file_get_contents($file);
+    if ($raw === false) {
+        throw new Exception('Falha ao ler arquivo de operacao');
+    }
+
+    $decoded = json_decode($raw, true);
+    if (!is_array($decoded)) {
+        throw new Exception('JSON de operacao invalido');
+    }
+
+    return $decoded;
+}
+
+function serverOpsInferOperationType(array $operation, $file = '')
+{
+    $explicit = trim((string) array_value($operation, 'type', ''));
+    if ($explicit !== '') {
+        return $explicit;
+    }
+
+    $id = trim((string) array_value($operation, 'id', ''));
+    if ($id === '' && $file !== '') {
+        $id = preg_replace('/\.json$/i', '', basename((string) $file));
+    }
+
+    if (strpos($id, 'start-server-') === 0) {
+        return 'startServer';
+    }
+    if (strpos($id, 'start-instances-') === 0) {
+        return 'startInstances';
+    }
+    if (strpos($id, 'start-instance-') === 0) {
+        return 'startInstance';
+    }
+    if (strpos($id, 'stop-instances-') === 0) {
+        return 'stopInstances';
+    }
+    if (strpos($id, 'stop-instance-') === 0) {
+        return 'stopInstance';
+    }
+    if (strpos($id, 'restart-instances-') === 0) {
+        return 'restartInstances';
+    }
+    if (strpos($id, 'restart-instance-') === 0) {
+        return 'restartInstance';
+    }
+    if (strpos($id, 'stop-server-') === 0) {
+        return 'stopServer';
+    }
+    if (strpos($id, 'restart-service-') === 0) {
+        return 'restartService';
+    }
+    if (strpos($id, 'start-service-') === 0) {
+        return 'startService';
+    }
+    if (strpos($id, 'stop-service-') === 0) {
+        return 'stopService';
+    }
+    if (strpos($id, 'restart-') === 0) {
+        return 'restartServer';
+    }
+
+    $action = trim((string) array_value($operation, 'action', ''));
+    $hasServices = !empty(array_value($operation, 'services', []));
+    if ($action !== '') {
+        if ($action === 'start') {
+            return $hasServices ? 'startService' : 'startServer';
+        }
+        if ($action === 'stop') {
+            return $hasServices ? 'stopService' : 'stopServer';
+        }
+        if ($action === 'restart') {
+            return $hasServices ? 'restartService' : 'restartServer';
+        }
+    }
+
+    return 'unknown';
+}
+
+function serverOpsParseTimestamp($value)
+{
+    if (!is_string($value) || trim($value) === '') {
+        return 0;
+    }
+
+    $ts = @strtotime($value);
+    return ($ts === false) ? 0 : intval($ts);
+}
+
+function serverOpsTimeoutForOperation(array $config, array $operation, $type)
+{
+    $serviceTimeout = max(60, intval(array_value($config, 'server_ops_service_timeout_seconds', 300)));
+    $restartTimeout = max(120, intval(array_value($config, 'server_ops_restart_timeout_seconds', 900)));
+    $servicesCount = max(1, count(array_value($operation, 'services', [])));
+    $instanceStartTimeout = max(30, intval(array_value($config, 'instance_ops_start_timeout_seconds', 90)));
+    $instanceStopTimeout = max(30, intval(array_value($config, 'instance_ops_stop_timeout_seconds', 90)));
+    $instanceVerifyTimeout = max(5, intval(array_value($config, 'instance_ops_verify_timeout_seconds', 45)));
+    $autostartTiming = serverAutostartTimingConfig($config);
+    $instancesCount = max(1, count(array_value($operation, 'instances', [])));
+    $selectedInstancesCount = count(array_value($operation, 'instances', []));
+
+    switch ($type) {
+        case 'startInstance':
+        case 'startInstances':
+            return ($instanceStartTimeout * $instancesCount) + 60;
+
+        case 'stopInstance':
+        case 'stopInstances':
+            return ($instanceStopTimeout * $instancesCount) + 60;
+
+        case 'restartInstance':
+        case 'restartInstances':
+            return (($instanceStartTimeout + $instanceStopTimeout) * $instancesCount) + 90;
+
+        case 'startService':
+        case 'stopService':
+        case 'restartService':
+            return ($serviceTimeout * $servicesCount) + 60;
+
+        case 'startServer':
+        case 'stopServer':
+            return $restartTimeout + 180 + ($type === 'startServer'
+                ? (
+                    ($selectedInstancesCount > 0 ? intval($autostartTiming['initial_delay_seconds']) : 0)
+                    + (($instanceStartTimeout + $instanceVerifyTimeout + intval($autostartTiming['per_instance_delay_seconds'])) * $selectedInstancesCount)
+                )
+                : 0);
+
+        case 'restartServer':
+            return max(180, intval(array_value($operation, 'countdown_seconds', 0))) + $restartTimeout + 180
+                + ($selectedInstancesCount > 0 ? intval($autostartTiming['initial_delay_seconds']) : 0)
+                + (($instanceStartTimeout + $instanceVerifyTimeout + intval($autostartTiming['per_instance_delay_seconds'])) * $selectedInstancesCount);
+
+        default:
+            return $restartTimeout + 180;
+    }
+}
+
+function serverOpsMaybeFinalizeStaleOperation(array $config, array $operation, $file = '')
+{
+    if ($file === '' || empty($operation['running']) || !empty($operation['dry_run'])) {
+        return $operation;
+    }
+
+    $type = trim((string) array_value($operation, 'type', 'unknown'));
+    $createdAtTs = serverOpsParseTimestamp(array_value($operation, 'created_at', null));
+    if ($createdAtTs <= 0) {
+        $createdAtTs = @filemtime($file) ?: 0;
+    }
+    if ($createdAtTs <= 0) {
+        return $operation;
+    }
+
+    $timeoutSeconds = serverOpsTimeoutForOperation($config, $operation, $type);
+    if ($timeoutSeconds <= 0 || (time() - $createdAtTs) < $timeoutSeconds) {
+        return $operation;
+    }
+
+    $staleDetectedAt = gmdate('c');
+    $operation['running'] = false;
+    $operation['success'] = false;
+    $operation['success_state'] = 'error';
+    $operation['stale'] = true;
+    $operation['stale_timeout_seconds'] = $timeoutSeconds;
+    $operation['stale_detected_at'] = $staleDetectedAt;
+    if (trim((string) array_value($operation, 'completed_at', '')) === '') {
+        $operation['completed_at'] = $staleDetectedAt;
+    }
+    if (trim((string) array_value($operation, 'error', '')) === '') {
+        $operation['error'] = 'Operacao marcada como stale apos exceder timeout de monitoramento';
+    }
+
+    $persisted = $operation;
+    unset($persisted['running'], $persisted['success_state'], $persisted['source_file']);
+
+    $originalMtime = @filemtime($file) ?: 0;
+    try {
+        writeAtomicFile($file, safeJsonEncode($persisted));
+        if ($originalMtime > 0) {
+            @touch($file, $originalMtime);
+        }
+    } catch (Exception $e) {
+        // Mantem o retorno hidratado mesmo se nao conseguir persistir a marcacao stale.
+    }
+
+    return $operation;
+}
+
+function serverOpsHydrateOperationStatus(array $operation, $file = '', array $config = null)
+{
+    $type = serverOpsInferOperationType($operation, $file);
+    $completedAt = array_value($operation, 'completed_at', null);
+    $stage = trim((string) array_value($operation, 'stage', ''));
+    $success = truthyValue(array_value($operation, 'success', false));
+    $isDryRun = truthyValue(array_value($operation, 'dry_run', false));
+    $running = !$isDryRun && ($completedAt === null || $completedAt === '') && $stage !== '' && $stage !== 'done';
+    $successState = $running ? 'running' : ($success ? 'success' : 'error');
+
+    $operation['type'] = $type;
+    $operation['running'] = $running;
+    $operation['success_state'] = $successState;
+    if ($file !== '') {
+        $operation['source_file'] = $file;
+    }
+
+    if (is_array($config)) {
+        $operation = serverOpsMaybeFinalizeStaleOperation($config, $operation, $file);
+    }
+
+    return $operation;
+}
+
+function serverOpsAllowedOperationTypes()
+{
+    return ['restartServer', 'startServer', 'stopServer', 'startService', 'stopService', 'restartService', 'startInstance', 'startInstances', 'stopInstance', 'stopInstances', 'restartInstance', 'restartInstances'];
+}
+
+function getServerOperationStatusHandler(array $config, array $request)
+{
+    $operationId = trim((string) array_value($request, 'operation_id', array_value($request, 'operationId', '')));
+    $type = trim((string) array_value($request, 'type', ''));
+
+    if ($operationId !== '' && !preg_match('/^[a-zA-Z0-9_.:-]+$/', $operationId)) {
+        throw new InvalidArgumentException('operation_id invalido');
+    }
+
+    $allowedTypes = serverOpsAllowedOperationTypes();
+    if ($type !== '' && !in_array($type, $allowedTypes, true)) {
+        throw new InvalidArgumentException('type invalido');
+    }
+
+    $dir = serverOpsLogDir($config);
+    $candidateFile = '';
+
+    if ($operationId !== '') {
+        $candidateFile = rtrim($dir, '/\\') . DIRECTORY_SEPARATOR . $operationId . '.json';
+        if (!is_file($candidateFile)) {
+            throw new Exception('Operacao nao encontrada');
+        }
+        $operation = serverOpsReadOperationFile($candidateFile);
+        $operation = serverOpsHydrateOperationStatus($operation, $candidateFile, $config);
+        if ($type !== '' && array_value($operation, 'type', '') !== $type) {
+            throw new Exception('Operacao nao encontrada');
+        }
+        return [
+            'success' => true,
+            'operation' => $operation,
+        ];
+    }
+
+    $files = serverOpsListOperationFiles($config);
+    foreach ($files as $file) {
+        $operation = serverOpsReadOperationFile($file);
+        $operation = serverOpsHydrateOperationStatus($operation, $file, $config);
+        if ($type !== '' && array_value($operation, 'type', '') !== $type) {
+            continue;
+        }
+        return [
+            'success' => true,
+            'operation' => $operation,
+        ];
+    }
+
+    throw new Exception('Operacao nao encontrada');
+}
+
+function serverOpsSummarizeOperation(array $operation)
+{
+    $summary = [
+        'id' => trim((string) array_value($operation, 'id', '')),
+        'type' => trim((string) array_value($operation, 'type', 'unknown')),
+        'stage' => trim((string) array_value($operation, 'stage', '')),
+        'running' => truthyValue(array_value($operation, 'running', false)),
+        'success' => truthyValue(array_value($operation, 'success', false)),
+        'success_state' => trim((string) array_value($operation, 'success_state', 'error')),
+        'created_at' => array_value($operation, 'created_at', null),
+        'completed_at' => array_value($operation, 'completed_at', null),
+        'action' => trim((string) array_value($operation, 'action', '')),
+        'services' => array_values(array_map('strval', array_value($operation, 'services', []))),
+        'instances' => array_values(array_map('strval', array_value($operation, 'instances', []))),
+        'reason' => trim((string) array_value($operation, 'reason', '')),
+        'dry_run' => truthyValue(array_value($operation, 'dry_run', false)),
+        'log_file' => trim((string) array_value($operation, 'log_file', '')),
+        'error' => array_value($operation, 'error', null),
+    ];
+
+    $verification = array_value($operation, 'verification', null);
+    if (is_array($verification)) {
+        $services = [];
+        foreach (array_value($verification, 'services', []) as $service) {
+            if (!is_array($service)) {
+                continue;
             }
-            if ($latest !== null) return $latest;
-        } else if (is_file($path)) {
-            return $path;
+            $services[] = [
+                'key' => trim((string) array_value($service, 'key', '')),
+                'state' => trim((string) array_value($service, 'state', '')),
+            ];
+        }
+
+        $summary['verification'] = [
+            'requested' => truthyValue(array_value($verification, 'requested', false)),
+            'success' => truthyValue(array_value($verification, 'success', false)),
+            'services' => $services,
+            'collected_at' => array_value($verification, 'collected_at', null),
+        ];
+        if (is_array(array_value($verification, 'instances', null))) {
+            $instances = [];
+            foreach (array_value($verification, 'instances', []) as $instance) {
+                if (!is_array($instance)) {
+                    continue;
+                }
+                $instances[] = [
+                    'code' => trim((string) array_value($instance, 'code', '')),
+                    'state' => trim((string) array_value($instance, 'state', '')),
+                ];
+            }
+            $summary['verification']['instances'] = $instances;
         }
     }
-    return null;
+
+    return $summary;
 }
 
-function serverOpsTailFile($path, $maxLines)
+function getServerOperationsHistoryHandler(array $config, array $request)
 {
-    if ($maxLines <= 0) $maxLines = 200;
-    if ($maxLines > 2000) $maxLines = 2000;
+    $type = trim((string) array_value($request, 'type', ''));
+    $successState = trim((string) array_value($request, 'success_state', array_value($request, 'successState', '')));
+    $limit = intval(array_value($request, 'limit', 50));
 
-    $size = @filesize($path);
-    if ($size !== false && $size > 5 * 1024 * 1024) {
-        $cmd = 'tail -n ' . intval($maxLines) . ' ' . escapeshellarg($path) . ' 2>/dev/null';
-        $out = [];
-        @exec($cmd, $out);
-        return $out;
+    if ($limit < 1 || $limit > 200) {
+        throw new InvalidArgumentException('limit deve ficar entre 1 e 200');
     }
 
-    $fh = @fopen($path, 'r');
-    if (!$fh) return null;
-    $lines = [];
-    while (!feof($fh)) {
-        $line = fgets($fh);
-        if ($line === false) break;
-        $lines[] = rtrim($line, "\r\n");
-    }
-    fclose($fh);
-    if (count($lines) > $maxLines) {
-        $lines = array_slice($lines, -$maxLines);
-    }
-    return $lines;
-}
-
-function serverOpsGuessLevel($line)
-{
-    $l = strtolower($line);
-    if (strpos($l, 'error') !== false || strpos($l, 'fatal') !== false || strpos($l, 'critical') !== false) return 'error';
-    if (strpos($l, 'warn') !== false) return 'warn';
-    if (strpos($l, 'debug') !== false || strpos($l, 'trace') !== false) return 'debug';
-    return 'info';
-}
-
-function getServerLogsSnapshot($CONFIG, $source, $lines, $query)
-{
-    $sources = serverOpsLogSources($CONFIG);
-    if (!isset($sources[$source])) {
-        return [
-            'success' => false,
-            'source'  => $source,
-            'entries' => [],
-            'error'   => 'Origem desconhecida: ' . $source,
-        ];
+    $allowedTypes = serverOpsAllowedOperationTypes();
+    if ($type !== '' && !in_array($type, $allowedTypes, true)) {
+        throw new InvalidArgumentException('type invalido');
     }
 
-    $file = serverOpsResolveLogFile($sources[$source]);
-    if ($file === null) {
-        return [
-            'success' => true,
-            'source'  => $source,
-            'entries' => [],
-            'count'   => 0,
-            'warning' => 'Nenhum arquivo de log encontrado para esta origem nesta VPS.',
-        ];
-    }
-    if (!is_readable($file)) {
-        return [
-            'success' => true,
-            'source'  => $source,
-            'file'    => $file,
-            'entries' => [],
-            'count'   => 0,
-            'warning' => 'Arquivo existe mas sem permissao de leitura para o usuario web.',
-        ];
+    $allowedSuccessStates = ['running', 'success', 'error'];
+    if ($successState !== '' && !in_array($successState, $allowedSuccessStates, true)) {
+        throw new InvalidArgumentException('success_state invalido');
     }
 
-    $rawLines = serverOpsTailFile($file, $lines);
-    if ($rawLines === null) {
-        return [
-            'success' => true,
-            'source'  => $source,
-            'file'    => $file,
-            'entries' => [],
-            'warning' => 'Nao foi possivel abrir o arquivo (fopen falhou).',
-        ];
-    }
+    $operations = [];
+    foreach (serverOpsListOperationFiles($config) as $file) {
+        try {
+            $operation = serverOpsReadOperationFile($file);
+        } catch (Exception $e) {
+            continue;
+        }
 
-    $entries = [];
-    foreach ($rawLines as $raw) {
-        if ($query !== '' && stripos($raw, $query) === false) continue;
-        $entries[] = [
-            'line'  => $raw,
-            'level' => serverOpsGuessLevel($raw),
-        ];
+        $operation = serverOpsHydrateOperationStatus($operation, $file, $config);
+        if ($type !== '' && array_value($operation, 'type', '') !== $type) {
+            continue;
+        }
+        if ($successState !== '' && array_value($operation, 'success_state', '') !== $successState) {
+            continue;
+        }
+
+        $operations[] = serverOpsSummarizeOperation($operation);
+        if (count($operations) >= $limit) {
+            break;
+        }
     }
 
     return [
         'success' => true,
-        'source'  => $source,
-        'file'    => $file,
-        'count'   => count($entries),
-        'entries' => $entries,
+        'operations' => $operations,
+        'count' => count($operations),
+        'filters' => [
+            'type' => $type,
+            'success_state' => $successState,
+            'limit' => $limit,
+        ],
+        'history_file' => rtrim(serverOpsLogDir($config), '/\\') . DIRECTORY_SEPARATOR . 'history.log',
     ];
+}
+
+function validateRestartServerRequest(array $request)
+{
+    $reason = trimOneLineText(array_value($request, 'reason', ''));
+    if ($reason === '' || strlen($reason) < 3) {
+        throw new InvalidArgumentException('reason obrigatorio com pelo menos 3 caracteres');
+    }
+    if (containsControlChars($reason) || strlen($reason) > 240) {
+        throw new InvalidArgumentException('reason invalido');
+    }
+
+    $countdown = intval(array_value($request, 'countdown_seconds', array_value($request, 'countdown', 0)));
+    if ($countdown < 0 || $countdown > 3600) {
+        throw new InvalidArgumentException('countdown_seconds deve ficar entre 0 e 3600');
+    }
+
+    return [
+        'reason' => $reason,
+        'countdown_seconds' => $countdown,
+        'broadcast' => !array_key_exists('broadcast', $request) || truthyValue(array_value($request, 'broadcast', true)),
+        'enable_maintenance' => !array_key_exists('enable_maintenance', $request) || truthyValue(array_value($request, 'enable_maintenance', true)),
+        'backup_before_restart' => !array_key_exists('backup_before_restart', $request) || truthyValue(array_value($request, 'backup_before_restart', true)),
+        'verify_after_restart' => !array_key_exists('verify_after_restart', $request) || truthyValue(array_value($request, 'verify_after_restart', true)),
+        'dry_run' => truthyValue(array_value($request, 'dry_run', array_value($request, 'dryRun', false))),
+    ];
+}
+
+function restartCountdownMarks(array $config, $countdownSeconds)
+{
+    $marks = array_map('intval', array_value($config, 'server_ops_restart_countdown_marks', [300, 180, 120, 60, 30, 10, 5, 4, 3, 2, 1]));
+    $marks = array_values(array_unique(array_filter($marks, function ($mark) use ($countdownSeconds) {
+        return $mark > 0 && $mark < intval($countdownSeconds);
+    })));
+    rsort($marks, SORT_NUMERIC);
+    return $marks;
+}
+
+function restartAnnouncementMessage($remainingSeconds, $reason)
+{
+    $remainingSeconds = intval($remainingSeconds);
+    $reason = trim((string) $reason);
+    if ($remainingSeconds <= 0) {
+        return 'Reinicio do servidor iniciando agora.' . ($reason !== '' ? (' Motivo: ' . $reason) : '');
+    }
+
+    if ($remainingSeconds >= 60 && ($remainingSeconds % 60) === 0) {
+        $minutes = intval($remainingSeconds / 60);
+        $label = $minutes === 1 ? '1 minuto' : $minutes . ' minutos';
+    } else {
+        $label = $remainingSeconds === 1 ? '1 segundo' : $remainingSeconds . ' segundos';
+    }
+
+    return 'Servidor sera reiniciado em ' . $label . '.' . ($reason !== '' ? (' Motivo: ' . $reason) : '');
+}
+
+function executeServerOpsCommand($command, $timeoutSeconds = 0)
+{
+    $command = trim((string) $command);
+    if ($command === '') {
+        throw new Exception('Comando de operacao do servidor nao configurado');
+    }
+    if (!function_exists('exec')) {
+        throw new Exception('exec() desabilitado no PHP');
+    }
+
+    $wrapper = '';
+    if ($timeoutSeconds > 0 && serverOpsShellAvailable()) {
+        $timeoutBin = trim((string) serverOpsRun('command -v timeout 2>/dev/null'));
+        if ($timeoutBin !== '') {
+            $wrapper = $timeoutBin . ' ' . intval($timeoutSeconds) . ' ';
+        }
+    }
+
+    $output = [];
+    $exitCode = 0;
+    @exec($wrapper . $command . ' 2>&1', $output, $exitCode);
+    $rawOutput = trim(implode("\n", $output));
+    $parsed = parseCommandJsonOutput($rawOutput);
+
+    return [
+        'success' => ($exitCode === 0),
+        'exit_code' => intval($exitCode),
+        'stdout_excerpt' => excerptText($rawOutput, 3000),
+        'parsed' => $parsed,
+    ];
+}
+
+function verifyRestartServices(array $config)
+{
+    $wanted = array_map('strval', array_value($config, 'server_ops_verify_services', []));
+    return waitForServiceKeysState($config, $wanted, true);
+}
+
+function serverOpsServiceAliases()
+{
+    return [
+        'world' => 'gamed',
+        'gs' => 'gamed',
+        'gauthd' => 'authd',
+        'glink' => 'glinkd',
+    ];
+}
+
+function serverOpsManageableServiceKeys(array $config)
+{
+    $configured = array_map('strval', array_value($config, 'server_ops_manageable_services', []));
+    if (!empty($configured)) {
+        return array_values(array_unique(array_filter(array_map('trim', $configured), function ($value) {
+            return $value !== '';
+        })));
+    }
+
+    $known = [];
+    foreach (serverOpsKnownServices() as $service) {
+        $key = trim((string) array_value($service, 'key', ''));
+        if ($key !== '' && !in_array($key, ['mysql', 'httpd'], true)) {
+            $known[] = $key;
+        }
+    }
+    return array_values(array_unique($known));
+}
+
+function normalizeServerOpsServiceKeys(array $request, array $config, $required = true)
+{
+    $raw = [];
+    if (array_key_exists('service', $request)) {
+        $raw[] = array_value($request, 'service', '');
+    }
+    if (array_key_exists('services', $request)) {
+        $services = array_value($request, 'services', []);
+        if (is_array($services)) {
+            $raw = array_merge($raw, $services);
+        } else {
+            $raw[] = $services;
+        }
+    }
+
+    $values = [];
+    foreach ($raw as $entry) {
+        if (is_array($entry)) {
+            $values = array_merge($values, $entry);
+            continue;
+        }
+        foreach (preg_split('/[\s,;]+/', trim((string) $entry)) as $part) {
+            $part = trim((string) $part);
+            if ($part !== '') {
+                $values[] = $part;
+            }
+        }
+    }
+
+    $aliases = serverOpsServiceAliases();
+    $allowed = serverOpsManageableServiceKeys($config);
+    $normalized = [];
+    foreach ($values as $value) {
+        $value = strtolower(trim((string) $value));
+        if ($value === '') {
+            continue;
+        }
+        if (isset($aliases[$value])) {
+            $value = $aliases[$value];
+        }
+        if (!in_array($value, $allowed, true)) {
+            throw new InvalidArgumentException('service invalido: ' . $value);
+        }
+        if (!in_array($value, $normalized, true)) {
+            $normalized[] = $value;
+        }
+    }
+
+    if ($required && empty($normalized)) {
+        throw new InvalidArgumentException('Informe service ou services');
+    }
+
+    return $normalized;
+}
+
+function validateServerOpsActionRequest(array $request)
+{
+    return [
+        'dry_run' => truthyValue(array_value($request, 'dry_run', array_value($request, 'dryRun', false))),
+        'verify' => !array_key_exists('verify', $request) || truthyValue(array_value($request, 'verify', true)),
+    ];
+}
+
+function verifyServiceKeysState(array $config, array $wanted, $expectOnline = true)
+{
+    $snapshot = getServiceStatusSnapshot($config);
+    $services = array_value($snapshot, 'services', []);
+    $index = [];
+    foreach ($services as $service) {
+        $key = trim((string) array_value($service, 'key', ''));
+        if ($key !== '') {
+            $index[$key] = $service;
+        }
+    }
+
+    $selected = [];
+    $ok = true;
+    foreach ($wanted as $key) {
+        $item = isset($index[$key]) ? $index[$key] : ['key' => $key, 'state' => 'unknown', 'process_count' => 0, 'listening' => false];
+        $selected[] = [
+            'key' => $key,
+            'state' => array_value($item, 'state', 'unknown'),
+            'pid' => array_value($item, 'pid', null),
+            'process_count' => intval(array_value($item, 'process_count', 0)),
+            'listening' => truthyValue(array_value($item, 'listening', false)),
+        ];
+
+        if ($expectOnline) {
+            if (array_value($item, 'state', 'unknown') !== 'online') {
+                $ok = false;
+            }
+        } else {
+            if (intval(array_value($item, 'process_count', 0)) > 0 || truthyValue(array_value($item, 'listening', false)) || array_value($item, 'state', 'unknown') === 'online') {
+                $ok = false;
+            }
+        }
+    }
+
+    return [
+        'requested' => true,
+        'expect_online' => $expectOnline,
+        'success' => $ok,
+        'services' => $selected,
+        'collected_at' => array_value($snapshot, 'collected_at', gmdate('c')),
+    ];
+}
+
+function waitForServiceKeysState(array $config, array $wanted, $expectOnline = true)
+{
+    $timeoutSeconds = max(5, intval(array_value($config, 'server_ops_verify_timeout_seconds', 45)));
+    $intervalSeconds = max(1, intval(array_value($config, 'server_ops_verify_poll_interval_seconds', 2)));
+    $deadline = microtime(true) + $timeoutSeconds;
+
+    $last = verifyServiceKeysState($config, $wanted, $expectOnline);
+    $attempts = 1;
+    while (empty($last['success']) && microtime(true) < $deadline) {
+        sleep($intervalSeconds);
+        $last = verifyServiceKeysState($config, $wanted, $expectOnline);
+        $attempts++;
+    }
+
+    $last['timeout_seconds'] = $timeoutSeconds;
+    $last['poll_interval_seconds'] = $intervalSeconds;
+    $last['attempts'] = $attempts;
+    return $last;
+}
+
+function executeServiceControlCommand(array $config, $action, $service)
+{
+    $command = trim((string) array_value($config, 'server_ops_service_control_command', ''));
+    if ($command === '') {
+        throw new Exception('Comando de controle de servico nao configurado');
+    }
+
+    return executeServerOpsCommand(
+        $command . ' ' . escapeshellarg((string) $action) . ' ' . escapeshellarg((string) $service),
+        intval(array_value($config, 'server_ops_service_timeout_seconds', 300))
+    );
+}
+
+function handleServiceOperationRequest(array $config, $action, array $request)
+{
+    $meta = validateServerOpsActionRequest($request);
+    $services = normalizeServerOpsServiceKeys($request, $config, true);
+    $operation = [
+        'id' => buildOperationId($action . '-service'),
+        'success' => false,
+        'stage' => 'validated',
+        'action' => $action,
+        'services' => $services,
+        'dry_run' => !empty($meta['dry_run']),
+        'verify' => !empty($meta['verify']),
+        'created_at' => gmdate('c'),
+        'results' => [],
+    ];
+    $operation['log_file'] = writeRestartOperationSnapshot($config, $operation);
+
+    if (!empty($meta['dry_run'])) {
+        $operation['success'] = true;
+        $operation['would_execute'] = trim((string) array_value($config, 'server_ops_service_control_command', ''));
+        $operation['stage'] = 'validated';
+        $operation['log_file'] = writeRestartOperationLog($config, $operation);
+        return ['success' => true, 'dry_run' => true, 'operation' => $operation];
+    }
+
+    try {
+        foreach ($services as $service) {
+            $operation['stage'] = $action . '_' . $service;
+            $operation['log_file'] = writeRestartOperationSnapshot($config, $operation);
+            $result = executeServiceControlCommand($config, $action, $service);
+            $operation['results'][] = [
+                'service' => $service,
+                'result' => $result,
+            ];
+            $operation['log_file'] = writeRestartOperationSnapshot($config, $operation);
+            if (empty($result['success'])) {
+                throw new Exception('Falha ao executar ' . $action . ' em ' . $service . ' (exit ' . intval(array_value($result, 'exit_code', 1)) . ')');
+            }
+        }
+
+        if (!empty($meta['verify'])) {
+            $operation['stage'] = 'verify';
+            $operation['verification'] = waitForServiceKeysState($config, $services, $action !== 'stop');
+            $operation['log_file'] = writeRestartOperationSnapshot($config, $operation);
+            if (empty($operation['verification']['success'])) {
+                throw new Exception('Verificacao apos ' . $action . ' falhou para um ou mais servicos');
+            }
+        } else {
+            $operation['verification'] = ['requested' => false];
+        }
+
+        $operation['stage'] = 'done';
+        $operation['success'] = true;
+        $operation['completed_at'] = gmdate('c');
+        $operation['log_file'] = writeRestartOperationLog($config, $operation);
+        return ['success' => true, 'operation' => $operation];
+    } catch (Exception $e) {
+        $operation['success'] = false;
+        $operation['error'] = $e->getMessage();
+        $operation['completed_at'] = gmdate('c');
+        $operation['log_file'] = writeRestartOperationLog($config, $operation);
+        return [
+            'success' => false,
+            'error' => $e->getMessage(),
+            'operation' => [
+                'id' => $operation['id'],
+                'stage' => $operation['stage'],
+                'log_file' => $operation['log_file'],
+            ],
+        ];
+    }
+}
+
+function handleServerPowerRequest(array $config, $action, array $request)
+{
+    $meta = validateServerOpsActionRequest($request);
+    $commandKey = $action === 'start' ? 'server_ops_start_command' : 'server_ops_stop_command';
+    $services = serverOpsManageableServiceKeys($config);
+    $instanceSelection = ($action === 'start')
+        ? normalizeServerStartInstanceSelectionRequest($request, $config)
+        : ['requested' => false, 'use_auto_start' => false, 'source' => 'none', 'codes' => []];
+    $operation = [
+        'id' => buildOperationId($action . '-server'),
+        'success' => false,
+        'stage' => 'validated',
+        'action' => $action,
+        'dry_run' => !empty($meta['dry_run']),
+        'verify' => !empty($meta['verify']),
+        'services' => $services,
+        'instances' => array_values(array_map('strval', array_value($instanceSelection, 'codes', []))),
+        'created_at' => gmdate('c'),
+    ];
+    $operation['log_file'] = writeRestartOperationSnapshot($config, $operation);
+
+    if (!empty($meta['dry_run'])) {
+        $operation['success'] = true;
+        $operation['would_execute'] = trim((string) array_value($config, $commandKey, ''));
+        if ($action === 'start') {
+            $operation['instance_selection'] = [
+                'requested' => !empty($instanceSelection['requested']),
+                'use_auto_start' => !empty($instanceSelection['use_auto_start']),
+                'source' => trim((string) array_value($instanceSelection, 'source', 'none')),
+            ];
+            $instancesByCode = instanceControlIndexByCode($config);
+            $alreadyRunning = [];
+            $pending = [];
+            foreach ((array) array_value($instanceSelection, 'codes', []) as $code) {
+                if (truthyValue(array_value(array_value($instancesByCode, $code, []), 'running', false))) {
+                    $alreadyRunning[] = $code;
+                } else {
+                    $pending[] = $code;
+                }
+            }
+            $operation['would_start_instances'] = $pending;
+            $operation['would_skip_running_instances'] = $alreadyRunning;
+        }
+        $operation['log_file'] = writeRestartOperationLog($config, $operation);
+        return ['success' => true, 'dry_run' => true, 'operation' => $operation];
+    }
+
+    ignore_user_abort(true);
+    @set_time_limit(max(120, serverOpsTimeoutForOperation($config, $operation, $action === 'start' ? 'startServer' : 'stopServer') + 30));
+
+    try {
+        $operation['stage'] = $action;
+        $operation['log_file'] = writeRestartOperationSnapshot($config, $operation);
+        $operation['result'] = executeServerOpsCommand(
+            array_value($config, $commandKey, ''),
+            intval(array_value($config, 'server_ops_restart_timeout_seconds', 900))
+        );
+        $operation['log_file'] = writeRestartOperationSnapshot($config, $operation);
+        if (empty($operation['result']['success'])) {
+            throw new Exception('Wrapper de ' . $action . ' falhou (exit ' . intval(array_value($operation['result'], 'exit_code', 1)) . ')');
+        }
+
+        if (!empty($meta['verify'])) {
+            $operation['stage'] = 'verify';
+            $operation['verification'] = waitForServiceKeysState($config, $services, $action === 'start');
+            $operation['log_file'] = writeRestartOperationSnapshot($config, $operation);
+            if (empty($operation['verification']['success'])) {
+                throw new Exception('Verificacao apos ' . $action . ' falhou');
+            }
+        } else {
+            $operation['verification'] = ['requested' => false];
+        }
+
+        if ($action === 'start') {
+            executeServerSelectedInstanceStart($config, $operation, $instanceSelection, !empty($meta['verify']));
+        } else {
+            $operation['instance_verification'] = ['requested' => false];
+        }
+
+        $operation['stage'] = 'done';
+        $operation['success'] = true;
+        $operation['completed_at'] = gmdate('c');
+        $operation['log_file'] = writeRestartOperationLog($config, $operation);
+        return ['success' => true, 'operation' => $operation];
+    } catch (Exception $e) {
+        $operation['success'] = false;
+        $operation['error'] = $e->getMessage();
+        $operation['completed_at'] = gmdate('c');
+        $operation['log_file'] = writeRestartOperationLog($config, $operation);
+        return [
+            'success' => false,
+            'error' => $e->getMessage(),
+            'operation' => [
+                'id' => $operation['id'],
+                'stage' => $operation['stage'],
+                'log_file' => $operation['log_file'],
+            ],
+        ];
+    }
+}
+
+function handleRestartServerRequest(array $config, array $request)
+{
+    $payload = validateRestartServerRequest($request);
+    $instanceSelection = normalizeServerStartInstanceSelectionRequest($request, $config);
+    $operation = [
+        'id' => buildOperationId('restart'),
+        'success' => false,
+        'stage' => 'validated',
+        'reason' => $payload['reason'],
+        'countdown_seconds' => intval($payload['countdown_seconds']),
+        'dry_run' => !empty($payload['dry_run']),
+        'instances' => array_values(array_map('strval', array_value($instanceSelection, 'codes', []))),
+        'created_at' => gmdate('c'),
+        'countdown' => [],
+    ];
+    $operation['log_file'] = writeRestartOperationSnapshot($config, $operation);
+
+    if (!empty($payload['dry_run'])) {
+        $operation['success'] = true;
+        $operation['would_enable_maintenance'] = !empty($payload['enable_maintenance']);
+        $operation['would_broadcast'] = !empty($payload['broadcast']);
+        $operation['would_backup'] = !empty($payload['backup_before_restart']);
+        $operation['would_execute'] = trim((string) array_value($config, 'server_ops_restart_command', ''));
+        $operation['would_verify_services'] = array_values(array_map('strval', array_value($config, 'server_ops_verify_services', [])));
+        $operation['instance_selection'] = [
+            'requested' => !empty($instanceSelection['requested']),
+            'use_auto_start' => !empty($instanceSelection['use_auto_start']),
+            'source' => trim((string) array_value($instanceSelection, 'source', 'none')),
+        ];
+        $instancesByCode = instanceControlIndexByCode($config);
+        $alreadyRunning = [];
+        $pending = [];
+        foreach ((array) array_value($instanceSelection, 'codes', []) as $code) {
+            if (truthyValue(array_value(array_value($instancesByCode, $code, []), 'running', false))) {
+                $alreadyRunning[] = $code;
+            } else {
+                $pending[] = $code;
+            }
+        }
+        $operation['would_start_instances_after_restart'] = array_values(array_map('strval', array_value($instanceSelection, 'codes', [])));
+        $operation['would_skip_running_instances_before_restart'] = $alreadyRunning;
+        $operation['would_pending_instances_before_restart'] = $pending;
+        $operation['log_file'] = writeRestartOperationLog($config, $operation);
+        return [
+            'success' => true,
+            'dry_run' => true,
+            'operation' => $operation,
+        ];
+    }
+
+    ignore_user_abort(true);
+    @set_time_limit(max(120, serverOpsTimeoutForOperation($config, $operation, 'restartServer') + 30));
+
+    try {
+        if (!empty($payload['enable_maintenance'])) {
+            $operation['stage'] = 'maintenance_enable';
+            $operation['maintenance'] = applyMaintenanceMode($config, [
+                'enabled' => true,
+                'reason' => $payload['reason'],
+                'eta_minutes' => intval(ceil($payload['countdown_seconds'] / 60)),
+                'broadcast' => false,
+                'dry_run' => false,
+                'updated_by' => 'restartServer',
+            ]);
+            $operation['log_file'] = writeRestartOperationSnapshot($config, $operation);
+        }
+
+        if (!empty($payload['broadcast'])) {
+            $operation['stage'] = 'broadcast_initial';
+            $operation['broadcast'] = [
+                'enabled' => true,
+                'initial' => tryHandleSendSystemMessageRequest($config, [
+                    'message' => restartAnnouncementMessage($payload['countdown_seconds'], $payload['reason']),
+                    'kind' => 'system',
+                    'priority' => 'high',
+                    'dry_run' => false,
+                ]),
+            ];
+            $operation['log_file'] = writeRestartOperationSnapshot($config, $operation);
+        } else {
+            $operation['broadcast'] = ['enabled' => false];
+            $operation['log_file'] = writeRestartOperationSnapshot($config, $operation);
+        }
+
+        $marks = restartCountdownMarks($config, $payload['countdown_seconds']);
+        $remaining = intval($payload['countdown_seconds']);
+        foreach ($marks as $mark) {
+            $sleepFor = $remaining - $mark;
+            if ($sleepFor > 0) {
+                sleep($sleepFor);
+            }
+
+            if (!empty($payload['broadcast'])) {
+                $operation['stage'] = 'countdown_' . $mark;
+                $operation['countdown'][] = [
+                    'remaining_seconds' => $mark,
+                    'broadcast' => tryHandleSendSystemMessageRequest($config, [
+                        'message' => restartAnnouncementMessage($mark, $payload['reason']),
+                        'kind' => 'system',
+                        'priority' => ($mark <= 30 ? 'high' : 'normal'),
+                        'dry_run' => false,
+                    ]),
+                ];
+                $operation['log_file'] = writeRestartOperationSnapshot($config, $operation);
+            }
+            $remaining = $mark;
+        }
+
+        if ($remaining > 0) {
+            sleep($remaining);
+        }
+
+        if (!empty($payload['backup_before_restart'])) {
+            $operation['stage'] = 'backup';
+            $operation['log_file'] = writeRestartOperationSnapshot($config, $operation);
+            $operation['backup'] = createGamedbdSafetyBackup($config, 'before_restartServer_' . $operation['id'], true);
+            $operation['log_file'] = writeRestartOperationSnapshot($config, $operation);
+        } else {
+            $operation['backup'] = ['requested' => false];
+            $operation['log_file'] = writeRestartOperationSnapshot($config, $operation);
+        }
+
+        $operation['stage'] = 'restart';
+        $operation['log_file'] = writeRestartOperationSnapshot($config, $operation);
+        $operation['restart'] = executeServerOpsCommand(
+            array_value($config, 'server_ops_restart_command', ''),
+            intval(array_value($config, 'server_ops_restart_timeout_seconds', 900))
+        );
+        $operation['log_file'] = writeRestartOperationSnapshot($config, $operation);
+        if (empty($operation['restart']['success'])) {
+            throw new Exception('Wrapper de restart falhou (exit ' . intval(array_value($operation['restart'], 'exit_code', 1)) . ')');
+        }
+
+        if (!empty($payload['verify_after_restart'])) {
+            $operation['stage'] = 'verify';
+            $operation['log_file'] = writeRestartOperationSnapshot($config, $operation);
+            $operation['verification'] = verifyRestartServices($config);
+            $operation['log_file'] = writeRestartOperationSnapshot($config, $operation);
+            if (empty($operation['verification']['success'])) {
+                throw new Exception('Verificacao pos-restart falhou: nem todos os servicos criticos voltaram online');
+            }
+        } else {
+            $operation['verification'] = ['requested' => false];
+            $operation['log_file'] = writeRestartOperationSnapshot($config, $operation);
+        }
+
+        executeServerSelectedInstanceStart($config, $operation, $instanceSelection, !empty($payload['verify_after_restart']));
+
+        if (!empty($payload['enable_maintenance'])) {
+            $operation['stage'] = 'maintenance_disable';
+            $operation['maintenance_after_restart'] = applyMaintenanceMode($config, [
+                'enabled' => false,
+                'reason' => 'Servidor reiniciado com sucesso',
+                'eta_minutes' => 0,
+                'broadcast' => false,
+                'dry_run' => false,
+                'updated_by' => 'restartServer',
+            ]);
+            $operation['log_file'] = writeRestartOperationSnapshot($config, $operation);
+        }
+
+        if (!empty($payload['broadcast'])) {
+            $operation['stage'] = 'broadcast_final';
+            $operation['broadcast']['final'] = tryHandleSendSystemMessageRequest($config, [
+                'message' => 'Servidor reiniciado com sucesso.',
+                'kind' => 'system',
+                'priority' => 'high',
+                'dry_run' => false,
+            ]);
+            $operation['log_file'] = writeRestartOperationSnapshot($config, $operation);
+        }
+
+        $operation['stage'] = 'done';
+        $operation['success'] = true;
+        $operation['completed_at'] = gmdate('c');
+        $operation['log_file'] = writeRestartOperationLog($config, $operation);
+        return [
+            'success' => true,
+            'operation' => $operation,
+        ];
+    } catch (Exception $e) {
+        $operation['completed_at'] = gmdate('c');
+        $operation['error'] = $e->getMessage();
+        $operation['success'] = false;
+        $operation['log_file'] = writeRestartOperationLog($config, $operation);
+        return [
+            'success' => false,
+            'error' => $e->getMessage(),
+            'operation' => [
+                'id' => $operation['id'],
+                'stage' => $operation['stage'],
+                'log_file' => $operation['log_file'],
+            ],
+        ];
+    }
+}
+
+function respondJson($payload, $status = 200)
+{
+    http_response_code($status);
+    echo safeJsonEncode($payload);
 }
 
 if (php_sapi_name() !== 'cli' || isset($_GET['action'])) {
+    header('Content-Type: application/json; charset=utf-8');
 
     $secret = isset($_SERVER['HTTP_X_SYNC_SECRET']) ? $_SERVER['HTTP_X_SYNC_SECRET'] : (isset($_GET['secret']) ? $_GET['secret'] : '');
     if ($secret !== $CONFIG['api_secret']) {
@@ -5467,6 +8149,432 @@ if (php_sapi_name() !== 'cli' || isset($_GET['action'])) {
                     'items' => $items,
                     'sources' => array_value($catalog, 'sources', []),
                 ]);
+            } catch (Exception $e) {
+                respondJson(['error' => $e->getMessage()], 500);
+            }
+            break;
+
+        case 'sendMailItem':
+        case 'sendMailGold':
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                respondJson(['error' => 'Use POST para envio de correio'], 405);
+                exit;
+            }
+
+            $request = readRequestPayload();
+            if (isset($request['__json_error'])) {
+                respondJson(['error' => 'JSON invalido: ' . $request['__json_error']], 400);
+                exit;
+            }
+
+            try {
+                $mailPayload = ($action === 'sendMailItem')
+                    ? buildSendMailItemPayload($request, $CONFIG)
+                    : buildSendMailGoldPayload($request, $CONFIG);
+
+                $delivery = executeMailSendCommand($CONFIG, $mailPayload);
+                respondJson([
+                    'success' => true,
+                    'delivery' => $delivery,
+                ]);
+            } catch (InvalidArgumentException $e) {
+                respondJson(['error' => $e->getMessage()], 400);
+            } catch (Exception $e) {
+                respondJson(['error' => $e->getMessage()], 500);
+            }
+            break;
+
+        case 'kickRole':
+        case 'banAccount':
+        case 'unbanAccount':
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                respondJson(['error' => 'Use POST para moderacao'], 405);
+                exit;
+            }
+
+            $request = readRequestPayload();
+            if (isset($request['__json_error'])) {
+                respondJson(['error' => 'JSON invalido: ' . $request['__json_error']], 400);
+                exit;
+            }
+
+            $proto = new GamedProtocol();
+
+            try {
+                if ($action === 'kickRole') {
+                    $payload = buildKickRolePayload($request, $CONFIG);
+                } elseif ($action === 'banAccount') {
+                    $payload = buildBanAccountPayload($request, $CONFIG, $proto);
+                } else {
+                    $payload = buildUnbanAccountPayload($request, $CONFIG, $proto);
+                }
+
+                $result = executeSecurityAction($CONFIG, $payload);
+                respondJson([
+                    'success' => true,
+                    'moderation' => $result,
+                ]);
+            } catch (InvalidArgumentException $e) {
+                appendSecurityActionLog($CONFIG, [
+                    'created_at' => gmdate('c'),
+                    'status' => 'error',
+                    'action' => $action,
+                    'roleid' => intval(firstArrayValue($request, ['roleid', 'role_id', 'target_roleid'], 0)),
+                    'userid' => intval(firstArrayValue($request, ['userid', 'user_id', 'account_id', 'accountId', 'target_userid'], 0)),
+                    'error' => $e->getMessage(),
+                ]);
+                respondJson(['error' => $e->getMessage()], 400);
+            } catch (Exception $e) {
+                appendSecurityActionLog($CONFIG, [
+                    'created_at' => gmdate('c'),
+                    'status' => 'error',
+                    'action' => $action,
+                    'roleid' => intval(firstArrayValue($request, ['roleid', 'role_id', 'target_roleid'], 0)),
+                    'userid' => intval(firstArrayValue($request, ['userid', 'user_id', 'account_id', 'accountId', 'target_userid'], 0)),
+                    'error' => $e->getMessage(),
+                ]);
+                respondJson(['error' => $e->getMessage()], 500);
+            }
+            break;
+
+        case 'getServiceStatus':
+            try {
+                respondJson(getServiceStatusSnapshot($CONFIG));
+            } catch (InvalidArgumentException $e) {
+                respondJson(['error' => $e->getMessage()], 400);
+            } catch (Exception $e) {
+                respondJson(['error' => $e->getMessage()], 500);
+            }
+            break;
+
+        case 'getManageableServices':
+            try {
+                respondJson(getManageableServicesSnapshot($CONFIG));
+            } catch (InvalidArgumentException $e) {
+                respondJson(['error' => $e->getMessage()], 400);
+            } catch (Exception $e) {
+                respondJson(['error' => $e->getMessage()], 500);
+            }
+            break;
+
+        case 'getManageableInstances':
+            try {
+                respondJson(getManageableInstancesSnapshot($CONFIG));
+            } catch (InvalidArgumentException $e) {
+                respondJson(['error' => $e->getMessage()], 400);
+            } catch (Exception $e) {
+                respondJson(['error' => $e->getMessage()], 500);
+            }
+            break;
+
+        case 'setInstanceAutoStart':
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                respondJson(['error' => 'Use POST para setInstanceAutoStart'], 405);
+                exit;
+            }
+
+            $request = readRequestPayload();
+            if (isset($request['__json_error'])) {
+                respondJson(['error' => 'JSON invalido: ' . $request['__json_error']], 400);
+                exit;
+            }
+
+            try {
+                respondJson(setInstanceAutoStartHandler($CONFIG, $request));
+            } catch (InvalidArgumentException $e) {
+                respondJson(['error' => $e->getMessage()], 400);
+            } catch (Exception $e) {
+                respondJson(['error' => $e->getMessage()], 500);
+            }
+            break;
+
+        case 'startInstance':
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                respondJson(['error' => 'Use POST para startInstance'], 405);
+                exit;
+            }
+
+            $request = readRequestPayload();
+            if (isset($request['__json_error'])) {
+                respondJson(['error' => 'JSON invalido: ' . $request['__json_error']], 400);
+                exit;
+            }
+
+            try {
+                $result = handleStartInstanceRequest($CONFIG, $request, false);
+                respondJson($result, !empty($result['success']) ? 200 : 500);
+            } catch (InvalidArgumentException $e) {
+                respondJson(['error' => $e->getMessage()], 400);
+            } catch (Exception $e) {
+                respondJson(['error' => $e->getMessage()], 500);
+            }
+            break;
+
+        case 'startInstances':
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                respondJson(['error' => 'Use POST para startInstances'], 405);
+                exit;
+            }
+
+            $request = readRequestPayload();
+            if (isset($request['__json_error'])) {
+                respondJson(['error' => 'JSON invalido: ' . $request['__json_error']], 400);
+                exit;
+            }
+
+            try {
+                $result = handleStartInstanceRequest($CONFIG, $request, true);
+                respondJson($result, !empty($result['success']) ? 200 : 500);
+            } catch (InvalidArgumentException $e) {
+                respondJson(['error' => $e->getMessage()], 400);
+            } catch (Exception $e) {
+                respondJson(['error' => $e->getMessage()], 500);
+            }
+            break;
+
+        case 'stopInstance':
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                respondJson(['error' => 'Use POST para stopInstance'], 405);
+                exit;
+            }
+
+            $request = readRequestPayload();
+            if (isset($request['__json_error'])) {
+                respondJson(['error' => 'JSON invalido: ' . $request['__json_error']], 400);
+                exit;
+            }
+
+            try {
+                $result = handleStopInstanceRequest($CONFIG, $request, false);
+                respondJson($result, !empty($result['success']) ? 200 : 500);
+            } catch (InvalidArgumentException $e) {
+                respondJson(['error' => $e->getMessage()], 400);
+            } catch (Exception $e) {
+                respondJson(['error' => $e->getMessage()], 500);
+            }
+            break;
+
+        case 'stopInstances':
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                respondJson(['error' => 'Use POST para stopInstances'], 405);
+                exit;
+            }
+
+            $request = readRequestPayload();
+            if (isset($request['__json_error'])) {
+                respondJson(['error' => 'JSON invalido: ' . $request['__json_error']], 400);
+                exit;
+            }
+
+            try {
+                $result = handleStopInstanceRequest($CONFIG, $request, true);
+                respondJson($result, !empty($result['success']) ? 200 : 500);
+            } catch (InvalidArgumentException $e) {
+                respondJson(['error' => $e->getMessage()], 400);
+            } catch (Exception $e) {
+                respondJson(['error' => $e->getMessage()], 500);
+            }
+            break;
+
+        case 'restartInstance':
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                respondJson(['error' => 'Use POST para restartInstance'], 405);
+                exit;
+            }
+
+            $request = readRequestPayload();
+            if (isset($request['__json_error'])) {
+                respondJson(['error' => 'JSON invalido: ' . $request['__json_error']], 400);
+                exit;
+            }
+
+            try {
+                $result = handleRestartInstanceRequest($CONFIG, $request, false);
+                respondJson($result, !empty($result['success']) ? 200 : 500);
+            } catch (InvalidArgumentException $e) {
+                respondJson(['error' => $e->getMessage()], 400);
+            } catch (Exception $e) {
+                respondJson(['error' => $e->getMessage()], 500);
+            }
+            break;
+
+        case 'restartInstances':
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                respondJson(['error' => 'Use POST para restartInstances'], 405);
+                exit;
+            }
+
+            $request = readRequestPayload();
+            if (isset($request['__json_error'])) {
+                respondJson(['error' => 'JSON invalido: ' . $request['__json_error']], 400);
+                exit;
+            }
+
+            try {
+                $result = handleRestartInstanceRequest($CONFIG, $request, true);
+                respondJson($result, !empty($result['success']) ? 200 : 500);
+            } catch (InvalidArgumentException $e) {
+                respondJson(['error' => $e->getMessage()], 400);
+            } catch (Exception $e) {
+                respondJson(['error' => $e->getMessage()], 500);
+            }
+            break;
+
+        case 'getServerOperationStatus':
+            try {
+                respondJson(getServerOperationStatusHandler($CONFIG, $_GET));
+            } catch (InvalidArgumentException $e) {
+                respondJson(['error' => $e->getMessage()], 400);
+            } catch (Exception $e) {
+                $message = $e->getMessage();
+                $status = ($message === 'Operacao nao encontrada') ? 404 : 500;
+                respondJson(['error' => $message], $status);
+            }
+            break;
+
+        case 'getServerOperationsHistory':
+            try {
+                respondJson(getServerOperationsHistoryHandler($CONFIG, $_GET));
+            } catch (InvalidArgumentException $e) {
+                respondJson(['error' => $e->getMessage()], 400);
+            } catch (Exception $e) {
+                respondJson(['error' => $e->getMessage()], 500);
+            }
+            break;
+
+        case 'getServerLogs':
+            try {
+                $source = isset($_GET['source']) ? (string) $_GET['source'] : 'apicls';
+                $lines = isset($_GET['lines']) ? intval($_GET['lines']) : 100;
+                $query = isset($_GET['q']) ? (string) $_GET['q'] : '';
+                respondJson(getServerLogsSnapshot($CONFIG, $source, $lines, $query));
+            } catch (InvalidArgumentException $e) {
+                respondJson(['error' => $e->getMessage()], 400);
+            } catch (Exception $e) {
+                respondJson(['error' => $e->getMessage()], 500);
+            }
+            break;
+
+        case 'sendSystemMessage':
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                respondJson(['error' => 'Use POST para sendSystemMessage'], 405);
+                exit;
+            }
+
+            $request = readRequestPayload();
+            if (isset($request['__json_error'])) {
+                respondJson(['error' => 'JSON invalido: ' . $request['__json_error']], 400);
+                exit;
+            }
+
+            try {
+                respondJson(handleSendSystemMessageRequest($CONFIG, $request));
+            } catch (InvalidArgumentException $e) {
+                respondJson(['error' => $e->getMessage()], 400);
+            } catch (Exception $e) {
+                respondJson(['error' => $e->getMessage()], 500);
+            }
+            break;
+
+        case 'getMaintenanceMode':
+            try {
+                respondJson(getMaintenanceModeHandler($CONFIG));
+            } catch (InvalidArgumentException $e) {
+                respondJson(['error' => $e->getMessage()], 400);
+            } catch (Exception $e) {
+                respondJson(['error' => $e->getMessage()], 500);
+            }
+            break;
+
+        case 'setMaintenanceMode':
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                respondJson(['error' => 'Use POST para setMaintenanceMode'], 405);
+                exit;
+            }
+
+            $request = readRequestPayload();
+            if (isset($request['__json_error'])) {
+                respondJson(['error' => 'JSON invalido: ' . $request['__json_error']], 400);
+                exit;
+            }
+
+            try {
+                respondJson(setMaintenanceModeHandler($CONFIG, $request));
+            } catch (InvalidArgumentException $e) {
+                respondJson(['error' => $e->getMessage()], 400);
+            } catch (Exception $e) {
+                respondJson(['error' => $e->getMessage()], 500);
+            }
+            break;
+
+        case 'startServer':
+        case 'stopServer':
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                respondJson(['error' => 'Use POST para ' . $action], 405);
+                exit;
+            }
+
+            $request = readRequestPayload();
+            if (isset($request['__json_error'])) {
+                respondJson(['error' => 'JSON invalido: ' . $request['__json_error']], 400);
+                exit;
+            }
+
+            try {
+                $result = handleServerPowerRequest($CONFIG, $action === 'startServer' ? 'start' : 'stop', $request);
+                respondJson($result, !empty($result['success']) ? 200 : 500);
+            } catch (InvalidArgumentException $e) {
+                respondJson(['error' => $e->getMessage()], 400);
+            } catch (Exception $e) {
+                respondJson(['error' => $e->getMessage()], 500);
+            }
+            break;
+
+        case 'restartServer':
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                respondJson(['error' => 'Use POST para restartServer'], 405);
+                exit;
+            }
+
+            $request = readRequestPayload();
+            if (isset($request['__json_error'])) {
+                respondJson(['error' => 'JSON invalido: ' . $request['__json_error']], 400);
+                exit;
+            }
+
+            try {
+                $result = handleRestartServerRequest($CONFIG, $request);
+                respondJson($result, !empty($result['success']) ? 200 : 500);
+            } catch (InvalidArgumentException $e) {
+                respondJson(['error' => $e->getMessage()], 400);
+            } catch (Exception $e) {
+                respondJson(['error' => $e->getMessage()], 500);
+            }
+            break;
+
+        case 'startService':
+        case 'stopService':
+        case 'restartService':
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                respondJson(['error' => 'Use POST para ' . $action], 405);
+                exit;
+            }
+
+            $request = readRequestPayload();
+            if (isset($request['__json_error'])) {
+                respondJson(['error' => 'JSON invalido: ' . $request['__json_error']], 400);
+                exit;
+            }
+
+            $serviceAction = $action === 'startService'
+                ? 'start'
+                : ($action === 'stopService' ? 'stop' : 'restart');
+
+            try {
+                $result = handleServiceOperationRequest($CONFIG, $serviceAction, $request);
+                respondJson($result, !empty($result['success']) ? 200 : 500);
+            } catch (InvalidArgumentException $e) {
+                respondJson(['error' => $e->getMessage()], 400);
             } catch (Exception $e) {
                 respondJson(['error' => $e->getMessage()], 500);
             }
@@ -5652,152 +8760,11 @@ if (php_sapi_name() !== 'cli' || isset($_GET['action'])) {
             } catch (Exception $e) {
                 respondJson(['error' => $e->getMessage()], 500);
             }
-
-        case 'sendMailItem':
-        case 'sendMailGold':
-            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-                respondJson(['error' => 'Use POST para ' . $action], 405);
-                exit;
-            }
-
-            $request = readRequestPayload();
-            if (isset($request['__json_error'])) {
-                respondJson(['error' => 'JSON invalido: ' . $request['__json_error']], 400);
-                exit;
-            }
-
-            try {
-                $result = handleSendMailRequest($CONFIG, $action, $request);
-                respondJson($result, 200);
-            } catch (Exception $e) {
-                respondJson([
-                    'success' => false,
-                    'error'   => $e->getMessage(),
-                ], 400);
-            }
-            break;
-
-        case 'getServiceStatus':
-            try {
-                respondJson(getServiceStatusSnapshot(), 200);
-            } catch (Exception $e) {
-                respondJson(['success' => false, 'error' => $e->getMessage()], 500);
-            }
-            break;
-
-        case 'getServerLogs':
-            $src   = isset($_GET['source']) ? trim((string)$_GET['source']) : 'gamedbd';
-            $lines = isset($_GET['lines']) ? intval($_GET['lines']) : 200;
-            $q     = isset($_GET['q']) ? trim((string)$_GET['q']) : '';
-            try {
-                $snap = getServerLogsSnapshot($CONFIG, $src, $lines, $q);
-                respondJson($snap, isset($snap['success']) && $snap['success'] === false ? 400 : 200);
-            } catch (Exception $e) {
-                respondJson(['success' => false, 'error' => $e->getMessage()], 500);
-            }
-            break;
-
-        case 'registerIngameParticipation':
-            try {
-                $result = registerIngameParticipationHandler($CONFIG);
-                respondJson($result['body'], $result['http']);
-            } catch (Exception $e) {
-                respondJson([
-                    'success' => false,
-                    'status'  => 'upstream_error',
-                    'message' => $e->getMessage(),
-                ], 500);
-            }
-            break;
-
-        case 'sendSystemMessage':
-            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-                respondJson(['error' => 'Use POST para sendSystemMessage'], 405);
-                exit;
-            }
-            $request = readRequestPayload();
-            if (isset($request['__json_error'])) {
-                respondJson(['error' => 'JSON invalido: ' . $request['__json_error']], 400);
-                exit;
-            }
-            try {
-                $result = handleSendSystemMessageRequest($CONFIG, $request);
-                respondJson($result, 200);
-            } catch (Exception $e) {
-                respondJson([
-                    'success' => false,
-                    'error'   => $e->getMessage(),
-                ], 400);
-            }
-            break;
-
-        case 'getMaintenanceMode':
-            try {
-                $result = handleGetMaintenanceModeRequest($CONFIG);
-                respondJson($result, 200);
-            } catch (Exception $e) {
-                respondJson([
-                    'success' => false,
-                    'error'   => $e->getMessage(),
-                ], 400);
-            }
-            break;
-
-        case 'setMaintenanceMode':
-            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-                respondJson(['error' => 'Use POST para setMaintenanceMode'], 405);
-                exit;
-            }
-            $request = readRequestPayload();
-            if (isset($request['__json_error'])) {
-                respondJson(['error' => 'JSON invalido: ' . $request['__json_error']], 400);
-                exit;
-            }
-            try {
-                $result = handleSetMaintenanceModeRequest($CONFIG, $request);
-                respondJson($result, 200);
-            } catch (Exception $e) {
-                respondJson([
-                    'success' => false,
-                    'error'   => $e->getMessage(),
-                ], 400);
-            }
-            break;
-
-        case 'getManageableServices':
-            try {
-                respondJson(getManageableServicesSnapshot(), 200);
-            } catch (Exception $e) {
-                respondJson(['success' => false, 'error' => $e->getMessage()], 500);
-            }
-            break;
-
-        case 'startService':
-        case 'stopService':
-        case 'restartService':
-            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-                respondJson(['error' => 'Use POST para ' . $action], 405);
-                exit;
-            }
-            $request = readRequestPayload();
-            if (isset($request['__json_error'])) {
-                respondJson(['error' => 'JSON invalido: ' . $request['__json_error']], 400);
-                exit;
-            }
-            try {
-                $result = handleServiceControlRequest($CONFIG, $action, $request);
-                respondJson($result, 200);
-            } catch (Exception $e) {
-                respondJson([
-                    'success' => false,
-                    'error'   => $e->getMessage(),
-                ], 400);
-            }
             break;
 
         default:
             respondJson([
-                'error' => 'Acao invalida. Use: getRole, getRoles, getRoleEditable, getRolesEditable, getClasses, getClsconfig, getClsconfigDebug, getItemCatalog, listBackups, backupGamedbd, getBackupContent, restoreBackup, exportClsconfig, saveRoleEditable, saveClsconfigTemplate, sendMailItem, sendMailGold, getServiceStatus, getServerLogs, getManageableServices, startService, stopService, restartService, sendSystemMessage, registerIngameParticipation, getMaintenanceMode, setMaintenanceMode',
+                'error' => 'Acao invalida. Use: getRole, getRoles, getRoleEditable, getRolesEditable, getClasses, getClsconfig, getClsconfigDebug, getItemCatalog, getServiceStatus, getManageableServices, getManageableInstances, setInstanceAutoStart, startInstance, startInstances, stopInstance, stopInstances, restartInstance, restartInstances, getServerOperationStatus, getServerOperationsHistory, getServerLogs, sendSystemMessage, getMaintenanceMode, setMaintenanceMode, startServer, stopServer, restartServer, startService, stopService, restartService, sendMailItem, sendMailGold, kickRole, banAccount, unbanAccount, listBackups, backupGamedbd, getBackupContent, restoreBackup, exportClsconfig, saveRoleEditable, saveClsconfigTemplate',
             ], 400);
             break;
     }
