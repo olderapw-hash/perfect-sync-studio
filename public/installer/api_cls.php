@@ -66,6 +66,16 @@ $CONFIG = [
     'system_message_default_kind' => 'system',     // system | broadcast | tip
     'system_message_log_dir'      => __DIR__ . '/backups/sysmsg-logs',
 
+    // === Modo manutencao (setMaintenanceMode / getMaintenanceMode) ===
+    // Estado persistido em backups/maintenance/state.json (legivel pelo
+    // usuario web). Quando ligado, opcionalmente dispara uma mensagem
+    // de sistema via o mesmo wrapper de sendSystemMessage.
+    'maintenance_enabled_action'  => true,
+    'maintenance_state_file'      => __DIR__ . '/backups/maintenance/state.json',
+    'maintenance_log_dir'         => __DIR__ . '/backups/maintenance',
+    'maintenance_max_reason_len'  => 240,
+    'maintenance_max_eta_minutes' => 24 * 60, // 24h teto sanitario
+
     // === Eventos ingame (registerIngameParticipation) ===
     // Ponte NPC -> VPS -> Supabase. O NPC NUNCA fala direto com o Supabase:
     // ele chama este api_cls.php, que aqui repassa para a RPC
