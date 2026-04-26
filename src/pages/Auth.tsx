@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useServers } from "@/hooks/useServers";
+import { useAppSettings } from "@/hooks/useAppSettings";
 import { toast } from "sonner";
 import heroBg from "@/assets/landing-hero.jpg";
 import orpheaLogo from "@/assets/orphea-core-logo.png";
@@ -14,6 +15,8 @@ const Auth = () => {
   const { session, loading: authLoading, isAdmin, isSuperadmin } = useAuth();
   const { isActive, loading: subLoading } = useSubscription();
   const { servers, active, loading: serversLoading } = useServers();
+  const { settings } = useAppSettings();
+  const bgImage = settings.background_url || heroBg;
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -94,22 +97,15 @@ const Auth = () => {
 
   return (
     <main
-      className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background p-4"
+      className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background bg-fixed bg-cover bg-center p-4 text-foreground"
       style={{
-        backgroundImage: `url(${heroBg})`,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        backgroundRepeat: "no-repeat",
+        backgroundImage: `linear-gradient(hsl(var(--background) / 0.92), hsl(var(--background) / 0.96)), url(${bgImage})`,
       }}
     >
-      {/* Overlays para legibilidade */}
+      {/* Glow do primary para realçar o card */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 bg-gradient-to-b from-background/60 via-background/40 to-background/80"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,hsl(var(--primary)/0.22),transparent_65%)]"
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,hsl(var(--primary)/0.18),transparent_65%)]"
       />
 
       <section className="relative z-10 w-full max-w-sm rounded-xl border border-border bg-card/70 p-6 shadow-glow backdrop-blur-xl">
