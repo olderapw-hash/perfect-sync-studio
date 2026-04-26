@@ -29,23 +29,48 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const hadSessionRef = useRef(false);
 
+  const clearAuthState = () => {
+    setSession(null);
+    setIsAdmin(false);
+    setIsSuperadmin(false);
+    hadSessionRef.current = false;
+  };
+
+  const validateSession = async (candidate: Session, warnOnFailure = false) => {
+    const { data, error } = await supabase.auth.getUser(candidate.access_token);
+    if (error || !data.user) {
+      console.warn("[auth] invalid cached session", error);
+      clearAuthState();
+      try {
+        await supabase.auth.signOut();
+      } catch {
+        /* ignore */
+      }
+      if (warnOnFailure) warnSessionExpired();
+      return false;
+    }
+
+    setSession(candidate);
+    hadSessionRef.current = true;
+    await checkRoles(data.user.id);
+    return true;
+  };
+
   useEffect(() => {
     // 1) Listener PRIMEIRO (evita race com getSession)
     const { data: sub } = supabase.auth.onAuthStateChange((event, newSession) => {
-      setSession(newSession);
       if (newSession?.user) {
-        hadSessionRef.current = true;
-        // Defer chamada Supabase para não travar o callback
-        setTimeout(() => checkRoles(newSession.user.id), 0);
+        // Defer chamada Supabase para não travar o callback.
+        setTimeout(() => {
+          void validateSession(newSession, false);
+        }, 0);
       } else {
         // Se o usuário tinha sessão e agora não tem (token expirou / refresh falhou),
         // avisa explicitamente em vez de redirecionar silenciosamente.
         if (hadSessionRef.current && (event === "SIGNED_OUT" || event === "TOKEN_REFRESHED")) {
           warnSessionExpired();
         }
-        hadSessionRef.current = false;
-        setIsAdmin(false);
-        setIsSuperadmin(false);
+        clearAuthState();
       }
     });
 
@@ -53,18 +78,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // (ex.: refresh_token_not_found após token expirar)
     supabase.auth
       .getSession()
-      .then(({ data: { session: s } }) => {
-        setSession(s);
+      .then(async ({ data: { session: s } }) => {
         if (s?.user) {
-          hadSessionRef.current = true;
-          checkRoles(s.user.id).finally(() => setLoading(false));
+          await validateSession(s, true);
         } else {
-          setLoading(false);
+          clearAuthState();
         }
+        setLoading(false);
       })
       .catch((err) => {
         console.error("[auth] getSession failed", err);
-        setSession(null);
+        clearAuthState();
         setLoading(false);
       });
 
@@ -103,9 +127,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signOut = async () => {
     await supabase.auth.signOut();
-    setSession(null);
-    setIsAdmin(false);
-    setIsSuperadmin(false);
+    clearAuthState();
   };
 
   return (
