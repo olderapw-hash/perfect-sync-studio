@@ -172,6 +172,7 @@ export default ServerOpsPage;
 import {
   pwApi,
   EndpointMissingError,
+  PwApiActionError,
   type ManageableService,
   type ServiceControlPayload,
   type ServiceControlResponse,
@@ -394,6 +395,15 @@ function ServerStatusTab() {
         toast.error(`Endpoint ${action}Service ausente nesta VPS.`);
       } else {
         toast.error(`Falha ao executar ${labelForAction(action)}: ${msg}`);
+      }
+      // Mesmo em falha, a VPS pode ter retornado operation.id (ex.: stop falhou
+      // numa etapa intermediária). Abrimos o drawer pra mostrar stage/log_file.
+      if (!dryRun && e instanceof PwApiActionError) {
+        const op = (e.payload as { operation?: { id?: string; type?: string } })
+          ?.operation;
+        if (op?.id) {
+          setTrackedOp({ id: op.id, type: op.type });
+        }
       }
       void logAuditEvent({
         action: auditAction,
