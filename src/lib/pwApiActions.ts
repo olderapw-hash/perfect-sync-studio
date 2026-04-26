@@ -1009,3 +1009,90 @@ export interface SecurityHistoryResponse {
   error?: string;
 }
 
+
+/* ─────────── Instance Control v1 ─────────── */
+
+export type InstanceActionType =
+  | "startInstance"
+  | "startInstances"
+  | "stopInstance"
+  | "stopInstances"
+  | "restartInstance"
+  | "restartInstances";
+
+export interface ManageableInstance {
+  code: string;
+  key: string;
+  name: string;
+  category: string;
+  scope: string;
+  configured: boolean;
+  auto_start: boolean;
+  auto_start_order: number | null;
+  running: boolean;
+  state: string; // "running" | "stopped" | ...
+  running_source: string; // "process" | "listen_port" | "none" | ...
+  pid: number | null;
+  process_count: number;
+  pids: number[];
+  command_excerpt: string;
+  batch_size: number;
+  section_types: string[];
+  section_type: string;
+  player_per_instance: number | null;
+  effect_player_per_instance: number | null;
+  instance_capacity: number | null;
+  listen_addr: string;
+  listen_port: number;
+  listening: boolean;
+  supported_actions: string[];
+  selectable: boolean;
+}
+
+export interface ManageableInstancesResponse {
+  success: boolean;
+  instances?: ManageableInstance[];
+  count?: number;
+  running_count?: number;
+  auto_start_count?: number;
+  collected_at?: string | number;
+  source_files?: string[];
+  error?: string;
+}
+
+/** Toggle individual: { code, enabled } OU lista completa: { codes }. */
+export type SetInstanceAutoStartPayload =
+  | { code: string; enabled: boolean }
+  | { codes: string[] };
+
+export interface SetInstanceAutoStartResponse {
+  success: boolean;
+  changed?: boolean;
+  auto_start_codes?: string[];
+  auto_start_count?: number;
+  auto_start_instances?: ManageableInstance[];
+  added?: string[];
+  removed?: string[];
+  previous_codes?: string[];
+  error?: string;
+}
+
+export interface InstanceControlSinglePayload {
+  code: string;
+  verify?: boolean;
+  dry_run?: boolean;
+}
+
+export interface InstanceControlBatchPayload {
+  codes: string[];
+  verify?: boolean;
+  dry_run?: boolean;
+}
+
+export interface InstanceControlResponse {
+  success: boolean;
+  dry_run?: boolean;
+  /** Operação assíncrona — usar id para abrir drawer de progresso. */
+  operation?: ServerOperationStatus;
+  error?: string;
+}
