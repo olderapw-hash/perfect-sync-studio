@@ -772,6 +772,24 @@ function ServerStatusTab() {
                     desconectados.
                   </p>
                 )}
+                {pendingConfirm?.action !== "start" && (
+                  <div className="space-y-1 pt-2">
+                    <Label htmlFor="op-reason" className="text-[11px] font-semibold">
+                      Motivo {!dryRun && <span className="text-destructive">*</span>}
+                    </Label>
+                    <Input
+                      id="op-reason"
+                      value={confirmReason}
+                      onChange={(e) => setConfirmReason(e.target.value)}
+                      placeholder="Ex.: manutenção programada"
+                      maxLength={200}
+                      autoFocus
+                    />
+                    <p className="text-[10px] text-muted-foreground">
+                      Mínimo 3 caracteres. Será registrado na auditoria.
+                    </p>
+                  </div>
+                )}
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -784,9 +802,14 @@ function ServerStatusTab() {
                   pendingConfirm.scope,
                   pendingConfirm.action,
                   pendingConfirm.services,
+                  confirmReason,
                 );
               }}
-              disabled={acting}
+              disabled={
+                acting ||
+                (pendingConfirm?.action !== "start" &&
+                  confirmReason.trim().length < 3)
+              }
               className={cn(
                 pendingConfirm?.action !== "start" &&
                   !dryRun &&
