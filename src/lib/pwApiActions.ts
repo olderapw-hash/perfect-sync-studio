@@ -541,9 +541,10 @@ export type ServerOperationStage =
   | "verify"
   | "completed"
   | "failed"
-  | "unknown";
+  | "unknown"
+  | string;
 
-export type ServerOperationSuccessState = "running" | "success" | "failed";
+export type ServerOperationSuccessState = "running" | "success" | "failed" | "error" | string;
 
 export interface ServerOperationStatus {
   id: string;
