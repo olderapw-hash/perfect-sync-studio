@@ -43,7 +43,7 @@ export interface ServerOperationProgressDrawerProps {
   onClose: () => void;
 }
 
-const STAGE_LABEL: Record<ServerOperationStage, string> = {
+const STAGE_LABEL: Record<string, string> = {
   queued: "Na fila",
   broadcast: "Broadcast",
   countdown: "Contagem regressiva",
@@ -57,7 +57,7 @@ const STAGE_LABEL: Record<ServerOperationStage, string> = {
   unknown: "—",
 };
 
-const STAGE_ORDER: ServerOperationStage[] = [
+const STAGE_ORDER = [
   "queued",
   "broadcast",
   "countdown",
@@ -67,7 +67,18 @@ const STAGE_ORDER: ServerOperationStage[] = [
   "restart",
   "verify",
   "completed",
-];
+] as const;
+
+function normalizeStage(stage: ServerOperationStage | null | undefined) {
+  if (!stage) return "unknown";
+  if (stage in STAGE_LABEL) return stage;
+  if (stage.startsWith("stop_")) return "stop";
+  if (stage.startsWith("start_")) return "start";
+  if (stage.startsWith("restart_")) return "restart";
+  if (stage.startsWith("verify_")) return "verify";
+  if (stage.startsWith("backup_")) return "backup";
+  return "unknown";
+}
 
 function StatusBadge({ op }: { op: ServerOperationStatus }) {
   if (op.running) {
@@ -92,7 +103,8 @@ function StatusBadge({ op }: { op: ServerOperationStatus }) {
 }
 
 function StageStepper({ stage }: { stage: ServerOperationStage }) {
-  const idx = STAGE_ORDER.indexOf(stage);
+  const normalizedStage = normalizeStage(stage);
+  const idx = STAGE_ORDER.indexOf(normalizedStage as (typeof STAGE_ORDER)[number]);
   return (
     <div className="flex flex-wrap gap-1.5">
       {STAGE_ORDER.map((s, i) => {
@@ -112,6 +124,11 @@ function StageStepper({ stage }: { stage: ServerOperationStage }) {
           </span>
         );
       })}
+      {stage && !(stage in STAGE_LABEL) && (
+        <span className="rounded-md border border-border px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+          {stage}
+        </span>
+      )}
     </div>
   );
 }
