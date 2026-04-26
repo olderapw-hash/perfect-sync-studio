@@ -1,8 +1,24 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Loader2, ShieldCheck, ShieldOff, Crown, ArrowLeft, RefreshCw, CheckCircle2, XCircle } from "lucide-react";
+import {
+  Loader2,
+  ShieldCheck,
+  ShieldOff,
+  Crown,
+  ArrowLeft,
+  RefreshCw,
+  CheckCircle2,
+  XCircle,
+  Trash2,
+  CreditCard,
+  ServerCog,
+  MoreVertical,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { UserPlanDialog } from "@/components/admin/users/UserPlanDialog";
+import { UserServersDialog } from "@/components/admin/users/UserServersDialog";
+import { UserDeleteDialog } from "@/components/admin/users/UserDeleteDialog";
 
 interface AdminUserRow {
   user_id: string;
@@ -13,12 +29,30 @@ interface AdminUserRow {
   has_subscription: boolean;
   tenant_server_name: string | null;
   onboarding_completed: boolean;
+  current_plan: string;
+  plan_expires_at: string | null;
+  tenants_count: number;
 }
+
+type DialogState =
+  | { kind: "plan"; row: AdminUserRow }
+  | { kind: "servers"; row: AdminUserRow }
+  | { kind: "delete"; row: AdminUserRow }
+  | null;
+
+const PLAN_BADGE: Record<string, string> = {
+  free: "bg-muted/40 text-muted-foreground",
+  trial: "bg-amber-500/15 text-amber-400",
+  pro: "bg-primary/15 text-primary",
+  ultimate: "bg-fuchsia-500/15 text-fuchsia-400",
+};
 
 const AdminUsers = () => {
   const [rows, setRows] = useState<AdminUserRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [dialog, setDialog] = useState<DialogState>(null);
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -59,9 +93,20 @@ const AdminUsers = () => {
     setBusyId(null);
   };
 
+  const planLabel = (row: AdminUserRow) => {
+    const cls = PLAN_BADGE[row.current_plan] ?? PLAN_BADGE.free;
+    return (
+      <span
+        className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${cls}`}
+      >
+        {row.current_plan}
+      </span>
+    );
+  };
+
   return (
     <main className="min-h-screen bg-hero p-4 sm:p-6">
-      <div className="mx-auto max-w-5xl">
+      <div className="mx-auto max-w-6xl">
         <header className="mb-6 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <Link
@@ -75,7 +120,7 @@ const AdminUsers = () => {
                 Gestão de usuários
               </h1>
               <p className="text-xs text-muted-foreground">
-                Acesso restrito ao superadmin · Aprove novos assinantes
+                Acesso restrito ao superadmin · Plano, servidores e permissões
               </p>
             </div>
           </div>
@@ -105,10 +150,10 @@ const AdminUsers = () => {
                 <thead className="bg-muted/30 text-left text-xs uppercase tracking-wider text-muted-foreground">
                   <tr>
                     <th className="px-4 py-3 font-semibold">Usuário</th>
-                    <th className="px-4 py-3 font-semibold">Servidor</th>
-                    <th className="px-4 py-3 font-semibold">Assinatura</th>
+                    <th className="px-4 py-3 font-semibold">Servidores</th>
+                    <th className="px-4 py-3 font-semibold">Plano</th>
                     <th className="px-4 py-3 font-semibold">Acesso</th>
-                    <th className="px-4 py-3 font-semibold text-right">Ação</th>
+                    <th className="px-4 py-3 text-right font-semibold">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -121,23 +166,36 @@ const AdminUsers = () => {
                         </div>
                       </td>
                       <td className="px-4 py-3 text-xs text-muted-foreground">
-                        {u.tenant_server_name ?? "—"}
-                        {u.tenant_server_name && (
-                          <div className="text-[10px]">
-                            Onboarding: {u.onboarding_completed ? "✓" : "pendente"}
-                          </div>
+                        {u.tenants_count > 0 ? (
+                          <button
+                            onClick={() => setDialog({ kind: "servers", row: u })}
+                            className="inline-flex items-center gap-1 rounded-md border border-border bg-card/40 px-2 py-1 text-[11px] hover:border-primary/40"
+                          >
+                            <ServerCog className="h-3 w-3" />
+                            {u.tenants_count} servidor{u.tenants_count > 1 ? "es" : ""}
+                          </button>
+                        ) : (
+                          <span className="text-[11px]">—</span>
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        {u.has_subscription ? (
-                          <span className="inline-flex items-center gap-1 text-xs text-emerald-500">
-                            <CheckCircle2 className="h-3.5 w-3.5" /> Ativa
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                            <XCircle className="h-3.5 w-3.5" /> Sem assinatura
-                          </span>
-                        )}
+                        <div className="flex flex-col gap-1">
+                          {planLabel(u)}
+                          {u.plan_expires_at && (
+                            <span className="text-[10px] text-muted-foreground">
+                              até {new Date(u.plan_expires_at).toLocaleDateString()}
+                            </span>
+                          )}
+                          {u.has_subscription ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] text-emerald-500">
+                              <CheckCircle2 className="h-2.5 w-2.5" /> ativa
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">
+                              <XCircle className="h-2.5 w-2.5" /> sem cobrança
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-4 py-3">
                         {u.is_superadmin ? (
@@ -155,35 +213,54 @@ const AdminUsers = () => {
                         )}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        {u.is_superadmin ? (
-                          <span className="text-[11px] text-muted-foreground">—</span>
-                        ) : u.is_admin ? (
-                          <button
-                            onClick={() => revoke(u.user_id)}
-                            disabled={busyId === u.user_id}
-                            className="inline-flex items-center gap-1 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-1.5 text-xs font-semibold text-destructive hover:bg-destructive/20 disabled:opacity-50"
-                          >
-                            {busyId === u.user_id ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            ) : (
-                              <ShieldOff className="h-3.5 w-3.5" />
-                            )}
-                            Revogar
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => grant(u.user_id)}
-                            disabled={busyId === u.user_id}
-                            className="inline-flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground shadow-glow hover:brightness-110 disabled:opacity-50"
-                          >
-                            {busyId === u.user_id ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            ) : (
-                              <ShieldCheck className="h-3.5 w-3.5" />
-                            )}
-                            Aprovar
-                          </button>
-                        )}
+                        <div className="inline-flex items-center gap-1">
+                          {!u.is_superadmin && (
+                            <>
+                              <button
+                                onClick={() => setDialog({ kind: "plan", row: u })}
+                                title="Alterar plano"
+                                className="rounded-md border border-border bg-card/40 p-1.5 text-muted-foreground hover:border-primary/40 hover:text-primary"
+                              >
+                                <CreditCard className="h-3.5 w-3.5" />
+                              </button>
+                              {u.is_admin ? (
+                                <button
+                                  onClick={() => revoke(u.user_id)}
+                                  disabled={busyId === u.user_id}
+                                  title="Revogar admin"
+                                  className="rounded-md border border-destructive/40 bg-destructive/10 p-1.5 text-destructive hover:bg-destructive/20 disabled:opacity-50"
+                                >
+                                  {busyId === u.user_id ? (
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                  ) : (
+                                    <ShieldOff className="h-3.5 w-3.5" />
+                                  )}
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => grant(u.user_id)}
+                                  disabled={busyId === u.user_id}
+                                  title="Promover a admin"
+                                  className="rounded-md bg-primary/90 p-1.5 text-primary-foreground hover:bg-primary disabled:opacity-50"
+                                >
+                                  {busyId === u.user_id ? (
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                  ) : (
+                                    <ShieldCheck className="h-3.5 w-3.5" />
+                                  )}
+                                </button>
+                              )}
+                              <button
+                                onClick={() => setDialog({ kind: "delete", row: u })}
+                                title="Excluir usuário"
+                                className="rounded-md border border-destructive/40 bg-destructive/10 p-1.5 text-destructive hover:bg-destructive/20"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </>
+                          )}
+                          {u.is_superadmin && <span className="text-[11px] text-muted-foreground">—</span>}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -199,8 +276,7 @@ const AdminUsers = () => {
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-sm font-medium text-foreground">{u.email}</div>
                       <div className="text-[10px] text-muted-foreground">
-                        {new Date(u.created_at).toLocaleDateString()}
-                        {u.tenant_server_name && ` · ${u.tenant_server_name}`}
+                        {new Date(u.created_at).toLocaleDateString()} · {u.tenants_count} servidor(es)
                       </div>
                     </div>
                     {u.is_superadmin ? (
@@ -217,45 +293,75 @@ const AdminUsers = () => {
                       </span>
                     )}
                   </div>
-                  <div className="flex items-center gap-2 text-[11px]">
-                    {u.has_subscription ? (
-                      <span className="inline-flex items-center gap-1 text-emerald-500">
-                        <CheckCircle2 className="h-3 w-3" /> Assinatura ativa
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 text-muted-foreground">
-                        <XCircle className="h-3 w-3" /> Sem assinatura
+                  <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                    {planLabel(u)}
+                    {u.plan_expires_at && (
+                      <span className="text-[10px] text-muted-foreground">
+                        até {new Date(u.plan_expires_at).toLocaleDateString()}
                       </span>
                     )}
                   </div>
                   {!u.is_superadmin && (
-                    <div className="pt-1">
-                      {u.is_admin ? (
-                        <button
-                          onClick={() => revoke(u.user_id)}
-                          disabled={busyId === u.user_id}
-                          className="inline-flex w-full items-center justify-center gap-1 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs font-semibold text-destructive disabled:opacity-50"
-                        >
-                          {busyId === u.user_id ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          ) : (
-                            <ShieldOff className="h-3.5 w-3.5" />
+                    <div className="relative pt-1">
+                      <button
+                        onClick={() => setOpenMenu(openMenu === u.user_id ? null : u.user_id)}
+                        className="inline-flex w-full items-center justify-center gap-1 rounded-md border border-border bg-card/40 px-3 py-2 text-xs font-semibold text-muted-foreground"
+                      >
+                        <MoreVertical className="h-3.5 w-3.5" /> Ações
+                      </button>
+                      {openMenu === u.user_id && (
+                        <div className="absolute right-0 z-10 mt-1 w-full rounded-md border border-border bg-card shadow-lg">
+                          <button
+                            onClick={() => {
+                              setOpenMenu(null);
+                              setDialog({ kind: "plan", row: u });
+                            }}
+                            className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs hover:bg-muted/30"
+                          >
+                            <CreditCard className="h-3.5 w-3.5" /> Alterar plano
+                          </button>
+                          {u.tenants_count > 0 && (
+                            <button
+                              onClick={() => {
+                                setOpenMenu(null);
+                                setDialog({ kind: "servers", row: u });
+                              }}
+                              className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs hover:bg-muted/30"
+                            >
+                              <ServerCog className="h-3.5 w-3.5" /> Gerenciar servidores
+                            </button>
                           )}
-                          Revogar admin
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => grant(u.user_id)}
-                          disabled={busyId === u.user_id}
-                          className="inline-flex w-full items-center justify-center gap-1 rounded-md bg-primary px-3 py-2 text-xs font-bold text-primary-foreground shadow-glow disabled:opacity-50"
-                        >
-                          {busyId === u.user_id ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          {u.is_admin ? (
+                            <button
+                              onClick={() => {
+                                setOpenMenu(null);
+                                revoke(u.user_id);
+                              }}
+                              className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-destructive hover:bg-destructive/10"
+                            >
+                              <ShieldOff className="h-3.5 w-3.5" /> Revogar admin
+                            </button>
                           ) : (
-                            <ShieldCheck className="h-3.5 w-3.5" />
+                            <button
+                              onClick={() => {
+                                setOpenMenu(null);
+                                grant(u.user_id);
+                              }}
+                              className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-primary hover:bg-primary/10"
+                            >
+                              <ShieldCheck className="h-3.5 w-3.5" /> Promover a admin
+                            </button>
                           )}
-                          Aprovar como admin
-                        </button>
+                          <button
+                            onClick={() => {
+                              setOpenMenu(null);
+                              setDialog({ kind: "delete", row: u });
+                            }}
+                            className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-destructive hover:bg-destructive/10"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" /> Excluir usuário
+                          </button>
+                        </div>
                       )}
                     </div>
                   )}
@@ -265,6 +371,32 @@ const AdminUsers = () => {
           </div>
         )}
       </div>
+
+      {dialog?.kind === "plan" && (
+        <UserPlanDialog
+          userId={dialog.row.user_id}
+          email={dialog.row.email}
+          currentPlan={dialog.row.current_plan}
+          onClose={() => setDialog(null)}
+          onSaved={load}
+        />
+      )}
+      {dialog?.kind === "servers" && (
+        <UserServersDialog
+          userId={dialog.row.user_id}
+          email={dialog.row.email}
+          onClose={() => setDialog(null)}
+          onChanged={load}
+        />
+      )}
+      {dialog?.kind === "delete" && (
+        <UserDeleteDialog
+          userId={dialog.row.user_id}
+          email={dialog.row.email}
+          onClose={() => setDialog(null)}
+          onDeleted={load}
+        />
+      )}
     </main>
   );
 };
