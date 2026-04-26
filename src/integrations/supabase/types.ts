@@ -1055,25 +1055,56 @@ export type Database = {
     }
     Functions: {
       accept_server_invite: { Args: { _invite_id: string }; Returns: string }
+      admin_delete_tenant: {
+        Args: { target_tenant_id: string }
+        Returns: undefined
+      }
       admin_grant_admin: {
         Args: { target_user_id: string }
         Returns: undefined
+      }
+      admin_list_user_tenants: {
+        Args: { target_user_id: string }
+        Returns: {
+          created_at: string
+          id: string
+          is_active: boolean
+          members_count: number
+          onboarding_completed: boolean
+          server_name: string
+        }[]
       }
       admin_list_users: {
         Args: never
         Returns: {
           created_at: string
+          current_plan: string
           email: string
           has_subscription: boolean
           is_admin: boolean
           is_superadmin: boolean
           onboarding_completed: boolean
+          plan_expires_at: string
           tenant_server_name: string
+          tenants_count: number
           user_id: string
         }[]
       }
+      admin_purge_user_data: {
+        Args: { target_user_id: string }
+        Returns: undefined
+      }
       admin_revoke_admin: {
         Args: { target_user_id: string }
+        Returns: undefined
+      }
+      admin_set_user_plan: {
+        Args: {
+          env?: string
+          expires_at?: string
+          new_plan: string
+          target_user_id: string
+        }
         Returns: undefined
       }
       create_server_invite: {
