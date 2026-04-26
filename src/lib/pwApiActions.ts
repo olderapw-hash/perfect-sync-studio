@@ -236,10 +236,29 @@ async function callAction<T>(
   }
   const path = `clsconfig-proxy/action/${action}${qs.toString() ? "?" + qs.toString() : ""}`;
   const { invokeClsconfigProxy } = await import("@/lib/clsconfigInvoke");
-  const { data, error, status, rawBody } = await invokeClsconfigProxy<T>(path, {
-    method: opts.method,
-    body: opts.method === "POST" ? (opts.body ?? {}) : undefined,
-  });
+
+  // Retry automático em 503 (SUPABASE_EDGE_RUNTIME_ERROR / cold-start / restart).
+  // Apenas para métodos idempotentes (GET) ou ações de leitura conhecidas.
+  const isIdempotent =
+    opts.method === "GET" ||
+    /^(get|list|export)/i.test(action);
+  const maxAttempts = isIdempotent ? 3 : 1;
+  let attempt = 0;
+  let lastResult: Awaited<ReturnType<typeof invokeClsconfigProxy<T>>> | null = null;
+  while (attempt < maxAttempts) {
+    attempt++;
+    lastResult = await invokeClsconfigProxy<T>(path, {
+      method: opts.method,
+      body: opts.method === "POST" ? (opts.body ?? {}) : undefined,
+    });
+    const transient =
+      lastResult.status === 503 ||
+      /SUPABASE_EDGE_RUNTIME_ERROR|temporarily unavailable/i.test(lastResult.rawBody ?? "");
+    if (!transient || attempt >= maxAttempts) break;
+    // Backoff: 400ms, 1200ms
+    await new Promise((r) => setTimeout(r, attempt === 1 ? 400 : 1200));
+  }
+  const { data, error, status, rawBody } = lastResult!;
   if (error) {
     if (status === 404) throw new EndpointMissingError(action);
     if (status === 400 && /acao\s+invalida|a[cç][aã]o\s+inv[aá]lida|unknown\s+action/i.test(rawBody)) {
