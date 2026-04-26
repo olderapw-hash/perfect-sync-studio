@@ -217,6 +217,52 @@ const shortForCls = (cls: number): string => {
   return "??";
 };
 
+/** Avatar do personagem: prioriza foto custom (class_photos) sobre iconUrl da API. */
+const CharacterAvatar = ({
+  cls,
+  iconUrl,
+  fallbackText,
+  color,
+  alt,
+  className,
+}: {
+  cls: number;
+  iconUrl: string | null;
+  fallbackText: string;
+  color: string;
+  alt: string;
+  className?: string;
+}) => {
+  const { url } = useCharacterPhoto({ roleid: 0, cls, fallbackUrl: iconUrl });
+  return (
+    <div
+      className={cn(
+        "relative flex shrink-0 items-center justify-center overflow-hidden rounded-lg border font-extrabold text-white shadow-md",
+        className,
+      )}
+      style={{
+        background: `linear-gradient(135deg, hsl(${color} / 0.9), hsl(${color} / 0.55))`,
+        borderColor: `hsl(${color} / 0.6)`,
+        textShadow: "0 1px 2px rgba(0,0,0,0.5)",
+      }}
+    >
+      {url ? (
+        <img
+          src={url}
+          alt={alt}
+          className="h-full w-full object-cover"
+          loading="lazy"
+          onError={(e) => {
+            (e.currentTarget as HTMLImageElement).style.display = "none";
+          }}
+        />
+      ) : (
+        <span>{fallbackText}</span>
+      )}
+    </div>
+  );
+};
+
 /** Card grande de um personagem (uma classe). */
 const CharacterCard = ({ group, onOpen }: { group: CharacterGroup; onOpen: () => void }) => {
   const color = colorForCls(group.cls);
