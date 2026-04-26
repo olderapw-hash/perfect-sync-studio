@@ -592,17 +592,6 @@ export default function InstancesPage() {
                 size="sm"
                 variant="outline"
                 onClick={() =>
-                  requestAction("selection", "start", Array.from(selected))
-                }
-                disabled={acting || !canManage}
-              >
-                <Play className="h-3.5 w-3.5" />
-                Iniciar
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() =>
                   requestAction("selection", "restart", Array.from(selected))
                 }
                 disabled={acting || !canManage}
