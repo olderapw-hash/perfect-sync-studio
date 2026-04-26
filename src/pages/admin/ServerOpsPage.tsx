@@ -68,6 +68,7 @@ import { cn } from "@/lib/utils";
 
 const TABS = [
   { value: "status", label: "Status", icon: Activity, path: "/admin/server" },
+  { value: "instances", label: "Instâncias", icon: CircuitBoard, path: "/admin/server/instances" },
   { value: "logs", label: "Logs", icon: FileText, path: "/admin/server/logs" },
   { value: "actions", label: "Export & Reload", icon: Wrench, path: "/admin/server/actions" },
   { value: "history", label: "Histórico", icon: HistoryIcon, path: "/admin/server/history" },
@@ -81,6 +82,7 @@ const ServerOpsPage = () => {
   const navigate = useNavigate();
 
   const currentTab = useMemo(() => {
+    if (location.pathname.startsWith("/admin/server/instances")) return "instances";
     if (location.pathname.startsWith("/admin/server/logs")) return "logs";
     if (location.pathname.startsWith("/admin/server/actions")) return "actions";
     if (location.pathname.startsWith("/admin/server/history")) return "history";
