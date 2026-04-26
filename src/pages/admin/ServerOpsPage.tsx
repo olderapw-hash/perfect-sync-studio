@@ -15,14 +15,29 @@ import {
   Activity,
   AlertTriangle,
   CircuitBoard,
+  Database,
+  Fingerprint,
   FileText,
+  Globe,
+  Link2,
   PlayCircle,
   RefreshCw,
   Server as ServerIcon,
+  Shield,
   ShieldOff,
   Sparkles,
+  Truck,
+  User as UserIcon,
   Wrench,
 } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
