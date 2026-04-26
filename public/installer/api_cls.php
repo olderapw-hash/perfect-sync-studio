@@ -5763,9 +5763,40 @@ if (php_sapi_name() !== 'cli' || isset($_GET['action'])) {
             }
             break;
 
+        case 'getManageableServices':
+            try {
+                respondJson(getManageableServicesSnapshot(), 200);
+            } catch (Exception $e) {
+                respondJson(['success' => false, 'error' => $e->getMessage()], 500);
+            }
+            break;
+
+        case 'startService':
+        case 'stopService':
+        case 'restartService':
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                respondJson(['error' => 'Use POST para ' . $action], 405);
+                exit;
+            }
+            $request = readRequestPayload();
+            if (isset($request['__json_error'])) {
+                respondJson(['error' => 'JSON invalido: ' . $request['__json_error']], 400);
+                exit;
+            }
+            try {
+                $result = handleServiceControlRequest($CONFIG, $action, $request);
+                respondJson($result, 200);
+            } catch (Exception $e) {
+                respondJson([
+                    'success' => false,
+                    'error'   => $e->getMessage(),
+                ], 400);
+            }
+            break;
+
         default:
             respondJson([
-                'error' => 'Acao invalida. Use: getRole, getRoles, getRoleEditable, getRolesEditable, getClasses, getClsconfig, getClsconfigDebug, getItemCatalog, listBackups, backupGamedbd, getBackupContent, restoreBackup, exportClsconfig, saveRoleEditable, saveClsconfigTemplate, sendMailItem, sendMailGold, getServiceStatus, getServerLogs, sendSystemMessage, registerIngameParticipation, getMaintenanceMode, setMaintenanceMode',
+                'error' => 'Acao invalida. Use: getRole, getRoles, getRoleEditable, getRolesEditable, getClasses, getClsconfig, getClsconfigDebug, getItemCatalog, listBackups, backupGamedbd, getBackupContent, restoreBackup, exportClsconfig, saveRoleEditable, saveClsconfigTemplate, sendMailItem, sendMailGold, getServiceStatus, getServerLogs, getManageableServices, startService, stopService, restartService, sendSystemMessage, registerIngameParticipation, getMaintenanceMode, setMaintenanceMode',
             ], 400);
             break;
     }
