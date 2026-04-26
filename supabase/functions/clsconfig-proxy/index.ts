@@ -58,6 +58,7 @@ const ALLOWED_ACTIONS = new Set([
   "restartService",
   // Server Ops v3 — polling de progresso de operações longas.
   "getServerOperationStatus",
+  "getServerOperationsHistory",
 ]);
 
 // Mapa Action → permissão exigida (deve refletir src/lib/serverPermissions.ts).
