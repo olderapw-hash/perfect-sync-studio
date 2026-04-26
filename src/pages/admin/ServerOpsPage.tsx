@@ -389,28 +389,46 @@ function ServerStatusTab() {
         setTimeout(() => void load(), 800);
       }
     } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
+      // 1) Endpoint não existe nesta VPS → notice amigável.
       if (e instanceof EndpointMissingError) {
         setEndpointMissing(true);
         toast.error(`Endpoint ${action}Service ausente nesta VPS.`);
-      } else {
-        toast.error(`Falha ao executar ${labelForAction(action)}: ${msg}`);
+        void logAuditEvent({
+          action: auditAction,
+          tenantId: active?.id ?? null,
+          target: payload.services?.join(",") ?? "server",
+          status: "error",
+          error: "endpoint_missing",
+        });
+        return;
       }
-      // Mesmo em falha, a VPS pode ter retornado operation.id (ex.: stop falhou
-      // numa etapa intermediária). Abrimos o drawer pra mostrar stage/log_file.
+
+      // 2) Falha estruturada (ex.: stop_logservice exit 15) — VPS já devolveu
+      //    operation.id. Abrimos o drawer ANTES do toast pra garantir UX e
+      //    extraímos a mensagem curta do payload.
+      let shortMsg = e instanceof Error ? e.message : String(e);
       if (!dryRun && e instanceof PwApiActionError) {
-        const op = (e.payload as { operation?: { id?: string; type?: string } })
-          ?.operation;
-        if (op?.id) {
-          setTrackedOp({ id: op.id, type: op.type });
+        const payloadObj = e.payload as {
+          error?: string;
+          operation?: { id?: string; type?: string; stage?: string };
+        };
+        if (payloadObj?.operation?.id) {
+          setTrackedOp({
+            id: payloadObj.operation.id,
+            type: payloadObj.operation.type,
+          });
         }
+        if (payloadObj?.error) shortMsg = payloadObj.error;
       }
+      toast.error(`${labelForAction(action)} falhou: ${shortMsg}`, {
+        duration: 8000,
+      });
       void logAuditEvent({
         action: auditAction,
         tenantId: active?.id ?? null,
         target: payload.services?.join(",") ?? "server",
         status: "error",
-        error: msg,
+        error: shortMsg,
       });
     } finally {
       setActing(false);
