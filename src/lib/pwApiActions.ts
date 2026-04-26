@@ -333,6 +333,17 @@ export const pwApi = {
   exportClsconfig() {
     return callAction<ExportClsconfigResponse>("exportClsconfig", { method: "POST", body: {} });
   },
+  /**
+   * Envia uma mensagem global/system para todos os jogadores online
+   * via wrapper sudo dedicado na VPS. Suporta `dry_run` para validar
+   * o payload sem entregar de fato.
+   */
+  sendSystemMessage(body: SendSystemMessagePayload) {
+    return callAction<SendSystemMessageResponse>("sendSystemMessage", {
+      method: "POST",
+      body,
+    });
+  },
   /* ─────────── Segurança v1 (kick / ban / unban) ─────────── */
   /**
    * Desconecta um personagem online (kick). Não bane — apenas força a
