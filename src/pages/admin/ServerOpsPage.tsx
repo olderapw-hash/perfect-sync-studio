@@ -117,14 +117,14 @@ const ServerOpsPage = () => {
           <div className="min-w-0 flex-1">
             <div className="mb-1 inline-flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest text-primary">
               <Sparkles className="h-3 w-3" />
-              v1 · observabilidade
+              v3 · controle real
             </div>
             <h1 className="truncate text-xl font-extrabold tracking-tight text-foreground">
               Operação do Servidor
             </h1>
             <p className="text-xs text-muted-foreground">
-              Status dos daemons, logs recentes e export do clsconfig — sem
-              ações destrutivas nesta fase.
+              Start/stop/restart em lote, progresso em tempo real e logs
+              auditados — gated por permissão <code>manage_servers</code>.
             </p>
           </div>
         </div>
