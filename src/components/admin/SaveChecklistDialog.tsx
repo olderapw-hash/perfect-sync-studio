@@ -124,6 +124,7 @@ export const SaveChecklistDialog = ({ open, onClose, result }: Props) => {
               }
             />
           )}
+        </ul>
 
         {result.error && (
           <div className="mt-3 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">
