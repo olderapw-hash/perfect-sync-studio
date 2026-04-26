@@ -59,6 +59,15 @@ const ALLOWED_ACTIONS = new Set([
   // Server Ops v3 — polling de progresso de operações longas.
   "getServerOperationStatus",
   "getServerOperationsHistory",
+  // Instance Control v1 — listagem + auto-start + start/stop/restart por instância.
+  "getManageableInstances",
+  "setInstanceAutoStart",
+  "startInstance",
+  "startInstances",
+  "stopInstance",
+  "stopInstances",
+  "restartInstance",
+  "restartInstances",
 ]);
 
 // Mapa Action → permissão exigida (deve refletir src/lib/serverPermissions.ts).
@@ -98,6 +107,15 @@ const ACTION_PERMISSION: Record<string, string> = {
   // Polling de status de operações é leitura.
   getServerOperationStatus: "view",
   getServerOperationsHistory: "view_audit",
+  // Instance Control v1: leitura é "view"; toggles e ações exigem manage_servers.
+  getManageableInstances: "view",
+  setInstanceAutoStart: "manage_servers",
+  startInstance: "manage_servers",
+  startInstances: "manage_servers",
+  stopInstance: "manage_servers",
+  stopInstances: "manage_servers",
+  restartInstance: "manage_servers",
+  restartInstances: "manage_servers",
 };
 
 function jsonError(message: string, status: number): Response {
