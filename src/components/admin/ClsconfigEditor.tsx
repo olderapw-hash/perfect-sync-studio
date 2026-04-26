@@ -774,6 +774,18 @@ export const ClsconfigEditor = ({ entry, allEntries = [], mode = "template", onS
                       {entry.key_hex.slice(0, 10)}…
                     </span>
                   )}
+                  {/* Indicador de modo: leitura (default) vs edição */}
+                  {editMode ? (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-primary/60 bg-primary/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary">
+                      <Pencil className="h-2.5 w-2.5" />
+                      Modo edição
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-bronze-soft bg-card/40 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-bronze-muted">
+                      <Eye className="h-2.5 w-2.5" />
+                      Visualização
+                    </span>
+                  )}
                   {dirty && (
                     <span className="inline-flex items-center gap-1 rounded-full border border-primary/50 bg-primary/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary animate-pulse-glow">
                       ● Não salvo
