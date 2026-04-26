@@ -3,6 +3,7 @@ import { ArrowLeft, Loader2, Search, ShieldAlert, Users } from "lucide-react";
 import type { ApiClass, ClsEntry } from "@/types/clsconfig";
 import { getClassInfo, getGenderInfo, getInitials, getRaceName } from "@/lib/pwClasses";
 import { buildClassIconUrl } from "@/lib/pwIcons";
+import { useCharacterPhoto } from "@/hooks/useCharacterPhoto";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -216,6 +217,52 @@ const shortForCls = (cls: number): string => {
   return "??";
 };
 
+/** Avatar do personagem: prioriza foto custom (class_photos) sobre iconUrl da API. */
+const CharacterAvatar = ({
+  cls,
+  iconUrl,
+  fallbackText,
+  color,
+  alt,
+  className,
+}: {
+  cls: number;
+  iconUrl: string | null;
+  fallbackText: string;
+  color: string;
+  alt: string;
+  className?: string;
+}) => {
+  const { url } = useCharacterPhoto({ roleid: 0, cls, fallbackUrl: iconUrl });
+  return (
+    <div
+      className={cn(
+        "relative flex shrink-0 items-center justify-center overflow-hidden rounded-lg border font-extrabold text-white shadow-md",
+        className,
+      )}
+      style={{
+        background: `linear-gradient(135deg, hsl(${color} / 0.9), hsl(${color} / 0.55))`,
+        borderColor: `hsl(${color} / 0.6)`,
+        textShadow: "0 1px 2px rgba(0,0,0,0.5)",
+      }}
+    >
+      {url ? (
+        <img
+          src={url}
+          alt={alt}
+          className="h-full w-full object-cover"
+          loading="lazy"
+          onError={(e) => {
+            (e.currentTarget as HTMLImageElement).style.display = "none";
+          }}
+        />
+      ) : (
+        <span>{fallbackText}</span>
+      )}
+    </div>
+  );
+};
+
 /** Card grande de um personagem (uma classe). */
 const CharacterCard = ({ group, onOpen }: { group: CharacterGroup; onOpen: () => void }) => {
   const color = colorForCls(group.cls);
@@ -242,28 +289,14 @@ const CharacterCard = ({ group, onOpen }: { group: CharacterGroup; onOpen: () =>
         style={{ background: `hsl(${color})` }}
       />
       <div className="flex items-center gap-3 pl-1.5">
-        <div
-          className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border text-base font-extrabold text-white shadow-md"
-          style={{
-            background: `linear-gradient(135deg, hsl(${color} / 0.9), hsl(${color} / 0.55))`,
-            borderColor: `hsl(${color} / 0.6)`,
-            textShadow: "0 1px 2px rgba(0,0,0,0.5)",
-          }}
-        >
-          {iconUrl ? (
-            <img
-              src={iconUrl}
-              alt={group.className}
-              className="h-full w-full object-cover"
-              loading="lazy"
-              onError={(e) => {
-                (e.currentTarget as HTMLImageElement).style.display = "none";
-              }}
-            />
-          ) : (
-            short
-          )}
-        </div>
+        <CharacterAvatar
+          cls={group.cls}
+          iconUrl={iconUrl}
+          fallbackText={short}
+          color={color}
+          alt={group.className}
+          className="h-14 w-14 text-base"
+        />
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline gap-1.5">
             <span
@@ -336,27 +369,14 @@ const ClsList = ({
           background: `linear-gradient(135deg, hsl(${color} / 0.12), transparent)`,
         }}
       >
-        <div
-          className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg border text-xs font-extrabold text-white shadow"
-          style={{
-            background: `linear-gradient(135deg, hsl(${color} / 0.9), hsl(${color} / 0.55))`,
-            borderColor: `hsl(${color} / 0.6)`,
-          }}
-        >
-          {iconUrl ? (
-            <img
-              src={iconUrl}
-              alt={group.className}
-              className="h-full w-full object-cover"
-              loading="lazy"
-              onError={(e) => {
-                (e.currentTarget as HTMLImageElement).style.display = "none";
-              }}
-            />
-          ) : (
-            short
-          )}
-        </div>
+        <CharacterAvatar
+          cls={group.cls}
+          iconUrl={iconUrl}
+          fallbackText={short}
+          color={color}
+          alt={group.className}
+          className="h-10 w-10 text-xs"
+        />
         <div className="min-w-0 flex-1">
           <div className="text-sm font-extrabold" style={{ color: `hsl(${color})` }}>
             {group.className}
