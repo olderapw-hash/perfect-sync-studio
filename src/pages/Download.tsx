@@ -71,21 +71,28 @@ const DownloadPage = () => {
             <div className="mx-auto mt-6 inline-flex items-center gap-2 rounded-md border border-success/40 bg-success/10 px-4 py-2 text-xs font-semibold text-success">
               ✓ App já instalado neste dispositivo
             </div>
-          ) : canInstall ? (
-            <Button
-              size="lg"
-              className="mt-6"
-              onClick={() => {
-                void promptInstall();
-              }}
-            >
-              <Download className="h-4 w-4" />
-              Instalar agora
-            </Button>
           ) : (
-            <p className="mx-auto mt-6 max-w-md text-xs text-muted-foreground">
-              Siga as instruções abaixo conforme o seu dispositivo.
-            </p>
+            <>
+              <Button
+                size="lg"
+                className="mt-6"
+                disabled={!canInstall}
+                onClick={() => {
+                  void promptInstall();
+                }}
+              >
+                <Download className="h-4 w-4" />
+                {canInstall ? "Instalar agora" : "Instalar app"}
+              </Button>
+              {!canInstall && (
+                <p className="mx-auto mt-3 max-w-md text-xs text-muted-foreground">
+                  Se o botão não estiver disponível, use o ícone{" "}
+                  <Chrome className="inline h-3.5 w-3.5 text-primary" />{" "}
+                  <strong className="text-foreground">Instalar</strong> no canto direito
+                  da barra de endereço — ou siga o passo a passo abaixo.
+                </p>
+              )}
+            </>
           )}
         </div>
 
