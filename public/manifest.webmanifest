@@ -2,7 +2,7 @@
   "name": "Orphea Core — Painel",
   "short_name": "Orphea Core",
   "description": "Painel de administração do servidor de Perfect World.",
-  "start_url": "/admin",
+  "start_url": "/auth",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
