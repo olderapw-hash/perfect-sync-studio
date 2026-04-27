@@ -12,6 +12,7 @@ import { LogOut, Shield, Sparkles, Boxes } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useServers } from "@/hooks/useServers";
+import { PwaInstallButton } from "@/components/PwaInstallButton";
 import { cn } from "@/lib/utils";
 
 const TRIAL_NAV = [
@@ -83,6 +84,7 @@ export const TrialLayout = () => {
               <span className="sm:hidden">Sem server</span>
             </Link>
           )}
+          <PwaInstallButton size="sm" />
           {user && (
             <span
               className="hidden text-[11px] text-muted-foreground lg:inline"

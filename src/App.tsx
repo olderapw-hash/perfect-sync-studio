@@ -10,6 +10,7 @@ import { ServerPermissionsProvider } from "@/hooks/useServerPermissions";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { SuperadminRoute } from "@/components/SuperadminRoute";
 import { TrialRoute } from "@/components/TrialRoute";
+import { PwaManifestGate } from "@/components/PwaManifestGate";
 import { AdminLayout } from "@/components/admin/layout/AdminLayout";
 import { TrialLayout } from "@/components/trial/TrialLayout";
 import TrialTemplatesPage from "./pages/trial/TrialTemplatesPage.tsx";
@@ -62,6 +63,7 @@ const App = () => (
               <ItemCatalogProvider>
                 <Toaster />
                 <Sonner />
+                <PwaManifestGate />
                 <Routes>
                   <Route path="/" element={<Landing />} />
                   <Route path="/auth" element={<Auth />} />
