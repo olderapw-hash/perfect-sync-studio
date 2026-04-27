@@ -10,9 +10,6 @@ import {
   Chrome,
   Download,
   MonitorSmartphone,
-  Plus,
-  Share,
-  Smartphone,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -21,7 +18,7 @@ import { usePwaInstall } from "@/hooks/usePwaInstall";
 
 const DownloadPage = () => {
   const { settings } = useAppSettings();
-  const { canInstall, installed, isIos, promptInstall } = usePwaInstall();
+  const { canInstall, installed, promptInstall } = usePwaInstall();
 
   useEffect(() => {
     document.title = `Baixar app — ${settings.server_name}`;
@@ -92,105 +89,50 @@ const DownloadPage = () => {
           )}
         </div>
 
-        <div className="mt-10 grid gap-4 md:grid-cols-3">
-          {/* Android / Chrome */}
-          <Card className="p-5">
-            <div className="mb-3 flex items-center gap-2">
-              <div className="rounded-md bg-primary/10 p-2 text-primary">
-                <Smartphone className="h-4 w-4" />
-              </div>
-              <h2 className="text-sm font-bold">Android (Chrome)</h2>
-            </div>
-            <ol className="space-y-2 text-xs text-muted-foreground">
-              <li>1. Abra esta página no <strong className="text-foreground">Chrome</strong>.</li>
-              <li>2. Toque no menu <strong className="text-foreground">⋮</strong> (canto superior).</li>
-              <li>
-                3. Escolha{" "}
-                <strong className="text-foreground">Instalar app</strong> ou{" "}
-                <strong className="text-foreground">Adicionar à tela inicial</strong>.
-              </li>
-              <li>4. Confirme. O ícone aparece junto dos outros apps.</li>
-            </ol>
-            {canInstall && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="mt-4 w-full"
-                onClick={() => {
-                  void promptInstall();
-                }}
-              >
-                <Download className="h-3.5 w-3.5" />
-                Instalar agora
-              </Button>
-            )}
-          </Card>
-
-          {/* iOS / Safari */}
-          <Card className="p-5">
-            <div className="mb-3 flex items-center gap-2">
-              <div className="rounded-md bg-primary/10 p-2 text-primary">
-                <Smartphone className="h-4 w-4" />
-              </div>
-              <h2 className="text-sm font-bold">iPhone / iPad (Safari)</h2>
-            </div>
-            <ol className="space-y-2 text-xs text-muted-foreground">
-              <li>1. Abra esta página no <strong className="text-foreground">Safari</strong>.</li>
-              <li className="flex items-start gap-1.5">
-                <span>2.</span>
-                <span>
-                  Toque em{" "}
-                  <Share className="inline h-3.5 w-3.5 text-primary" />{" "}
-                  <strong className="text-foreground">Compartilhar</strong> na barra inferior.
-                </span>
-              </li>
-              <li className="flex items-start gap-1.5">
-                <span>3.</span>
-                <span>
-                  Role e escolha{" "}
-                  <Plus className="inline h-3.5 w-3.5 text-primary" />{" "}
-                  <strong className="text-foreground">Adicionar à Tela de Início</strong>.
-                </span>
-              </li>
-              <li>4. Confirme o nome e toque em <strong className="text-foreground">Adicionar</strong>.</li>
-            </ol>
-            {isIos && (
-              <p className="mt-4 rounded-md border border-primary/30 bg-primary/5 p-2 text-[11px] text-primary">
-                Você está no iOS — siga os passos acima.
-              </p>
-            )}
-          </Card>
-
-          {/* Desktop */}
-          <Card className="p-5">
-            <div className="mb-3 flex items-center gap-2">
+        <div className="mx-auto mt-10 max-w-xl">
+          {/* Windows */}
+          <Card className="p-6">
+            <div className="mb-4 flex items-center gap-2">
               <div className="rounded-md bg-primary/10 p-2 text-primary">
                 <MonitorSmartphone className="h-4 w-4" />
               </div>
-              <h2 className="text-sm font-bold">Windows / Mac (Chrome / Edge)</h2>
+              <h2 className="text-sm font-bold">Windows (Chrome / Edge)</h2>
             </div>
-            <ol className="space-y-2 text-xs text-muted-foreground">
+            <ol className="space-y-2.5 text-xs text-muted-foreground">
               <li className="flex items-start gap-1.5">
-                <span>1.</span>
+                <span className="font-bold text-foreground">1.</span>
+                <span>
+                  Abra esta página no <strong className="text-foreground">Google Chrome</strong> ou{" "}
+                  <strong className="text-foreground">Microsoft Edge</strong>.
+                </span>
+              </li>
+              <li className="flex items-start gap-1.5">
+                <span className="font-bold text-foreground">2.</span>
                 <span>
                   Procure o ícone{" "}
                   <Chrome className="inline h-3.5 w-3.5 text-primary" />{" "}
-                  <strong className="text-foreground">Instalar</strong> no canto direito da barra de endereço.
+                  <strong className="text-foreground">Instalar</strong> no canto direito da barra de endereço — ou
+                  abra o menu <strong className="text-foreground">⋮</strong> e escolha{" "}
+                  <strong className="text-foreground">Instalar Orphea Core</strong>.
                 </span>
               </li>
-              <li>2. Clique e confirme — abre uma janela própria.</li>
-              <li>3. Atalho fica disponível no menu iniciar / dock.</li>
+              <li className="flex items-start gap-1.5">
+                <span className="font-bold text-foreground">3.</span>
+                <span>Clique em <strong className="text-foreground">Instalar</strong>. Abre uma janela própria, sem barra do navegador.</span>
+              </li>
+              <li className="flex items-start gap-1.5">
+                <span className="font-bold text-foreground">4.</span>
+                <span>O atalho fica disponível no <strong className="text-foreground">Menu Iniciar</strong> e na área de trabalho.</span>
+              </li>
             </ol>
             {canInstall && (
               <Button
-                size="sm"
-                variant="outline"
-                className="mt-4 w-full"
+                className="mt-5 w-full"
                 onClick={() => {
                   void promptInstall();
                 }}
               >
-                <Download className="h-3.5 w-3.5" />
+                <Download className="h-4 w-4" />
                 Instalar agora
               </Button>
             )}
