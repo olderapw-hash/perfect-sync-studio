@@ -17,6 +17,7 @@ import TrialTemplatesPage from "./pages/trial/TrialTemplatesPage.tsx";
 import AdminUsers from "./pages/AdminUsers.tsx";
 import Auth from "./pages/Auth.tsx";
 import Landing from "./pages/Landing.tsx";
+import Download from "./pages/Download.tsx";
 import Pricing from "./pages/Pricing.tsx";
 import CheckoutSuccess from "./pages/CheckoutSuccess.tsx";
 import Onboarding from "./pages/Onboarding.tsx";
@@ -66,6 +67,7 @@ const App = () => (
                 <PwaManifestGate />
                 <Routes>
                   <Route path="/" element={<Landing />} />
+                  <Route path="/download" element={<Download />} />
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/pricing" element={<Pricing />} />
                   <Route path="/checkout/success" element={<CheckoutSuccess />} />

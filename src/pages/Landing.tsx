@@ -4,6 +4,7 @@ import {
   ArrowRight,
   Check,
   Database,
+  Download,
   History,
   Image as ImageIcon,
   Lock,
@@ -69,6 +70,12 @@ const Landing = () => {
             <a href="#como-funciona" className="transition-smooth hover:text-foreground">Como funciona</a>
             <a href="#preco" className="transition-smooth hover:text-foreground">Preço</a>
             <a href="#faq" className="transition-smooth hover:text-foreground">FAQ</a>
+            <Link
+              to="/download"
+              className="inline-flex items-center gap-1 text-primary transition-smooth hover:brightness-125"
+            >
+              <Download className="h-3.5 w-3.5" /> Baixar app
+            </Link>
           </nav>
 
           <div className="flex items-center gap-2">

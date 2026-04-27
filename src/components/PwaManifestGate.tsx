@@ -40,7 +40,10 @@ function removeById(id: string) {
 
 export const PwaManifestGate = () => {
   const { pathname } = useLocation();
-  const inApp = pathname.startsWith("/admin") || pathname.startsWith("/trial");
+  const inApp =
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/trial") ||
+    pathname.startsWith("/download");
 
   useEffect(() => {
     if (inApp) {
