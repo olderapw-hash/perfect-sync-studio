@@ -41,9 +41,11 @@ type Step = "form" | "install" | "test";
 const Onboarding = () => {
   const navigate = useNavigate();
   const { session, loading: authLoading, isAdmin, isSuperadmin, signOut } = useAuth();
-  const { isActive, loading: subLoading } = useSubscription();
+  const { isActive, isTrial, loading: subLoading } = useSubscription();
   const { servers, active, loading: serversLoading, refetch, setActive } = useServers();
   const bypassPayment = isAdmin || isSuperadmin;
+  // Trial users go to /trial (slim layout) instead of /admin after onboarding.
+  const postOnboardingRoute = isTrial && !isAdmin && !isSuperadmin ? "/trial" : "/admin";
 
   // Estado do wizard de criação.
   const [step, setStep] = useState<Step>("form");
@@ -71,7 +73,7 @@ const Onboarding = () => {
     // Se existir servidor ativo porém ainda incompleto, permanece aqui para evitar
     // loop /onboarding -> /admin -> /onboarding.
     if (active?.onboarding_completed) {
-      navigate("/admin", { replace: true });
+      navigate(postOnboardingRoute, { replace: true });
     }
   }, [
     authLoading,
@@ -109,7 +111,7 @@ const Onboarding = () => {
     try {
       await setActive(id);
       toast.success("Servidor ativo definido");
-      navigate("/admin", { replace: true });
+      navigate(postOnboardingRoute, { replace: true });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erro ao ativar");
     } finally {
@@ -179,7 +181,7 @@ const Onboarding = () => {
     } catch {
       /* ignore — RPC já valida ownership */
     }
-    window.location.assign("/admin");
+    window.location.assign(postOnboardingRoute);
   };
 
   const installUrl = useMemo(() => "/install", []);
