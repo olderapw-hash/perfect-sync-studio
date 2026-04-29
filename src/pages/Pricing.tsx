@@ -207,10 +207,10 @@ const Pricing = () => {
             </Link>
           ) : (
             <Link
-              to="/download"
+              to="/auth"
               className="rounded-md border border-border bg-card/40 px-3 py-2 text-xs font-medium hover:border-primary/50"
             >
-              Baixar app
+              Entrar
             </Link>
           )}
         </div>

@@ -39,7 +39,6 @@ import { useServerPermissions } from "@/hooks/useServerPermissions";
 import { PendingInvitesBanner } from "@/components/PendingInvitesBanner";
 import { TrialBanner } from "@/components/TrialBanner";
 import { ProBadge } from "@/components/ProBadge";
-import { PwaInstallButton } from "@/components/PwaInstallButton";
 import {
   Sidebar,
   SidebarContent,
@@ -388,8 +387,6 @@ const AdminTopBar = () => {
             Sem servidor ativo
           </Link>
         )}
-
-        <PwaInstallButton />
 
         {isSuperadmin && (
           <Link
