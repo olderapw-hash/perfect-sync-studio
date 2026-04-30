@@ -15,6 +15,9 @@ interface SettingsForm {
   primary_color: string;
   background_url: string;
   favicon_url: string;
+  footer_text: string;
+  footer_link_label: string;
+  footer_link_url: string;
 }
 
 const EMPTY: SettingsForm = {
@@ -23,6 +26,9 @@ const EMPTY: SettingsForm = {
   primary_color: "",
   background_url: "",
   favicon_url: "",
+  footer_text: "",
+  footer_link_label: "",
+  footer_link_url: "",
 };
 
 /**
