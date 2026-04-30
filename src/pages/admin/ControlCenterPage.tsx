@@ -289,7 +289,7 @@ function DashboardTab() {
         <WatchdogMiniPanel watchdog={snapshot?.watchdog} loading={loading && !snapshot} />
       </div>
 
-      <InstancesPanel snapshot={snapshot} loading={loading && !snapshot} onChange={() => void load()} />
+      <InstancesPanel snapshot={snapshot} loading={loading && !snapshot} />
 
       <RecentOperationsPanel snapshot={snapshot} loading={loading && !snapshot} />
     </div>
