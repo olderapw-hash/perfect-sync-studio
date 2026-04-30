@@ -1353,6 +1353,10 @@ function BackupsTab() {
   const [creating, setCreating] = useState<PanelBackupKind | null>(null);
   const [endpointMissing, setEndpointMissing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [dryRun, setDryRun] = useState(false);
+  const [lastResult, setLastResult] = useState<
+    { type: PanelBackupKind; ok: boolean; message: string } | null
+  >(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -1388,28 +1392,100 @@ function BackupsTab() {
   const create = async (type: PanelBackupKind) => {
     if (!canAct) return;
     setCreating(type);
+    setLastResult(null);
     try {
-      await pwApi.backupNow({ type });
-      toast.success(`Backup ${type} disparado`);
+      const res = await pwApi.backupNow({ type, dry_run: dryRun });
+      const msg = dryRun
+        ? `Dry-run ${type} ok`
+        : res.backup?.name
+          ? `Backup ${type} criado: ${res.backup.name}`
+          : `Backup ${type} disparado`;
+      toast.success(msg);
+      setLastResult({ type, ok: true, message: msg });
       void load();
     } catch (e) {
-      if (e instanceof EndpointMissingError) {
-        toast.error(`backupNow ainda não implementado nesta VPS`);
-      } else {
-        toast.error(`Backup ${type}: ${e instanceof Error ? e.message : String(e)}`);
-      }
+      const msg = e instanceof EndpointMissingError
+        ? `backupNow ainda não implementado nesta VPS`
+        : e instanceof Error
+          ? e.message
+          : String(e);
+      toast.error(`Backup ${type}: ${msg}`);
+      setLastResult({ type, ok: false, message: msg });
     } finally {
       setCreating(null);
     }
   };
 
+  // Resumo por tipo a partir da lista carregada (sem pedir filtro).
+  const summaryByType = useMemo(() => {
+    const map = new Map<string, { count: number; latest?: PanelBackupRecord; bytes: number }>();
+    for (const b of items) {
+      const t = String(b.type ?? "unknown");
+      const cur = map.get(t) ?? { count: 0, bytes: 0 };
+      cur.count += 1;
+      cur.bytes += b.bytes ?? b.size ?? 0;
+      const cTs =
+        typeof cur.latest?.created_at === "number"
+          ? cur.latest.created_at
+          : Date.parse(String(cur.latest?.created_at ?? 0)) / 1000;
+      const bTs =
+        typeof b.created_at === "number"
+          ? b.created_at
+          : Date.parse(String(b.created_at ?? 0)) / 1000;
+      if (!cur.latest || (bTs || 0) > (cTs || 0)) cur.latest = b;
+      map.set(t, cur);
+    }
+    return map;
+  }, [items]);
+
   if (endpointMissing) return <EndpointMissingNotice action="listBackups" />;
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
+      {/* Resumo por tipo */}
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+        {BACKUP_TYPES.map((t) => {
+          const s = summaryByType.get(t);
+          const critical = BACKUP_CRITICAL.has(t);
+          return (
+            <div
+              key={t}
+              className={cn(
+                "flex flex-col rounded-lg border px-3 py-2 backdrop-blur-md",
+                critical
+                  ? "border-primary/30 bg-primary/5"
+                  : "border-border bg-card/40",
+              )}
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-[10px] font-extrabold uppercase tracking-widest text-foreground">
+                  {t}
+                </span>
+                {critical ? (
+                  <Badge variant="outline" className="border-primary/40 px-1 py-0 text-[8px] text-primary">
+                    CRÍT
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="border-border px-1 py-0 text-[8px] text-muted-foreground">
+                    LEVE
+                  </Badge>
+                )}
+              </div>
+              <div className="mt-1 font-mono text-base font-bold leading-tight text-foreground">
+                {s?.count ?? 0}
+              </div>
+              <div className="text-[10px] leading-tight text-muted-foreground">
+                {s?.latest ? fmtDate(s.latest.created_at ?? s.latest.mtime) : "sem backup"}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Toolbar de criação + filtro */}
+      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-card/40 p-2">
         <Select value={filter} onValueChange={(v) => setFilter(v as typeof filter)}>
-          <SelectTrigger className="h-9 w-[180px]">
+          <SelectTrigger className="h-8 w-[160px] text-xs">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -1421,33 +1497,61 @@ function BackupsTab() {
             ))}
           </SelectContent>
         </Select>
-        <Button size="sm" variant="outline" onClick={() => void load()} disabled={loading}>
+        <Button size="sm" variant="outline" onClick={() => void load()} disabled={loading} className="h-8">
           <RefreshCw className={cn("h-3.5 w-3.5", loading && "animate-spin")} />
           Atualizar
         </Button>
-        <div className="ml-auto flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-1.5 rounded-md border border-border bg-background/40 px-2 py-1">
+          <Switch
+            id="bk-dry-run"
+            checked={dryRun}
+            onCheckedChange={setDryRun}
+            disabled={!canAct || creating != null}
+            className="scale-75"
+          />
+          <Label htmlFor="bk-dry-run" className="cursor-pointer text-[9px] font-bold uppercase tracking-wider">
+            Dry-run
+          </Label>
+        </div>
+        <div className="ml-auto flex flex-wrap items-center gap-1.5">
           <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-            Disparar backup:
+            Disparar:
           </span>
-          {BACKUP_TYPES.map((t) => (
-            <Button
-              key={t}
-              size="sm"
-              variant="secondary"
-              disabled={!canAct || creating != null}
-              onClick={() => create(t)}
-              className="h-8 font-mono text-xs"
-            >
-              {creating === t ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Archive className="h-3.5 w-3.5" />
-              )}
-              {t}
-            </Button>
-          ))}
+          {BACKUP_TYPES.map((t) => {
+            const critical = BACKUP_CRITICAL.has(t);
+            return (
+              <Button
+                key={t}
+                size="sm"
+                variant={critical ? "default" : "secondary"}
+                disabled={!canAct || creating != null}
+                onClick={() => create(t)}
+                className="h-7 font-mono text-[11px]"
+              >
+                {creating === t ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Archive className="h-3 w-3" />
+                )}
+                {t}
+              </Button>
+            );
+          })}
         </div>
       </div>
+
+      {lastResult && (
+        <div
+          className={cn(
+            "rounded-md border px-3 py-2 text-xs",
+            lastResult.ok
+              ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-500"
+              : "border-destructive/40 bg-destructive/10 text-destructive",
+          )}
+        >
+          <span className="font-mono">[{lastResult.type}]</span> {lastResult.message}
+        </div>
+      )}
 
       {error && (
         <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
@@ -1456,9 +1560,14 @@ function BackupsTab() {
       )}
 
       <Card className="border-border bg-card/60 backdrop-blur-md">
+        <CardHeader className="pb-2 pt-3">
+          <CardTitle className="text-xs font-extrabold uppercase tracking-widest text-foreground">
+            Backups recentes
+          </CardTitle>
+        </CardHeader>
         <CardContent className="p-0">
           {loading && items.length === 0 ? (
-            <div className="p-6">
+            <div className="p-4">
               <Skeleton className="h-32 rounded-lg" />
             </div>
           ) : items.length === 0 ? (
@@ -1469,21 +1578,35 @@ function BackupsTab() {
             <ul className="divide-y divide-border/60">
               {items.map((b, i) => {
                 const size = b.bytes ?? b.size;
+                const critical = BACKUP_CRITICAL.has(String(b.type ?? ""));
                 return (
                   <li
                     key={b.id ?? b.file ?? `${b.name}-${i}`}
-                    className="flex flex-wrap items-center gap-3 px-4 py-3 hover:bg-accent/30"
+                    className={cn(
+                      "flex flex-wrap items-center gap-3 px-4 py-2 hover:bg-accent/30",
+                      critical && "border-l-2 border-l-primary/50",
+                    )}
                   >
-                    <Archive className="h-4 w-4 text-primary" />
-                    <Badge variant="outline" className="font-mono text-[10px] uppercase">
+                    <Archive className={cn("h-3.5 w-3.5", critical ? "text-primary" : "text-muted-foreground")} />
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "font-mono text-[10px] uppercase",
+                        critical
+                          ? "border-primary/40 text-primary"
+                          : "border-border text-muted-foreground",
+                      )}
+                    >
                       {b.type ?? "?"}
                     </Badge>
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-mono text-xs text-foreground">
                         {b.name ?? b.file ?? "—"}
                       </p>
-                      {b.file && b.name && (
-                        <p className="truncate font-mono text-[10px] text-muted-foreground">{b.file}</p>
+                      {b.sha1 && (
+                        <p className="truncate font-mono text-[10px] text-muted-foreground">
+                          sha1 {b.sha1.slice(0, 16)}…
+                        </p>
                       )}
                     </div>
                     {size != null && (
@@ -1495,7 +1618,7 @@ function BackupsTab() {
                       <Badge
                         variant="outline"
                         className={cn(
-                          "text-[10px] uppercase",
+                          "px-1.5 py-0 text-[9px] uppercase",
                           b.status === "ok"
                             ? "border-emerald-500/40 text-emerald-500"
                             : b.status === "failed"
@@ -1519,6 +1642,8 @@ function BackupsTab() {
     </div>
   );
 }
+
+const BACKUP_CRITICAL = new Set<string>(["gamedbd", "mysql", "full"]);
 
 /* -------------------------------------------------------------------------- */
 /* Watchdog Tab                                                                */
