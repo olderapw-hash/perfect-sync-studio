@@ -18,6 +18,9 @@ export type Database = {
         Row: {
           background_url: string | null
           favicon_url: string | null
+          footer_link_label: string | null
+          footer_link_url: string | null
+          footer_text: string | null
           icon_base_url: string
           id: number
           logo_url: string | null
@@ -31,6 +34,9 @@ export type Database = {
         Insert: {
           background_url?: string | null
           favicon_url?: string | null
+          footer_link_label?: string | null
+          footer_link_url?: string | null
+          footer_text?: string | null
           icon_base_url?: string
           id?: number
           logo_url?: string | null
@@ -44,6 +50,9 @@ export type Database = {
         Update: {
           background_url?: string | null
           favicon_url?: string | null
+          footer_link_label?: string | null
+          footer_link_url?: string | null
+          footer_text?: string | null
           icon_base_url?: string
           id?: number
           logo_url?: string | null
@@ -1174,6 +1183,9 @@ export type Database = {
         Returns: {
           background_url: string
           favicon_url: string
+          footer_link_label: string
+          footer_link_url: string
+          footer_text: string
           logo_url: string
           primary_color: string
           server_name: string

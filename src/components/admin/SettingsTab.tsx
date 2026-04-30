@@ -15,6 +15,9 @@ interface SettingsForm {
   primary_color: string;
   background_url: string;
   favicon_url: string;
+  footer_text: string;
+  footer_link_label: string;
+  footer_link_url: string;
 }
 
 const EMPTY: SettingsForm = {
@@ -23,6 +26,9 @@ const EMPTY: SettingsForm = {
   primary_color: "",
   background_url: "",
   favicon_url: "",
+  footer_text: "",
+  footer_link_label: "",
+  footer_link_url: "",
 };
 
 /**
@@ -51,7 +57,7 @@ export const SettingsTab = () => {
       if (isSuperadmin) {
         const { data, error } = await supabase
           .from("app_settings")
-          .select("server_name, logo_url, primary_color, background_url, favicon_url")
+          .select("server_name, logo_url, primary_color, background_url, favicon_url, footer_text, footer_link_label, footer_link_url")
           .eq("id", 1)
           .maybeSingle();
         if (error) {
@@ -66,6 +72,9 @@ export const SettingsTab = () => {
             primary_color: data.primary_color ?? "",
             background_url: data.background_url ?? "",
             favicon_url: data.favicon_url ?? "",
+            footer_text: data.footer_text ?? "",
+            footer_link_label: data.footer_link_label ?? "",
+            footer_link_url: data.footer_link_url ?? "",
           });
         }
         setLoading(false);
@@ -82,6 +91,9 @@ export const SettingsTab = () => {
         primary_color: tenant?.primary_color ?? "",
         background_url: "",
         favicon_url: "",
+        footer_text: "",
+        footer_link_label: "",
+        footer_link_url: "",
       });
       setLoading(false);
     })();
@@ -130,6 +142,9 @@ export const SettingsTab = () => {
       primary_color: form.primary_color.trim() || null,
       background_url: form.background_url.trim() || null,
       favicon_url: form.favicon_url.trim() || null,
+      footer_text: form.footer_text.trim() || null,
+      footer_link_label: form.footer_link_label.trim() || null,
+      footer_link_url: form.footer_link_url.trim() || null,
       updated_by: user?.id ?? null,
       updated_at: new Date().toISOString(),
     };
@@ -287,6 +302,44 @@ export const SettingsTab = () => {
           />
         </div>
       </section>
+
+      {/* Rodapé — somente superadmin */}
+      {isSuperadmin && (
+        <section className="rounded-xl border border-border bg-card/60 p-5">
+          <h3 className="mb-1 flex items-center gap-2 text-sm font-extrabold uppercase tracking-wider text-foreground">
+            <ExternalLink className="h-4 w-4 text-primary" /> Rodapé do Painel
+          </h3>
+          <p className="mb-4 text-xs text-muted-foreground">
+            Texto e link exibidos no rodapé de todas as páginas do /admin.
+          </p>
+          <div className="space-y-4">
+            <Field
+              label="Texto do rodapé"
+              hint='Ex.: "Desenvolvido por:"'
+              value={form.footer_text}
+              onChange={(v) => setForm({ ...form, footer_text: v })}
+              disabled={!canEdit}
+              placeholder="Desenvolvido por:"
+            />
+            <Field
+              label="Nome do link"
+              hint="Aparece dentro do chip estilo Discord."
+              value={form.footer_link_label}
+              onChange={(v) => setForm({ ...form, footer_link_label: v })}
+              disabled={!canEdit}
+              placeholder="Sath~"
+            />
+            <Field
+              label="URL do link"
+              hint="Para onde o nome no rodapé leva (Discord, site, etc.)."
+              value={form.footer_link_url}
+              onChange={(v) => setForm({ ...form, footer_link_url: v })}
+              disabled={!canEdit}
+              placeholder="https://discord.gg/seu-servidor"
+            />
+          </div>
+        </section>
+      )}
 
       <div className="flex justify-end gap-2">
         <button

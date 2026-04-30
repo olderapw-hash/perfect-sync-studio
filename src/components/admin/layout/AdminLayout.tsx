@@ -211,19 +211,29 @@ export const AdminLayout = () => {
   );
 };
 
-const AdminFooter = () => (
-  <footer className="border-t border-border/60 bg-card/40 px-5 py-2 text-center text-[11px] text-muted-foreground backdrop-blur-md">
-    Desenvolvido por:{" "}
-    <a
-      href="https://discord.gg/lovable-dev"
-      target="_blank"
-      rel="noopener noreferrer"
-      className="font-semibold text-primary hover:underline"
-    >
-      Sath~
-    </a>
-  </footer>
-);
+const AdminFooter = () => {
+  const { settings } = useAppSettings();
+  const text = settings.footer_text?.trim() || "Desenvolvido por:";
+  const label = settings.footer_link_label?.trim() || "Sath~";
+  const url = settings.footer_link_url?.trim() || "https://discord.gg/lovable-dev";
+
+  return (
+    <footer className="flex items-center justify-center gap-2 border-t border-border/60 bg-card/40 px-5 py-2 text-[11px] text-muted-foreground backdrop-blur-md">
+      <span>{text}</span>
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-1.5 rounded-md border border-border/60 bg-[#1f1a3a] px-2 py-0.5 font-semibold text-[#c9c2ff] transition-colors hover:border-[#5865F2]/60 hover:text-white"
+      >
+        <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 fill-[#5865F2]" aria-hidden="true">
+          <path d="M20.317 4.369A19.79 19.79 0 0 0 16.558 3a13.65 13.65 0 0 0-.617 1.265 18.27 18.27 0 0 0-5.482 0A13.46 13.46 0 0 0 9.84 3a19.74 19.74 0 0 0-3.76 1.37C2.36 9.92 1.38 15.33 1.86 20.66a19.94 19.94 0 0 0 6.04 3.05c.49-.66.92-1.36 1.29-2.1a12.86 12.86 0 0 1-2.04-.98c.17-.13.34-.26.5-.4 3.91 1.81 8.13 1.81 12 0 .16.14.33.27.5.4-.65.39-1.34.72-2.05.98.37.74.8 1.44 1.29 2.1a19.9 19.9 0 0 0 6.05-3.05c.56-6.18-.96-11.54-4.12-16.29ZM8.52 17.36c-1.2 0-2.19-1.1-2.19-2.45 0-1.36.97-2.46 2.19-2.46 1.23 0 2.21 1.11 2.19 2.46 0 1.35-.97 2.45-2.19 2.45Zm6.96 0c-1.2 0-2.18-1.1-2.18-2.45 0-1.36.96-2.46 2.18-2.46 1.23 0 2.21 1.11 2.19 2.46 0 1.35-.96 2.45-2.19 2.45Z"/>
+        </svg>
+        {label}
+      </a>
+    </footer>
+  );
+};
 
 /* -------------------------------------------------------------------------- */
 /* Sidebar                                                                    */

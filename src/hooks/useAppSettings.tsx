@@ -10,6 +10,9 @@ export interface AppSettings {
   primary_color: string | null;
   background_url: string | null;
   favicon_url: string | null;
+  footer_text: string | null;
+  footer_link_label: string | null;
+  footer_link_url: string | null;
 }
 
 interface Ctx {
@@ -26,6 +29,9 @@ const DEFAULTS: AppSettings = {
   primary_color: null,
   background_url: null,
   favicon_url: null,
+  footer_text: "Desenvolvido por:",
+  footer_link_label: "Sath~",
+  footer_link_url: "https://discord.gg/lovable-dev",
 };
 
 const AppSettingsContext = createContext<Ctx>({
@@ -43,7 +49,7 @@ export const AppSettingsProvider = ({ children }: { children: ReactNode }) => {
     // Tenta ler tabela completa (se admin) — senão cai pro branding público.
     const { data: full } = await supabase
       .from("app_settings")
-      .select("server_name, pw_api_base_url, icon_base_url, logo_url, primary_color, background_url, favicon_url")
+      .select("server_name, pw_api_base_url, icon_base_url, logo_url, primary_color, background_url, favicon_url, footer_text, footer_link_label, footer_link_url")
       .eq("id", 1)
       .maybeSingle();
 
@@ -56,6 +62,9 @@ export const AppSettingsProvider = ({ children }: { children: ReactNode }) => {
         primary_color: full.primary_color,
         background_url: full.background_url ?? null,
         favicon_url: full.favicon_url ?? null,
+        footer_text: full.footer_text ?? DEFAULTS.footer_text,
+        footer_link_label: full.footer_link_label ?? DEFAULTS.footer_link_label,
+        footer_link_url: full.footer_link_url ?? DEFAULTS.footer_link_url,
       });
     } else {
       const { data: pub } = await supabase.rpc("get_public_branding");
@@ -68,6 +77,9 @@ export const AppSettingsProvider = ({ children }: { children: ReactNode }) => {
           primary_color: row.primary_color,
           background_url: row.background_url ?? null,
           favicon_url: row.favicon_url ?? null,
+          footer_text: row.footer_text ?? DEFAULTS.footer_text,
+          footer_link_label: row.footer_link_label ?? DEFAULTS.footer_link_label,
+          footer_link_url: row.footer_link_url ?? DEFAULTS.footer_link_url,
         });
       }
     }
