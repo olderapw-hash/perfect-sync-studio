@@ -303,6 +303,44 @@ export const SettingsTab = () => {
         </div>
       </section>
 
+      {/* Rodapé — somente superadmin */}
+      {isSuperadmin && (
+        <section className="rounded-xl border border-border bg-card/60 p-5">
+          <h3 className="mb-1 flex items-center gap-2 text-sm font-extrabold uppercase tracking-wider text-foreground">
+            <ExternalLink className="h-4 w-4 text-primary" /> Rodapé do Painel
+          </h3>
+          <p className="mb-4 text-xs text-muted-foreground">
+            Texto e link exibidos no rodapé de todas as páginas do /admin.
+          </p>
+          <div className="space-y-4">
+            <Field
+              label="Texto do rodapé"
+              hint='Ex.: "Desenvolvido por:"'
+              value={form.footer_text}
+              onChange={(v) => setForm({ ...form, footer_text: v })}
+              disabled={!canEdit}
+              placeholder="Desenvolvido por:"
+            />
+            <Field
+              label="Nome do link"
+              hint="Aparece dentro do chip estilo Discord."
+              value={form.footer_link_label}
+              onChange={(v) => setForm({ ...form, footer_link_label: v })}
+              disabled={!canEdit}
+              placeholder="Sath~"
+            />
+            <Field
+              label="URL do link"
+              hint="Para onde o nome no rodapé leva (Discord, site, etc.)."
+              value={form.footer_link_url}
+              onChange={(v) => setForm({ ...form, footer_link_url: v })}
+              disabled={!canEdit}
+              placeholder="https://discord.gg/seu-servidor"
+            />
+          </div>
+        </section>
+      )}
+
       <div className="flex justify-end gap-2">
         <button
           onClick={onSave}
