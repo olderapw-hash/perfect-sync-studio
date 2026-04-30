@@ -36,6 +36,7 @@ import {
   Truck,
   User as UserIcon,
   Wrench,
+  Megaphone,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
