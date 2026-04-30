@@ -1660,10 +1660,27 @@ function WatchdogTab() {
   const [acting, setActing] = useState<string | null>(null);
   const [endpointMissing, setEndpointMissing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // editable config
+
+  // editable config (todos os campos do contrato)
   const [criticalText, setCriticalText] = useState("");
   const [cooldown, setCooldown] = useState<number>(60);
+  const [failureThreshold, setFailureThreshold] = useState<number>(2);
+  const [maxRestartAttempts, setMaxRestartAttempts] = useState<number>(3);
+  const [verifyRestart, setVerifyRestart] = useState(true);
+  const [pauseDuringMaintenance, setPauseDuringMaintenance] = useState(true);
   const [autoRestart, setAutoRestart] = useState(true);
+  const [dryRunCheck, setDryRunCheck] = useState(false);
+
+  const applyConfigToForm = useCallback((c?: WatchdogConfig) => {
+    if (!c) return;
+    setCriticalText((c.critical_services ?? []).join(", "));
+    if (c.cooldown_seconds != null) setCooldown(c.cooldown_seconds);
+    if (c.failure_threshold != null) setFailureThreshold(c.failure_threshold);
+    if (c.max_restart_attempts != null) setMaxRestartAttempts(c.max_restart_attempts);
+    if (c.verify_restart != null) setVerifyRestart(c.verify_restart);
+    if (c.pause_during_maintenance != null) setPauseDuringMaintenance(c.pause_during_maintenance);
+    if (c.auto_restart != null) setAutoRestart(c.auto_restart);
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -1672,21 +1689,21 @@ function WatchdogTab() {
     try {
       const [s, h] = await Promise.all([
         pwApi.getWatchdogStatus(),
-        pwApi.getWatchdogHistory({ limit: 20 }).catch(() => ({ success: false, entries: [] }) as never),
+        pwApi
+          .getWatchdogHistory({ limit: 20 })
+          .catch(() => ({ success: false, entries: [] }) as WatchdogHistoryResponse),
       ]);
       setStatus(s.status);
       setConfig(s.config);
-      setCriticalText((s.config?.critical_services ?? []).join(", "));
-      if (s.config?.cooldown_seconds != null) setCooldown(s.config.cooldown_seconds);
-      if (s.config?.auto_restart != null) setAutoRestart(s.config.auto_restart);
-      setHistory((h as WatchdogHistoryEntry[] extends never ? never : { entries?: WatchdogHistoryEntry[] }).entries ?? []);
+      applyConfigToForm(s.config);
+      setHistory(h.entries ?? []);
     } catch (e) {
       if (e instanceof EndpointMissingError) setEndpointMissing(true);
       else setError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [applyConfigToForm]);
 
   useEffect(() => {
     void load();
@@ -1711,9 +1728,9 @@ function WatchdogTab() {
     if (!canAct) return;
     setActing("run");
     try {
-      const r = await pwApi.runWatchdogCheckNow();
+      const r = await pwApi.runWatchdogCheckNow({ dry_run: dryRunCheck });
       if (r.status) setStatus(r.status);
-      toast.success(`Checagem: ${r.result ?? "ok"}`);
+      toast.success(`Checagem${dryRunCheck ? " (dry-run)" : ""}: ${r.result ?? "ok"}`);
       void load();
     } catch (e) {
       toast.error(`${e instanceof Error ? e.message : String(e)}`);
@@ -1733,6 +1750,10 @@ function WatchdogTab() {
       const r = await pwApi.saveWatchdogConfig({
         critical_services,
         cooldown_seconds: cooldown,
+        failure_threshold: failureThreshold,
+        max_restart_attempts: maxRestartAttempts,
+        verify_restart: verifyRestart,
+        pause_during_maintenance: pauseDuringMaintenance,
         auto_restart: autoRestart,
       });
       setConfig(r.config);
@@ -1748,11 +1769,12 @@ function WatchdogTab() {
   if (endpointMissing) return <EndpointMissingNotice action="getWatchdogStatus" />;
 
   return (
-    <div className="space-y-6">
-      <div className="grid gap-6 lg:grid-cols-2">
+    <div className="space-y-4">
+      <div className="grid gap-4 lg:grid-cols-2">
+        {/* ─── Estado atual ─── */}
         <Card className="border-border bg-card/60 backdrop-blur-md">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-            <CardTitle className="text-sm font-extrabold uppercase tracking-widest text-foreground">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-3">
+            <CardTitle className="text-xs font-extrabold uppercase tracking-widest text-foreground">
               Estado atual
             </CardTitle>
             {status?.enabled ? (
@@ -1761,7 +1783,7 @@ function WatchdogTab() {
               <ShieldAlert className="h-4 w-4 text-muted-foreground" />
             )}
           </CardHeader>
-          <CardContent className="space-y-3 text-xs">
+          <CardContent className="space-y-2 pb-3 text-xs">
             {loading && !status ? (
               <Skeleton className="h-32 rounded-lg" />
             ) : (
@@ -1769,6 +1791,7 @@ function WatchdogTab() {
                 <Field label="Habilitado" value={status?.enabled ? "SIM" : "NÃO"} />
                 <Field label="Último resultado" valueNode={<ResultBadge result={status?.last_result} />} />
                 <Field label="Última checagem" value={fmtDate(status?.last_check_at)} />
+                <Field label="Último sucesso" value={fmtDate(status?.last_success_at)} />
                 <Field
                   label="Cooldown"
                   value={
@@ -1778,32 +1801,43 @@ function WatchdogTab() {
                   }
                 />
                 <Field label="Falha crítica" value={status?.critical_failure ? "SIM" : "não"} />
-                {status?.unhealthy_services && status.unhealthy_services.length > 0 && (
-                  <div>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      Não saudáveis
-                    </p>
-                    <div className="mt-1 flex flex-wrap gap-1">
-                      {status.unhealthy_services.map((s) => (
-                        <Badge
-                          key={s}
-                          variant="outline"
-                          className="border-destructive/50 font-mono text-[10px] text-destructive"
-                        >
-                          {s}
-                        </Badge>
-                      ))}
-                    </div>
+
+                <ServiceTagList
+                  label="Saudáveis"
+                  items={status?.healthy_services}
+                  tone="ok"
+                />
+                <ServiceTagList
+                  label="Não saudáveis"
+                  items={status?.unhealthy_services}
+                  tone="danger"
+                />
+                <ServiceTagList
+                  label="Triggers"
+                  items={status?.trigger_services}
+                  tone="warn"
+                />
+
+                <div className="flex flex-wrap items-center gap-2 pt-2">
+                  <div className="flex items-center gap-1.5 rounded-md border border-border bg-background/40 px-2 py-1">
+                    <Switch
+                      id="wd-dry-run"
+                      checked={dryRunCheck}
+                      onCheckedChange={setDryRunCheck}
+                      disabled={!canAct || acting != null}
+                      className="scale-75"
+                    />
+                    <Label htmlFor="wd-dry-run" className="cursor-pointer text-[9px] font-bold uppercase tracking-wider">
+                      Dry-run
+                    </Label>
                   </div>
-                )}
-                <div className="flex flex-wrap gap-2 pt-2">
-                  <Button size="sm" disabled={!canAct || acting != null} onClick={runNow} variant="default">
+                  <Button size="sm" disabled={!canAct || acting != null} onClick={runNow} variant="default" className="h-8">
                     {acting === "run" ? (
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
                     ) : (
                       <Activity className="h-3.5 w-3.5" />
                     )}
-                    Rodar checagem agora
+                    Rodar checagem
                   </Button>
                   {status?.enabled ? (
                     <Button
@@ -1811,6 +1845,7 @@ function WatchdogTab() {
                       disabled={!canAct || acting != null}
                       onClick={() => toggle(false)}
                       variant="destructive"
+                      className="h-8"
                     >
                       {acting === "disable" ? (
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -1824,7 +1859,7 @@ function WatchdogTab() {
                       size="sm"
                       disabled={!canAct || acting != null}
                       onClick={() => toggle(true)}
-                      className="bg-emerald-600 text-white hover:bg-emerald-600/90"
+                      className="h-8 bg-emerald-600 text-white hover:bg-emerald-600/90"
                     >
                       {acting === "enable" ? (
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -1840,13 +1875,14 @@ function WatchdogTab() {
           </CardContent>
         </Card>
 
+        {/* ─── Configuração ─── */}
         <Card className="border-border bg-card/60 backdrop-blur-md">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-extrabold uppercase tracking-widest text-foreground">
+          <CardHeader className="pb-2 pt-3">
+            <CardTitle className="text-xs font-extrabold uppercase tracking-widest text-foreground">
               Configuração
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4 text-xs">
+          <CardContent className="space-y-3 pb-3 text-xs">
             <div className="space-y-1">
               <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                 Serviços críticos (separados por vírgula)
@@ -1854,12 +1890,12 @@ function WatchdogTab() {
               <Input
                 value={criticalText}
                 onChange={(e) => setCriticalText(e.target.value)}
-                className="font-mono"
+                className="h-8 font-mono text-xs"
                 placeholder="gamedbd, gdeliveryd, authd, mysql"
                 disabled={!canAct}
               />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-2">
               <div className="space-y-1">
                 <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                   Cooldown (s)
@@ -1869,18 +1905,63 @@ function WatchdogTab() {
                   min={0}
                   value={cooldown}
                   onChange={(e) => setCooldown(Math.max(0, Number(e.target.value) || 0))}
-                  className="font-mono"
+                  className="h-8 font-mono text-xs"
                   disabled={!canAct}
                 />
               </div>
-              <div className="flex items-center gap-2 pt-5">
-                <Switch checked={autoRestart} onCheckedChange={setAutoRestart} disabled={!canAct} id="autoR" />
-                <Label htmlFor="autoR" className="text-xs">
-                  Auto-restart
+              <div className="space-y-1">
+                <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                  Falhas p/ acionar
                 </Label>
+                <Input
+                  type="number"
+                  min={1}
+                  value={failureThreshold}
+                  onChange={(e) => setFailureThreshold(Math.max(1, Number(e.target.value) || 1))}
+                  className="h-8 font-mono text-xs"
+                  disabled={!canAct}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                  Max restarts
+                </Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={maxRestartAttempts}
+                  onChange={(e) => setMaxRestartAttempts(Math.max(0, Number(e.target.value) || 0))}
+                  className="h-8 font-mono text-xs"
+                  disabled={!canAct}
+                />
               </div>
             </div>
-            <Button size="sm" disabled={!canAct || acting != null} onClick={saveConfig}>
+
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+              <ToggleRow
+                id="wd-auto"
+                checked={autoRestart}
+                onChange={setAutoRestart}
+                disabled={!canAct}
+                label="Auto-restart"
+              />
+              <ToggleRow
+                id="wd-verify"
+                checked={verifyRestart}
+                onChange={setVerifyRestart}
+                disabled={!canAct}
+                label="Verificar após restart"
+              />
+              <ToggleRow
+                id="wd-pause-maint"
+                checked={pauseDuringMaintenance}
+                onChange={setPauseDuringMaintenance}
+                disabled={!canAct}
+                label="Pausar em manutenção"
+              />
+            </div>
+
+            <Button size="sm" disabled={!canAct || acting != null} onClick={saveConfig} className="h-8">
               {acting === "save" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ChevronRight className="h-3.5 w-3.5" />}
               Salvar configuração
             </Button>
@@ -1888,42 +1969,55 @@ function WatchdogTab() {
         </Card>
       </div>
 
+      {/* ─── Histórico ─── */}
       <Card className="border-border bg-card/60 backdrop-blur-md">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-          <CardTitle className="text-sm font-extrabold uppercase tracking-widest text-foreground">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-3">
+          <CardTitle className="text-xs font-extrabold uppercase tracking-widest text-foreground">
             Histórico recente
           </CardTitle>
           <HistoryIcon className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
-        <CardContent>
+        <CardContent className="pb-3">
           {loading && history.length === 0 ? (
             <Skeleton className="h-24 rounded-lg" />
           ) : history.length === 0 ? (
             <EmptyHint icon={HistoryIcon}>Sem histórico de checagens.</EmptyHint>
           ) : (
-            <div className="space-y-1.5">
-              {history.map((h, i) => (
-                <div
-                  key={h.id ?? i}
-                  className="flex flex-wrap items-center gap-3 rounded-md border border-border/60 bg-background/40 px-3 py-2 text-xs"
-                >
-                  <ResultBadge result={h.result} />
-                  <span className="font-mono text-[10px] text-muted-foreground">{fmtDate(h.ts)}</span>
-                  {h.duration_ms != null && (
-                    <span className="font-mono text-[10px] text-muted-foreground">{h.duration_ms}ms</span>
-                  )}
-                  {h.unhealthy_services && h.unhealthy_services.length > 0 && (
-                    <span className="truncate font-mono text-[10px] text-destructive">
-                      {h.unhealthy_services.join(", ")}
-                    </span>
-                  )}
-                  {h.actions && h.actions.length > 0 && (
-                    <span className="ml-auto truncate font-mono text-[10px] text-amber-500">
-                      → {h.actions.join(", ")}
-                    </span>
-                  )}
-                </div>
-              ))}
+            <div className="space-y-1">
+              {history.map((h, i) => {
+                const message = (h as { message?: string; source?: string }).message;
+                const sourceTag = (h as { source?: string }).source;
+                return (
+                  <div
+                    key={h.id ?? i}
+                    className="flex flex-wrap items-center gap-2 rounded-md border border-border/60 bg-background/40 px-3 py-1.5 text-xs"
+                  >
+                    <ResultBadge result={h.result} />
+                    <span className="font-mono text-[10px] text-muted-foreground">{fmtDate(h.ts)}</span>
+                    {sourceTag && (
+                      <Badge variant="outline" className="border-border px-1 py-0 text-[9px] font-mono uppercase">
+                        {sourceTag}
+                      </Badge>
+                    )}
+                    {h.duration_ms != null && (
+                      <span className="font-mono text-[10px] text-muted-foreground">{h.duration_ms}ms</span>
+                    )}
+                    {message && (
+                      <span className="min-w-0 flex-1 truncate text-[11px] text-foreground/85">{message}</span>
+                    )}
+                    {h.unhealthy_services && h.unhealthy_services.length > 0 && (
+                      <span className="truncate font-mono text-[10px] text-destructive">
+                        {h.unhealthy_services.join(", ")}
+                      </span>
+                    )}
+                    {h.actions && h.actions.length > 0 && (
+                      <span className="ml-auto truncate font-mono text-[10px] text-amber-500">
+                        → {h.actions.join(", ")}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </CardContent>
@@ -1934,6 +2028,61 @@ function WatchdogTab() {
           {error}
         </div>
       )}
+    </div>
+  );
+}
+
+function ToggleRow({
+  id,
+  checked,
+  onChange,
+  disabled,
+  label,
+}: {
+  id: string;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  disabled?: boolean;
+  label: string;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-2 rounded-md border border-border/60 bg-background/40 px-2 py-1.5">
+      <Label htmlFor={id} className="cursor-pointer text-[11px] text-foreground">
+        {label}
+      </Label>
+      <Switch id={id} checked={checked} onCheckedChange={onChange} disabled={disabled} />
+    </div>
+  );
+}
+
+function ServiceTagList({
+  label,
+  items,
+  tone,
+}: {
+  label: string;
+  items?: string[];
+  tone: "ok" | "warn" | "danger";
+}) {
+  if (!items || items.length === 0) return null;
+  const cls =
+    tone === "danger"
+      ? "border-destructive/50 text-destructive"
+      : tone === "warn"
+        ? "border-amber-500/40 text-amber-500"
+        : "border-emerald-500/40 text-emerald-500";
+  return (
+    <div>
+      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+        {label} <span className="text-muted-foreground/60">({items.length})</span>
+      </p>
+      <div className="mt-1 flex flex-wrap gap-1">
+        {items.map((s) => (
+          <Badge key={s} variant="outline" className={cn("font-mono text-[10px]", cls)}>
+            {s}
+          </Badge>
+        ))}
+      </div>
     </div>
   );
 }
