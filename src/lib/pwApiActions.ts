@@ -1224,3 +1224,213 @@ export interface InstanceControlResponse {
   operation?: ServerOperationStatus;
   error?: string;
 }
+
+/* ─────────── Control Center v1 ─────────── */
+
+export interface HostHealthSnapshot {
+  hostname?: string;
+  ip?: string;
+  uptime_seconds?: number;
+  uptime_human?: string;
+  cpu_percent?: number;
+  cpu_cores?: number;
+  load_average?: number[]; // [1m, 5m, 15m]
+  memory?: {
+    total_mb?: number;
+    used_mb?: number;
+    free_mb?: number;
+    percent?: number;
+  };
+  disk?: {
+    total_gb?: number;
+    used_gb?: number;
+    free_gb?: number;
+    percent?: number;
+    mountpoint?: string;
+  };
+  ping_ms?: number | null;
+  response_time_ms?: number | null;
+  collected_at?: string | number;
+  [k: string]: unknown;
+}
+
+export interface ServicesSummary {
+  total?: number;
+  online?: number;
+  offline?: number;
+  unknown?: number;
+  critical_offline?: number;
+  [k: string]: unknown;
+}
+
+export interface InstancesSummary {
+  total?: number;
+  running?: number;
+  stopped?: number;
+  auto_start?: number;
+  [k: string]: unknown;
+}
+
+export interface ControlCenterAlert {
+  id?: string;
+  severity?: "info" | "warn" | "warning" | "error" | "critical" | string;
+  title?: string;
+  message?: string;
+  source?: string;
+  created_at?: string | number;
+  [k: string]: unknown;
+}
+
+export interface OperationRecentEntry {
+  id?: string;
+  type?: string;
+  stage?: string;
+  success?: boolean;
+  success_state?: string;
+  created_at?: string | number;
+  completed_at?: string | number;
+  services?: string[];
+  instances?: string[];
+  reason?: string | null;
+  [k: string]: unknown;
+}
+
+export interface WatchdogStatusBlock {
+  enabled?: boolean;
+  critical_services?: string[];
+  last_check_at?: string | number | null;
+  last_result?: "ok" | "degraded" | "failed" | string | null;
+  cooldown_seconds?: number;
+  cooldown_remaining?: number;
+  unhealthy_services?: string[];
+  critical_failure?: boolean;
+  [k: string]: unknown;
+}
+
+export interface ControlCenterSnapshot {
+  host?: HostHealthSnapshot;
+  services?: {
+    all?: ManageableService[];
+    manageable?: ManageableService[];
+    summary?: ServicesSummary;
+  };
+  instances?: {
+    items?: ManageableInstance[];
+    summary?: InstancesSummary;
+  };
+  maintenance?: MaintenanceState;
+  watchdog?: WatchdogStatusBlock;
+  operations?: {
+    recent?: OperationRecentEntry[];
+    running?: OperationRecentEntry[];
+  };
+  alerts?: ControlCenterAlert[];
+  collected_at?: string | number;
+  [k: string]: unknown;
+}
+
+export interface ControlCenterSnapshotResponse {
+  success: boolean;
+  snapshot: ControlCenterSnapshot;
+  error?: string;
+}
+
+/* ─────────── Backups (panel-level) ─────────── */
+
+export type PanelBackupKind =
+  | "gamedbd"
+  | "clsconfig"
+  | "mysql"
+  | "uniquenamed"
+  | "panel"
+  | "full";
+
+export interface PanelBackupRecord {
+  id?: string;
+  type?: PanelBackupKind | string;
+  name?: string;
+  file?: string;
+  bytes?: number;
+  size?: number;
+  created_at?: string | number;
+  mtime?: number;
+  sha1?: string;
+  status?: "ok" | "running" | "failed" | string;
+  source?: string;
+  [k: string]: unknown;
+}
+
+export interface ListPanelBackupsResponse {
+  success: boolean;
+  count?: number;
+  backups?: PanelBackupRecord[];
+  // Tolerância: algumas versões do PHP devolvem agrupado por tipo
+  grouped?: Record<string, PanelBackupRecord[]>;
+  error?: string;
+}
+
+export interface BackupNowPayload {
+  type: PanelBackupKind;
+  reason?: string;
+  dry_run?: boolean;
+}
+
+export interface BackupNowResponse {
+  success: boolean;
+  backup?: PanelBackupRecord;
+  operation?: ServerOperationStatus;
+  log_file?: string;
+  error?: string;
+}
+
+/* ─────────── Watchdog ─────────── */
+
+export interface WatchdogConfig {
+  enabled?: boolean;
+  critical_services?: string[];
+  cooldown_seconds?: number;
+  auto_restart?: boolean;
+  notify?: boolean;
+  [k: string]: unknown;
+}
+
+export interface WatchdogConfigResponse {
+  success: boolean;
+  config?: WatchdogConfig;
+  status?: WatchdogStatusBlock;
+  error?: string;
+}
+
+export interface WatchdogStatusResponse {
+  success: boolean;
+  status?: WatchdogStatusBlock;
+  config?: WatchdogConfig;
+  error?: string;
+}
+
+export interface WatchdogHistoryEntry {
+  id?: string;
+  ts?: string | number;
+  result?: "ok" | "degraded" | "failed" | string;
+  unhealthy_services?: string[];
+  actions?: string[];
+  duration_ms?: number;
+  [k: string]: unknown;
+}
+
+export interface WatchdogHistoryResponse {
+  success: boolean;
+  count?: number;
+  entries?: WatchdogHistoryEntry[];
+  error?: string;
+}
+
+export interface WatchdogCheckResponse {
+  success: boolean;
+  result?: "ok" | "degraded" | "failed" | string;
+  unhealthy_services?: string[];
+  actions?: string[];
+  duration_ms?: number;
+  status?: WatchdogStatusBlock;
+  error?: string;
+}
