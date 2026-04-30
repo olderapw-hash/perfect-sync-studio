@@ -39,7 +39,10 @@ import { useServers } from "@/hooks/useServers";
 import { useServerPermissions } from "@/hooks/useServerPermissions";
 import { PendingInvitesBanner } from "@/components/PendingInvitesBanner";
 import { TrialBanner } from "@/components/TrialBanner";
+import { InstallerUpdateBanner } from "@/components/InstallerUpdateBanner";
 import { ProBadge } from "@/components/ProBadge";
+import { useInstallerRelease } from "@/hooks/useInstallerRelease";
+import { Download } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
