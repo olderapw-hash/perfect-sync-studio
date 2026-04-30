@@ -627,6 +627,42 @@ export type Database = {
           },
         ]
       }
+      installer_releases: {
+        Row: {
+          changelog: string | null
+          file_path: string
+          file_size_bytes: number | null
+          file_url: string
+          id: string
+          is_current: boolean
+          published_at: string
+          published_by: string
+          version: string
+        }
+        Insert: {
+          changelog?: string | null
+          file_path: string
+          file_size_bytes?: number | null
+          file_url: string
+          id?: string
+          is_current?: boolean
+          published_at?: string
+          published_by: string
+          version: string
+        }
+        Update: {
+          changelog?: string | null
+          file_path?: string
+          file_size_bytes?: number | null
+          file_url?: string
+          id?: string
+          is_current?: boolean
+          published_at?: string
+          published_by?: string
+          version?: string
+        }
+        Relationships: []
+      }
       item_catalogs: {
         Row: {
           created_at: string

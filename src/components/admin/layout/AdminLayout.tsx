@@ -39,7 +39,10 @@ import { useServers } from "@/hooks/useServers";
 import { useServerPermissions } from "@/hooks/useServerPermissions";
 import { PendingInvitesBanner } from "@/components/PendingInvitesBanner";
 import { TrialBanner } from "@/components/TrialBanner";
+import { InstallerUpdateBanner } from "@/components/InstallerUpdateBanner";
 import { ProBadge } from "@/components/ProBadge";
+import { useInstallerRelease } from "@/hooks/useInstallerRelease";
+import { Download } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -177,6 +180,13 @@ const SUPERADMIN_SECTIONS: NavSection[] = [
     basePath: "/admin/site",
     children: [{ to: "/admin/site", label: "Editar conteúdo", end: true }],
   },
+  {
+    id: "installer",
+    label: "Installer / Releases",
+    icon: Download,
+    basePath: "/admin/installer",
+    children: [{ to: "/admin/installer", label: "Publicar versão", end: true }],
+  },
 ];
 
 export const AdminLayout = () => {
@@ -200,6 +210,7 @@ export const AdminLayout = () => {
         <div className="flex min-w-0 flex-1 flex-col">
           <PendingInvitesBanner />
           <TrialBanner />
+          <InstallerUpdateBanner />
           <AdminTopBar />
           <main className="flex-1 overflow-hidden">
             <Outlet />
@@ -380,6 +391,7 @@ const AdminTopBar = () => {
   const { user, signOut, isSuperadmin } = useAuth();
   const { settings } = useAppSettings();
   const { active: activeServer } = useServers();
+  const { current: currentRelease, hasUpdate } = useInstallerRelease();
 
   return (
     <header className="flex flex-wrap items-center gap-3 border-b border-border bg-card/60 px-5 py-3 backdrop-blur-md">
@@ -421,6 +433,30 @@ const AdminTopBar = () => {
             Sem servidor ativo
           </Link>
         )}
+
+        <Link
+          to="/install"
+          className="relative inline-flex items-center gap-2 rounded-md border border-primary/40 bg-primary/10 px-3 py-2 text-xs font-semibold text-primary transition-smooth hover:bg-primary/20"
+          title={
+            currentRelease
+              ? `Installer da API · v${currentRelease.version}${hasUpdate ? " (nova versão!)" : ""}`
+              : "Instalar API no servidor"
+          }
+        >
+          <Download className="h-3.5 w-3.5" />
+          Install
+          {currentRelease && (
+            <span className="rounded bg-primary/20 px-1 py-0.5 text-[9px] font-mono">
+              v{currentRelease.version}
+            </span>
+          )}
+          {hasUpdate && (
+            <span className="absolute -right-1 -top-1 flex h-2.5 w-2.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-primary" />
+            </span>
+          )}
+        </Link>
 
         {isSuperadmin && (
           <Link

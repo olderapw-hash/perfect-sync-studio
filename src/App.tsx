@@ -51,6 +51,7 @@ import SecurityModerationPage from "./pages/admin/SecurityModerationPage.tsx";
 import SecurityHistoryPage from "./pages/admin/SecurityHistoryPage.tsx";
 import SecuritySettingsPage from "./pages/admin/SecuritySettingsPage.tsx";
 import SitePage from "./pages/admin/SitePage.tsx";
+import InstallerReleasesPage from "./pages/admin/InstallerReleasesPage.tsx";
 
 const queryClient = new QueryClient();
 
@@ -136,6 +137,15 @@ const App = () => (
                       element={
                         <SuperadminRoute>
                           <SitePage />
+                        </SuperadminRoute>
+                      }
+                    />
+                    {/* Installer / Releases — apenas superadmin. */}
+                    <Route
+                      path="installer"
+                      element={
+                        <SuperadminRoute>
+                          <InstallerReleasesPage />
                         </SuperadminRoute>
                       }
                     />
