@@ -66,6 +66,7 @@ import { useServers } from "@/hooks/useServers";
 import { useServerPermissions } from "@/hooks/useServerPermissions";
 import {
   EndpointMissingError,
+  PwApiActionError,
   pwApi,
   type ControlCenterSnapshot,
   type ManageableInstance,
@@ -80,6 +81,7 @@ import {
 } from "@/lib/pwApiActions";
 import { logAuditEvent } from "@/lib/auditLog";
 import { cn } from "@/lib/utils";
+import { ServerOperationProgressDrawer } from "@/components/admin/ServerOperationProgressDrawer";
 
 const POLL_MS = 15_000;
 
