@@ -86,6 +86,15 @@ interface NavSection {
 
 const SECTIONS: NavSection[] = [
   {
+    id: "control-center",
+    label: "Central de Controle",
+    icon: Gauge,
+    basePath: "/admin/control-center",
+    children: [
+      { to: "/admin/control-center", label: "Dashboard NOC", end: true },
+    ],
+  },
+  {
     id: "server",
     label: "Operação do Servidor",
     icon: Server,
