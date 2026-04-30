@@ -687,7 +687,7 @@ function ServerWideOpsPanel({ onChange }: { onChange: () => void }) {
   );
 }
 
-
+function ServicesSummaryPanel({
   snapshot,
   loading,
 }: {
