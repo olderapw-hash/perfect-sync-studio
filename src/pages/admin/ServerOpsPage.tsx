@@ -83,12 +83,11 @@ const ServerOpsPage = () => {
   const navigate = useNavigate();
 
   const currentTab = useMemo(() => {
-    if (location.pathname.startsWith("/admin/server/instances")) return "instances";
     if (location.pathname.startsWith("/admin/server/logs")) return "logs";
     if (location.pathname.startsWith("/admin/server/messages")) return "messages";
     if (location.pathname.startsWith("/admin/server/actions")) return "actions";
     if (location.pathname.startsWith("/admin/server/history")) return "history";
-    return "status";
+    return "logs";
   }, [location.pathname]);
 
   const allowed = isSuperadmin || can("view");
