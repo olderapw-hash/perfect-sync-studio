@@ -585,6 +585,41 @@ export const pwApi = {
       body,
     });
   },
+  /* ─────────── Control Center v1 ─────────── */
+  getControlCenterSnapshot() {
+    return callAction<ControlCenterSnapshotResponse>("getControlCenterSnapshot", { method: "GET" });
+  },
+  /* ─────────── Backups (panel-level) ─────────── */
+  listPanelBackups(params: { limit?: number; type?: PanelBackupKind } = {}) {
+    const query: Record<string, string | number> = {};
+    if (params.limit != null) query.limit = params.limit;
+    if (params.type) query.type = params.type;
+    return callAction<ListPanelBackupsResponse>("listBackups", { method: "GET", query });
+  },
+  backupNow(body: BackupNowPayload) {
+    return callAction<BackupNowResponse>("backupNow", { method: "POST", body });
+  },
+  /* ─────────── Watchdog ─────────── */
+  getWatchdogStatus() {
+    return callAction<WatchdogStatusResponse>("getWatchdogStatus", { method: "GET" });
+  },
+  getWatchdogHistory(params: { limit?: number } = {}) {
+    const query: Record<string, string | number> = {};
+    if (params.limit != null) query.limit = params.limit;
+    return callAction<WatchdogHistoryResponse>("getWatchdogHistory", { method: "GET", query });
+  },
+  saveWatchdogConfig(body: WatchdogConfig) {
+    return callAction<WatchdogConfigResponse>("saveWatchdogConfig", { method: "POST", body });
+  },
+  enableWatchdog() {
+    return callAction<WatchdogConfigResponse>("enableWatchdog", { method: "POST", body: {} });
+  },
+  disableWatchdog() {
+    return callAction<WatchdogConfigResponse>("disableWatchdog", { method: "POST", body: {} });
+  },
+  runWatchdogCheckNow() {
+    return callAction<WatchdogCheckResponse>("runWatchdogCheckNow", { method: "POST", body: {} });
+  },
 };
 
 /* ─────────── Server Ops — histórico de operações ─────────── */
