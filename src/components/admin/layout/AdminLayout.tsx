@@ -180,6 +180,13 @@ const SUPERADMIN_SECTIONS: NavSection[] = [
     basePath: "/admin/site",
     children: [{ to: "/admin/site", label: "Editar conteúdo", end: true }],
   },
+  {
+    id: "installer",
+    label: "Installer / Releases",
+    icon: Download,
+    basePath: "/admin/installer",
+    children: [{ to: "/admin/installer", label: "Publicar versão", end: true }],
+  },
 ];
 
 export const AdminLayout = () => {
