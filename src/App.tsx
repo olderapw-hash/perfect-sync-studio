@@ -45,7 +45,7 @@ import ServerLogsPage from "./pages/admin/ServerLogsPage.tsx";
 import ServerActionsPage from "./pages/admin/ServerActionsPage.tsx";
 import ServerMessagesPage from "./pages/admin/ServerMessagesPage.tsx";
 import ServerHistoryPage from "./pages/admin/ServerHistoryPage.tsx";
-import InstancesPage from "./pages/admin/InstancesPage.tsx";
+
 import SecurityOverviewPage from "./pages/admin/SecurityOverviewPage.tsx";
 import SecurityModerationPage from "./pages/admin/SecurityModerationPage.tsx";
 import SecurityHistoryPage from "./pages/admin/SecurityHistoryPage.tsx";
