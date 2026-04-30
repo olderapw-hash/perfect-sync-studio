@@ -808,11 +808,22 @@ export interface ServiceStatusResponse {
 }
 
 export type ServerLogSource =
-  | "gamedbd"
+  | "apicls"
+  | "authd"
   | "exportclsconfig"
+  | "gacd"
+  | "gamedbd"
+  | "gdeliveryd"
+  | "gfactiond"
+  | "glinkd"
+  | "gs01"
   | "httpd"
+  | "logservice"
   | "mail"
-  | "apicls";
+  | "mysql"
+  | "uniquenamed"
+  | "world2"
+  | "world2.formatlog";
 
 export interface ServerLogEntry {
   /** ISO 8601 ou epoch — depende da origem. */
