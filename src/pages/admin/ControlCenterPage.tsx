@@ -279,6 +279,7 @@ function DashboardTab() {
       <MaintenanceBanner snapshot={snapshot} />
       <AlertsBanner alerts={snapshot?.alerts} />
 
+      <ServerWideOpsPanel onChange={() => void load()} />
       <HostHealthGrid snapshot={snapshot} loading={loading && !snapshot} />
 
       <div className="grid gap-6 xl:grid-cols-3">
