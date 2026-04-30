@@ -301,72 +301,84 @@ function DashboardTab() {
 function MaintenanceBanner({ snapshot }: { snapshot: ControlCenterSnapshot | null }) {
   const m = snapshot?.maintenance;
   if (!m?.enabled) return null;
+  const tooltip = [
+    m.reason && `Motivo: ${m.reason}`,
+    m.started_at && `Início: ${fmtDate(m.started_at)}`,
+    m.ends_at && `Fim previsto: ${fmtDate(m.ends_at)}`,
+    m.updated_by && `Por: ${m.updated_by}`,
+  ]
+    .filter(Boolean)
+    .join("\n");
   return (
-    <div className="rounded-xl border border-amber-500/50 bg-gradient-to-r from-amber-500/15 via-amber-500/10 to-transparent p-4">
-      <div className="flex flex-wrap items-start gap-3">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-500/20 text-amber-500">
-          <Wrench className="h-4 w-4" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-extrabold uppercase tracking-widest text-amber-500">
-              Manutenção ativa
-            </span>
-            {m.eta_minutes != null && (
-              <Badge variant="outline" className="border-amber-500/60 text-amber-500">
-                ETA {m.eta_minutes} min
-              </Badge>
-            )}
-          </div>
-          {m.reason && <p className="mt-1 text-sm text-foreground/90">{m.reason}</p>}
-          <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-[11px] text-muted-foreground sm:grid-cols-4">
-            <Field label="Início" value={fmtDate(m.started_at)} />
-            <Field label="Previsão fim" value={fmtDate(m.ends_at)} />
-            <Field label="Atualizado" value={fmtDate(m.updated_at)} />
-            <Field label="Por" value={m.updated_by ?? "—"} />
-          </div>
-        </div>
-      </div>
+    <div
+      className="flex flex-wrap items-center gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-xs text-amber-500"
+      title={tooltip || undefined}
+    >
+      <Wrench className="h-3.5 w-3.5 shrink-0" />
+      <span className="font-extrabold uppercase tracking-widest">Manutenção ativa</span>
+      {m.eta_minutes != null && (
+        <Badge variant="outline" className="border-amber-500/60 text-amber-500">
+          ETA {m.eta_minutes} min
+        </Badge>
+      )}
+      {m.reason && (
+        <span className="truncate text-foreground/80">— {m.reason}</span>
+      )}
+      <a
+        href="/admin/server/messages"
+        className="ml-auto inline-flex items-center gap-1 text-[11px] font-semibold text-amber-500 hover:underline"
+      >
+        Gerenciar <ChevronRight className="h-3 w-3" />
+      </a>
     </div>
   );
 }
 
 function AlertsBanner({ alerts }: { alerts?: ControlCenterSnapshot["alerts"] }) {
   if (!alerts || alerts.length === 0) return null;
+  const order: Record<string, number> = { critical: 3, error: 3, warn: 2, warning: 2, info: 1 };
+  const sorted = [...alerts].sort(
+    (a, b) =>
+      (order[(b.severity ?? "info").toLowerCase()] ?? 0) -
+      (order[(a.severity ?? "info").toLowerCase()] ?? 0),
+  );
+  const worst = (sorted[0]?.severity ?? "info").toLowerCase();
+  const tone =
+    worst === "critical" || worst === "error"
+      ? "border-destructive/50 bg-destructive/10 text-destructive"
+      : worst.startsWith("warn")
+        ? "border-amber-500/50 bg-amber-500/10 text-amber-500"
+        : "border-primary/40 bg-primary/10 text-primary";
+  const Icon =
+    worst === "critical" || worst === "error"
+      ? XCircle
+      : worst.startsWith("warn")
+        ? AlertTriangle
+        : AlertCircle;
+  const visible = sorted.slice(0, 3);
+  const extra = sorted.length - visible.length;
+
   return (
-    <div className="space-y-2">
-      {alerts.map((a, i) => {
-        const sev = (a.severity ?? "info").toLowerCase();
-        const tone =
-          sev === "critical" || sev === "error"
-            ? "border-destructive/50 bg-destructive/10 text-destructive"
-            : sev === "warn" || sev === "warning"
-              ? "border-amber-500/50 bg-amber-500/10 text-amber-500"
-              : "border-primary/40 bg-primary/10 text-primary";
-        const Icon = sev === "critical" || sev === "error" ? XCircle : sev.startsWith("warn") ? AlertTriangle : AlertCircle;
-        return (
-          <div key={a.id ?? i} className={cn("rounded-lg border p-3 text-xs", tone)}>
-            <div className="flex items-start gap-2">
-              <Icon className="mt-0.5 h-4 w-4 shrink-0" />
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-[10px] font-extrabold uppercase tracking-widest">{sev}</span>
-                  {a.title && <span className="font-semibold text-foreground">{a.title}</span>}
-                  {a.source && (
-                    <Badge variant="outline" className="border-current/40 text-current">
-                      {a.source}
-                    </Badge>
-                  )}
-                </div>
-                {a.message && <p className="mt-1 text-foreground/90">{a.message}</p>}
-                {a.created_at && (
-                  <p className="mt-1 text-[10px] opacity-70">{fmtDate(a.created_at)}</p>
-                )}
-              </div>
-            </div>
-          </div>
-        );
-      })}
+    <div className={cn("rounded-md border p-2.5 text-xs", tone)}>
+      <div className="flex items-center gap-2">
+        <Icon className="h-3.5 w-3.5 shrink-0" />
+        <span className="text-[10px] font-extrabold uppercase tracking-widest">
+          {sorted.length} alerta{sorted.length > 1 ? "s" : ""}
+        </span>
+        <span className="opacity-70">· pior: {worst}</span>
+      </div>
+      <ul className="mt-1.5 space-y-0.5">
+        {visible.map((a, i) => (
+          <li key={a.id ?? i} className="flex flex-wrap items-center gap-1.5 text-[11px]">
+            <span className="font-semibold text-foreground">{a.title ?? a.message ?? "—"}</span>
+            {a.source && <span className="font-mono text-[10px] opacity-70">[{a.source}]</span>}
+            {a.created_at && (
+              <span className="ml-auto text-[10px] opacity-60">{fmtDate(a.created_at)}</span>
+            )}
+          </li>
+        ))}
+        {extra > 0 && <li className="text-[10px] opacity-70">+{extra} alerta(s)…</li>}
+      </ul>
     </div>
   );
 }
