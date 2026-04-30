@@ -27,7 +27,7 @@ import {
   Globe,
   LogOut,
   Mail,
-  Server as _ServerIcon,
+  Megaphone,
   Shield,
   ShieldCheck,
   UserCog,
