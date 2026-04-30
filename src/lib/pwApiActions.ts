@@ -1394,6 +1394,10 @@ export interface WatchdogConfig {
   enabled?: boolean;
   critical_services?: string[];
   cooldown_seconds?: number;
+  failure_threshold?: number;
+  max_restart_attempts?: number;
+  verify_restart?: boolean;
+  pause_during_maintenance?: boolean;
   auto_restart?: boolean;
   notify?: boolean;
   [k: string]: unknown;
