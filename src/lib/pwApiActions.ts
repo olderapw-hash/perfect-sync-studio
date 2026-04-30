@@ -879,6 +879,8 @@ export interface ServerLogsResponse {
   entries: ServerLogEntry[];
   /** Mensagem amigável quando o arquivo não existe / sem permissão. */
   warning?: string;
+  /** Lista de sources disponíveis no host (best-effort do backend). */
+  available_sources?: ServerLogSource[];
   error?: string;
 }
 
