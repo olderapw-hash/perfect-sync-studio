@@ -855,39 +855,23 @@ const CRITICAL_SERVICES = new Set([
 function InstancesPanel({
   snapshot,
   loading,
-  onChange,
 }: {
   snapshot: ControlCenterSnapshot | null;
   loading: boolean;
-  onChange: () => void;
+  /** Mantido por compatibilidade — o painel é read-only agora. */
+  onChange?: () => void;
 }) {
   const items = snapshot?.instances?.items ?? [];
   const summary = snapshot?.instances?.summary;
-  const { isSuperadmin } = useAuth();
-  const { can } = useServerPermissions();
-  const canAct = isSuperadmin || can("manage_servers");
-  const [busy, setBusy] = useState<string | null>(null);
-
-  const act = async (i: ManageableInstance, action: "start" | "stop" | "restart") => {
-    if (!canAct) return;
-    const k = `${i.code}:${action}`;
-    setBusy(k);
-    try {
-      const fn =
-        action === "start"
-          ? pwApi.startInstance
-          : action === "stop"
-            ? pwApi.stopInstance
-            : pwApi.restartInstance;
-      await fn({ code: i.code });
-      toast.success(`${action} ${i.code}: ok`);
-      onChange();
-    } catch (e) {
-      toast.error(`${action} ${i.code}: ${e instanceof Error ? e.message : String(e)}`);
-    } finally {
-      setBusy(null);
+  const groups = useMemo(() => {
+    const g = new Map<string, ManageableInstance[]>();
+    for (const i of items) {
+      const cat = i.category ?? "outras";
+      if (!g.has(cat)) g.set(cat, []);
+      g.get(cat)!.push(i);
     }
-  };
+    return Array.from(g.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+  }, [items]);
 
   return (
     <Card className="border-border bg-card/60 backdrop-blur-md">
@@ -905,7 +889,12 @@ function InstancesPanel({
             </p>
           )}
         </div>
-        <CircuitBoard className="h-4 w-4 text-muted-foreground" />
+        <Button asChild size="sm" variant="outline" className="gap-1.5">
+          <a href="/admin/server/instances">
+            Gerenciar
+            <ChevronRight className="h-3.5 w-3.5" />
+          </a>
+        </Button>
       </CardHeader>
       <CardContent>
         {loading && items.length === 0 ? (
@@ -913,75 +902,48 @@ function InstancesPanel({
         ) : items.length === 0 ? (
           <EmptyHint icon={CircuitBoard}>Nenhuma instância configurada.</EmptyHint>
         ) : (
-          <div className="grid gap-2 md:grid-cols-2">
-            {items.map((i) => {
-              const running = i.running || i.state === "running";
+          <div className="space-y-3">
+            {groups.map(([cat, list]) => {
+              const running = list.filter((i) => i.running || i.state === "running").length;
               return (
-                <div
-                  key={i.code}
-                  className={cn(
-                    "flex items-center gap-3 rounded-lg border px-3 py-2",
-                    running
-                      ? "border-emerald-500/30 bg-emerald-500/5"
-                      : "border-border bg-card/40",
-                  )}
-                >
-                  <StateDot state={running ? "online" : "offline"} />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-sm font-bold text-foreground">{i.code}</span>
-                      {i.auto_start && (
-                        <Badge
-                          variant="outline"
-                          className="border-primary/40 text-[9px] uppercase text-primary"
-                        >
-                          auto
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="truncate text-[11px] text-muted-foreground">
-                      {i.name || i.category}
-                      {i.listen_port ? ` · :${i.listen_port}` : ""}
-                      {i.pid ? ` · pid ${i.pid}` : ""}
-                    </p>
+                <div key={cat}>
+                  <div className="mb-1.5 flex items-center justify-between">
+                    <span className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground">
+                      {cat}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground">
+                      <span className="text-emerald-500">{running}</span>/{list.length}
+                    </span>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      disabled={!canAct || busy != null}
-                      onClick={() => act(i, "start")}
-                    >
-                      {busy === `${i.code}:start` ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <PlayCircle className="h-3.5 w-3.5 text-emerald-500" />
-                      )}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      disabled={!canAct || busy != null}
-                      onClick={() => act(i, "restart")}
-                    >
-                      {busy === `${i.code}:restart` ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <RotateCcw className="h-3.5 w-3.5 text-amber-500" />
-                      )}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      disabled={!canAct || busy != null}
-                      onClick={() => act(i, "stop")}
-                    >
-                      {busy === `${i.code}:stop` ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <Square className="h-3.5 w-3.5 text-destructive" />
-                      )}
-                    </Button>
+                  <div className="flex flex-wrap gap-1.5">
+                    {list.map((i) => {
+                      const isRunning = i.running || i.state === "running";
+                      return (
+                        <div
+                          key={i.code}
+                          title={[
+                            i.name && `Nome: ${i.name}`,
+                            i.listen_port && `Porta: ${i.listen_port}`,
+                            i.pid && `PID: ${i.pid}`,
+                            i.auto_start && "Auto-start",
+                          ]
+                            .filter(Boolean)
+                            .join("\n")}
+                          className={cn(
+                            "inline-flex items-center gap-1.5 rounded-md border px-2 py-1 font-mono text-[11px]",
+                            isRunning
+                              ? "border-emerald-500/30 bg-emerald-500/5 text-foreground"
+                              : "border-border bg-background/40 text-muted-foreground",
+                          )}
+                        >
+                          <StateDot state={isRunning ? "online" : "offline"} />
+                          <span className="font-bold">{i.code}</span>
+                          {i.auto_start && (
+                            <span className="text-[9px] uppercase text-primary">auto</span>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               );
