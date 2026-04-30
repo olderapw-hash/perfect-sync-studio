@@ -406,19 +406,16 @@ function HostHealthGrid({
   }
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xs font-extrabold uppercase tracking-widest text-muted-foreground">
-          Saúde do host
-        </h2>
-        {h?.hostname && (
+    <div className="space-y-1.5">
+      {h?.hostname && (
+        <div className="flex items-center justify-end">
           <span className="font-mono text-[10px] text-muted-foreground">
             {h.hostname}
             {h.ip ? ` · ${h.ip}` : ""}
           </span>
-        )}
-      </div>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+        </div>
+      )}
+      <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
         <MetricCard
           icon={Cpu}
           label="CPU"
@@ -459,7 +456,7 @@ function HostHealthGrid({
         />
         <MetricCard
           icon={Activity}
-          label="Load avg"
+          label="Load"
           value={
             Array.isArray(h?.load_average) && h.load_average.length > 0
               ? h.load_average
@@ -475,7 +472,7 @@ function HostHealthGrid({
           icon={Wifi}
           label="Latência"
           value={h?.ping_ms != null ? `${h.ping_ms.toFixed(0)} ms` : "—"}
-          sub={h?.response_time_ms != null ? `resposta ${h.response_time_ms.toFixed(0)} ms` : undefined}
+          sub={h?.response_time_ms != null ? `resp ${h.response_time_ms.toFixed(0)} ms` : undefined}
           tone={toneFor(h?.ping_ms ?? undefined, 100, 250)}
         />
       </div>
