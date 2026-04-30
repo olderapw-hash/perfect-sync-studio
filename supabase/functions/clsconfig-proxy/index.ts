@@ -74,6 +74,15 @@ const ALLOWED_ACTIONS = new Set([
   "stopInstances",
   "restartInstance",
   "restartInstances",
+  // Control Center v1 — snapshot operacional + backups panel-level + watchdog.
+  "getControlCenterSnapshot",
+  "backupNow",
+  "getWatchdogStatus",
+  "getWatchdogHistory",
+  "saveWatchdogConfig",
+  "enableWatchdog",
+  "disableWatchdog",
+  "runWatchdogCheckNow",
 ]);
 
 // Mapa Action → permissão exigida (deve refletir src/lib/serverPermissions.ts).
