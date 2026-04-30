@@ -27,7 +27,7 @@ import {
   Globe,
   LogOut,
   Mail,
-  Megaphone,
+  
   Shield,
   ShieldCheck,
   UserCog,
