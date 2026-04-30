@@ -77,6 +77,7 @@ import {
   type ServerLogSource,
   type WatchdogConfig,
   type WatchdogHistoryEntry,
+  type WatchdogHistoryResponse,
   type WatchdogStatusBlock,
 } from "@/lib/pwApiActions";
 import { logAuditEvent } from "@/lib/auditLog";
