@@ -98,18 +98,13 @@ export default function ServerActionsPage() {
     <div className="space-y-6">
       <div>
         <h2 className="text-sm font-extrabold uppercase tracking-wider text-foreground">
-          Operação do servidor
+          Export & Reload
         </h2>
         <p className="text-xs text-muted-foreground">
-          Mensagem de sistema, export e reloads — todas auditadas.
+          Reescreve <code className="font-mono">clsconfig.data</code> e dispara
+          reloads do servidor — todas as ações são auditadas.
         </p>
       </div>
-
-      {/* Send System Message — v2 */}
-      <SystemMessageCard />
-
-      {/* Maintenance Mode — v2 */}
-      <MaintenanceModeCard />
 
       {/* Export clsconfig */}
       <section className="rounded-xl border border-border bg-card/40 p-5 backdrop-blur-md">
