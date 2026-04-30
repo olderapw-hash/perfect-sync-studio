@@ -1024,6 +1024,14 @@ function RecentOperationsPanel({
                 </div>
               );
             })}
+            {extra > 0 && (
+              <a
+                href="/admin/server/history"
+                className="block pt-1 text-center text-[10px] text-muted-foreground hover:text-primary"
+              >
+                +{extra} operação(ões) — ver histórico completo
+              </a>
+            )}
           </div>
         )}
       </CardContent>
