@@ -716,6 +716,16 @@ function ServerWideOpsPanel({ onChange }: { onChange: () => void }) {
           </div>
         </div>
       )}
+
+      <ServerOperationProgressDrawer
+        open={trackedOp !== null}
+        operationId={trackedOp?.id ?? null}
+        type={trackedOp?.type}
+        onClose={() => {
+          setTrackedOp(null);
+          onChange();
+        }}
+      />
     </>
   );
 }
