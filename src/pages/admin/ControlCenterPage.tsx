@@ -185,7 +185,7 @@ export default function ControlCenterPage() {
         </Tabs>
       </header>
 
-      <main className="flex-1 overflow-y-auto p-6">
+      <main className="flex-1 overflow-y-auto px-4 py-4">
         {tab === "dashboard" && <DashboardTab />}
         {tab === "logs" && <LogsTab />}
         {tab === "backups" && <BackupsTab />}
@@ -246,7 +246,7 @@ function DashboardTab() {
   if (endpointMissing) return <EndpointMissingNotice action="getControlCenterSnapshot" />;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <Clock className="h-3.5 w-3.5" />
@@ -284,7 +284,7 @@ function DashboardTab() {
       <ServerWideOpsPanel onChange={() => void load()} />
       <HostHealthGrid snapshot={snapshot} loading={loading && !snapshot} />
 
-      <div className="grid gap-6 xl:grid-cols-3">
+      <div className="grid gap-4 xl:grid-cols-3">
         <div className="xl:col-span-2">
           <ServicesSummaryPanel snapshot={snapshot} loading={loading && !snapshot} />
         </div>
