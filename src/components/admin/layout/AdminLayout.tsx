@@ -204,11 +204,26 @@ export const AdminLayout = () => {
           <main className="flex-1 overflow-hidden">
             <Outlet />
           </main>
+          <AdminFooter />
         </div>
       </div>
     </SidebarProvider>
   );
 };
+
+const AdminFooter = () => (
+  <footer className="border-t border-border/60 bg-card/40 px-5 py-2 text-center text-[11px] text-muted-foreground backdrop-blur-md">
+    Desenvolvido por:{" "}
+    <a
+      href="https://discord.gg/lovable-dev"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="font-semibold text-primary hover:underline"
+    >
+      Sath~
+    </a>
+  </footer>
+);
 
 /* -------------------------------------------------------------------------- */
 /* Sidebar                                                                    */
