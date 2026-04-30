@@ -964,14 +964,21 @@ function RecentOperationsPanel({
   snapshot: ControlCenterSnapshot | null;
   loading: boolean;
 }) {
-  const ops = snapshot?.operations?.recent ?? [];
+  const allOps = snapshot?.operations?.recent ?? [];
+  const ops = allOps.slice(0, 6);
+  const extra = allOps.length - ops.length;
   return (
     <Card className="border-border bg-card/60 backdrop-blur-md">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
         <CardTitle className="text-sm font-extrabold uppercase tracking-widest text-foreground">
           Operações recentes
         </CardTitle>
-        <HistoryIcon className="h-4 w-4 text-muted-foreground" />
+        <Button asChild size="sm" variant="outline" className="gap-1.5">
+          <a href="/admin/server/history">
+            Histórico
+            <ChevronRight className="h-3.5 w-3.5" />
+          </a>
+        </Button>
       </CardHeader>
       <CardContent>
         {loading && ops.length === 0 ? (
