@@ -364,19 +364,15 @@ const InstallerReleasesPage = () => {
           </CardContent>
         </Card>
 
-        {rel_link()}
+        <p className="text-center text-xs text-muted-foreground">
+          Pré-visualize a página pública em{" "}
+          <Link to="/install" className="inline-flex items-center gap-1 text-primary underline">
+            /install <ExternalLink className="h-3 w-3" />
+          </Link>
+        </p>
       </div>
     </div>
   );
 };
-
-const rel_link = () => (
-  <p className="text-center text-xs text-muted-foreground">
-    Pré-visualize a página pública em{" "}
-    <Link to="/install" className="inline-flex items-center gap-1 text-primary underline">
-      /install <ExternalLink className="h-3 w-3" />
-    </Link>
-  </p>
-);
 
 export default InstallerReleasesPage;
