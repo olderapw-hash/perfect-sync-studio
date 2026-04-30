@@ -263,6 +263,7 @@ const Install = () => {
       </header>
 
       <main className="mx-auto max-w-4xl px-4 py-8">
+        <CurrentReleaseCard />
         {/* Aviso de origem da conexão */}
         <div className="mb-6 flex flex-wrap items-start gap-3 rounded-xl border border-primary/40 bg-primary/5 p-4 text-xs">
           <Settings2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
