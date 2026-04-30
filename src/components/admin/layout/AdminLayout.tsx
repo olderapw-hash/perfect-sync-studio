@@ -92,10 +92,10 @@ const SECTIONS: NavSection[] = [
     basePath: "/admin/control-center",
     children: [
       { to: "/admin/control-center", label: "Dashboard NOC", end: true },
-      { to: "/admin/server", label: "Status do servidor", end: true },
       { to: "/admin/server/logs", label: "Logs" },
       { to: "/admin/server/messages", label: "Mensagens & manutenção" },
       { to: "/admin/server/actions", label: "Export & reload" },
+      { to: "/admin/server/history", label: "Histórico" },
     ],
   },
   {
