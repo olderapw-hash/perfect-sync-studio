@@ -135,6 +135,15 @@ const ACTION_PERMISSION: Record<string, string> = {
   stopInstances: "manage_servers",
   restartInstance: "manage_servers",
   restartInstances: "manage_servers",
+  // Control Center v1 — snapshot é leitura; backup manual e watchdog write exigem manage_servers.
+  getControlCenterSnapshot: "view",
+  backupNow: "manage_servers",
+  getWatchdogStatus: "view",
+  getWatchdogHistory: "view_audit",
+  saveWatchdogConfig: "manage_servers",
+  enableWatchdog: "manage_servers",
+  disableWatchdog: "manage_servers",
+  runWatchdogCheckNow: "manage_servers",
 };
 
 function jsonError(message: string, status: number): Response {
