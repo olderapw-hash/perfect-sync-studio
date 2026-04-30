@@ -279,6 +279,7 @@ function DashboardTab() {
       <MaintenanceBanner snapshot={snapshot} />
       <AlertsBanner alerts={snapshot?.alerts} />
 
+      <ServerWideOpsPanel onChange={() => void load()} />
       <HostHealthGrid snapshot={snapshot} loading={loading && !snapshot} />
 
       <div className="grid gap-6 xl:grid-cols-3">
@@ -520,6 +521,171 @@ function MetricCard({
 }
 
 /* ---- Services ---- */
+
+function ServerWideOpsPanel({ onChange }: { onChange: () => void }) {
+  const { isSuperadmin } = useAuth();
+  const { can } = useServerPermissions();
+  const canManage = isSuperadmin || can("manage_servers");
+  const [dryRun, setDryRun] = useState(false);
+  const [busy, setBusy] = useState<"start" | "stop" | "restart" | null>(null);
+  const [confirm, setConfirm] = useState<"stop" | "restart" | null>(null);
+  const [reason, setReason] = useState("");
+
+  const run = async (action: "start" | "stop" | "restart", reasonText?: string) => {
+    if (!canManage) {
+      toast.error("Sem permissão (manage_servers).");
+      return;
+    }
+    setBusy(action);
+    setConfirm(null);
+    const trimmed = (reasonText ?? "").trim();
+    const payload = {
+      verify: true,
+      dry_run: dryRun,
+      ...(trimmed.length >= 3 ? { reason: trimmed } : {}),
+    };
+    try {
+      const fn =
+        action === "start"
+          ? pwApi.startServer
+          : action === "stop"
+            ? pwApi.stopServer
+            : pwApi.restartServer;
+      const res = await fn(payload);
+      const okCount = (res.results ?? []).filter((r) => r.success).length;
+      const failCount = (res.results ?? []).filter((r) => !r.success).length;
+      const summary = res.results
+        ? `${okCount} ok${failCount > 0 ? ` · ${failCount} falha(s)` : ""}`
+        : res.message ?? "Concluído";
+      if (failCount > 0) {
+        toast.warning(`${action}${dryRun ? " (dry-run)" : ""}: ${summary}`);
+      } else {
+        toast.success(`${action}${dryRun ? " (dry-run)" : ""}: ${summary}`);
+      }
+      if (!dryRun) setTimeout(onChange, 800);
+    } catch (e) {
+      toast.error(`${action} falhou: ${e instanceof Error ? e.message : String(e)}`, {
+        duration: 8000,
+      });
+    } finally {
+      setBusy(null);
+      setReason("");
+    }
+  };
+
+  return (
+    <>
+      <Card className="border-border bg-card/60 backdrop-blur-md">
+        <CardContent className="flex flex-wrap items-center justify-between gap-3 border-l-2 border-primary p-5">
+          <div className="min-w-0">
+            <h2 className="text-sm font-extrabold uppercase tracking-widest text-foreground">
+              Operação geral
+            </h2>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Ações sobre todo o conjunto de serviços do servidor PW.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-2 rounded-md border border-border bg-background/40 px-3 py-1.5">
+              <Switch
+                id="noc-dry-run"
+                checked={dryRun}
+                onCheckedChange={setDryRun}
+                disabled={!canManage || busy != null}
+              />
+              <Label
+                htmlFor="noc-dry-run"
+                className="cursor-pointer text-[10px] font-bold uppercase tracking-wider"
+              >
+                Dry-run
+              </Label>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={!canManage || busy != null}
+              onClick={() => void run("start")}
+              className="gap-1.5"
+            >
+              {busy === "start" ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Power className="h-3.5 w-3.5 text-emerald-500" />
+              )}
+              Iniciar servidor
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={!canManage || busy != null}
+              onClick={() => setConfirm("restart")}
+              className="gap-1.5"
+            >
+              {busy === "restart" ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <RotateCcw className="h-3.5 w-3.5 text-amber-500" />
+              )}
+              Reiniciar servidor
+            </Button>
+            <Button
+              size="sm"
+              variant="destructive"
+              disabled={!canManage || busy != null}
+              onClick={() => setConfirm("stop")}
+              className="gap-1.5"
+            >
+              {busy === "stop" ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <PauseCircle className="h-3.5 w-3.5" />
+              )}
+              Parar servidor
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {confirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-border bg-card p-5 shadow-xl">
+            <h3 className="text-sm font-extrabold uppercase tracking-widest text-foreground">
+              Confirmar {confirm === "stop" ? "parada" : "reinício"} do servidor
+            </h3>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Esta ação afeta o servidor inteiro e todos os jogadores conectados.
+              {dryRun && " (dry-run ativo — nada será executado de verdade.)"}
+            </p>
+            <div className="mt-4 space-y-1.5">
+              <Label htmlFor="noc-reason" className="text-[10px] font-bold uppercase tracking-wider">
+                Motivo (mínimo 3 caracteres)
+              </Label>
+              <Input
+                id="noc-reason"
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                placeholder="Ex: manutenção emergencial"
+              />
+            </div>
+            <div className="mt-5 flex justify-end gap-2">
+              <Button variant="ghost" size="sm" onClick={() => setConfirm(null)}>
+                Cancelar
+              </Button>
+              <Button
+                size="sm"
+                variant={confirm === "stop" ? "destructive" : "default"}
+                disabled={reason.trim().length < 3}
+                onClick={() => void run(confirm, reason)}
+              >
+                Confirmar {confirm === "stop" ? "parada" : "reinício"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
 
 function ServicesSummaryPanel({
   snapshot,
