@@ -1,7 +1,7 @@
 <?php
 /**
  * API CLS - busca templates da clsconfig e dados completos de personagem via gamedbd.
- *
+ * Desenvolvida Por: Sath~
  * Uso HTTP:
  *   GET /apicls/api_cls.php?action=getClsconfig&secret=SEU_SECRET
  *   GET /apicls/api_cls.php?action=getRoleEditable&roleid=12345&secret=SEU_SECRET
@@ -14,9 +14,16 @@
  *   GET  /apicls/api_cls.php?action=getMaintenanceMode&secret=SEU_SECRET
  *   GET  /apicls/api_cls.php?action=getManageableServices&secret=SEU_SECRET
  *   GET  /apicls/api_cls.php?action=getManageableInstances&secret=SEU_SECRET
+ *   GET  /apicls/api_cls.php?action=getControlCenterSnapshot&secret=SEU_SECRET
  *   GET  /apicls/api_cls.php?action=getServerOperationStatus&secret=SEU_SECRET
  *   GET  /apicls/api_cls.php?action=getServerOperationsHistory&secret=SEU_SECRET
+ *   GET  /apicls/api_cls.php?action=getWatchdogStatus&secret=SEU_SECRET
+ *   GET  /apicls/api_cls.php?action=getWatchdogHistory&secret=SEU_SECRET
  *   POST /apicls/api_cls.php?action=setMaintenanceMode&secret=SEU_SECRET
+ *   POST /apicls/api_cls.php?action=saveWatchdogConfig&secret=SEU_SECRET
+ *   POST /apicls/api_cls.php?action=enableWatchdog&secret=SEU_SECRET
+ *   POST /apicls/api_cls.php?action=disableWatchdog&secret=SEU_SECRET
+ *   POST /apicls/api_cls.php?action=runWatchdogCheckNow&secret=SEU_SECRET
  *   POST /apicls/api_cls.php?action=setInstanceAutoStart&secret=SEU_SECRET
  *   POST /apicls/api_cls.php?action=startInstance&secret=SEU_SECRET
  *   POST /apicls/api_cls.php?action=startInstances&secret=SEU_SECRET
@@ -33,7 +40,11 @@
  *   POST /apicls/api_cls.php?action=kickRole&secret=SEU_SECRET
  *   POST /apicls/api_cls.php?action=banAccount&secret=SEU_SECRET
  *   POST /apicls/api_cls.php?action=unbanAccount&secret=SEU_SECRET
+ *   POST /apicls/api_cls.php?action=backupNow&secret=SEU_SECRET
  *   GET  /apicls/api_cls.php?action=getBackupContent&name=roleid-...json&secret=SEU_SECRET
+ *   GET  /apicls/api_cls.php?action=getRestorePlan&name=backup.ext&secret=SEU_SECRET
+ *   GET  /apicls/api_cls.php?action=getRestoreHistory&secret=SEU_SECRET
+ *   POST /apicls/api_cls.php?action=restoreNow&secret=SEU_SECRET
  *   POST /apicls/api_cls.php?action=restoreBackup&secret=SEU_SECRET
  */
 
@@ -52,11 +63,27 @@ $CONFIG = [
     'clsconfig_backup_dir' => __DIR__ . '/backups/clsconfig',
     'clsconfig_file_path' => '/home/gamedbd/clsconfig',
     'clsconfig_file_backup_dir' => __DIR__ . '/backups/clsconfig/files',
+    'clsconfig_archive_backup_enabled' => true,
+    'clsconfig_archive_backup_command' => '/usr/bin/sudo -n /usr/local/sbin/backupclsconfig-api.sh',
+    'clsconfig_archive_backup_dir' => __DIR__ . '/backups/clsconfig/archives',
     'gamedbd_backup_enabled' => true,
     'gamedbd_backup_required' => true,
     'gamedbd_backup_command' => '/usr/bin/sudo -n /usr/local/sbin/backupgamedbd-api.sh',
     'gamedbd_backup_dir' => __DIR__ . '/backups/gamedbd',
     'gamedbd_backup_min_interval_seconds' => 300,
+    'mysql_backup_enabled' => true,
+    'mysql_backup_command' => '/usr/bin/sudo -n /usr/local/sbin/backupmysql-api.sh',
+    'mysql_backup_dir' => __DIR__ . '/backups/mysql',
+    'uniquenamed_backup_enabled' => true,
+    'uniquenamed_backup_command' => '/usr/bin/sudo -n /usr/local/sbin/backupuniquenamed-api.sh',
+    'uniquenamed_backup_dir' => __DIR__ . '/backups/uniquenamed',
+    'panel_backup_enabled' => true,
+    'panel_backup_command' => '/usr/bin/sudo -n /usr/local/sbin/backuppanel-api.sh',
+    'panel_backup_dir' => __DIR__ . '/backups/panel',
+    'full_backup_enabled' => true,
+    'full_backup_command' => '/usr/bin/sudo -n /usr/local/sbin/backupfull-api.sh',
+    'full_backup_dir' => __DIR__ . '/backups/full',
+    'backup_now_timeout_seconds' => 1800,
     'gdeliveryd_ip' => '127.0.0.1',
     'gdeliveryd_port' => 29100,
     'mail_send_command' => '/usr/bin/sudo -n /usr/local/sbin/sendreward-api.sh',
@@ -70,6 +97,22 @@ $CONFIG = [
     'maintenance_eta_max_minutes' => 1440,
     'maintenance_state_file' => __DIR__ . '/backups/maintenance/state.json',
     'maintenance_history_file' => __DIR__ . '/backups/maintenance/history.log',
+    'watchdog_enabled_default' => false,
+    'watchdog_config_file' => __DIR__ . '/backups/watchdog/config.json',
+    'watchdog_state_file' => __DIR__ . '/backups/watchdog/state.json',
+    'watchdog_history_file' => __DIR__ . '/backups/watchdog/history.log',
+    'watchdog_lock_file' => __DIR__ . '/backups/watchdog/runner.lock',
+    'watchdog_runner_script' => '/usr/local/sbin/pw-watchdog-runner.sh',
+    'watchdog_cron_file' => '/etc/cron.d/apicls-watchdog',
+    'watchdog_check_interval_seconds' => 60,
+    'watchdog_failure_threshold' => 2,
+    'watchdog_cooldown_seconds' => 300,
+    'watchdog_max_restart_attempts' => 3,
+    'watchdog_verify_restart' => true,
+    'watchdog_pause_during_maintenance' => true,
+    'watchdog_recent_history_limit' => 20,
+    'watchdog_critical_services' => ['logservice', 'uniquenamed', 'authd', 'gamedbd', 'gacd', 'gfactiond', 'gdeliveryd', 'glinkd', 'gamed'],
+    'restore_history_file' => __DIR__ . '/backups/restore/history.log',
     'server_ops_log_dir' => __DIR__ . '/backups/server-ops',
     'server_ops_start_command' => '/usr/bin/sudo -n /usr/local/sbin/panel_start.sh',
     'server_ops_stop_command' => '/usr/bin/sudo -n /usr/local/sbin/panel_stop.sh',
@@ -82,6 +125,11 @@ $CONFIG = [
     'server_ops_restart_countdown_marks' => [300, 180, 120, 60, 30, 10, 5, 4, 3, 2, 1],
     'server_ops_verify_services' => ['logservice', 'uniquenamed', 'authd', 'gamedbd', 'gacd', 'gfactiond', 'gdeliveryd', 'glinkd', 'gamed', 'httpd'],
     'server_ops_manageable_services' => ['logservice', 'uniquenamed', 'authd', 'gamedbd', 'gacd', 'gfactiond', 'gdeliveryd', 'glinkd', 'gamed'],
+    'control_center_disk_path' => '/',
+    'control_center_ping_target' => '127.0.0.1',
+    'control_center_ping_timeout_seconds' => 1,
+    'control_center_cpu_sample_microseconds' => 200000,
+    'control_center_recent_operations_limit' => 5,
     'pwadmin_instance_catalog_path' => '/home/pwadmin/instance.txt',
     'pwadmin_autoinstance_path' => '/home/pwadmin/autoinstance.txt',
     'gamed_gs_conf_path' => '/home/gamed/gs.conf',
@@ -3969,7 +4017,7 @@ function backupFileInfo($file, $type)
         'bytes' => is_file($file) ? filesize($file) : 0,
         'mtime' => is_file($file) ? filemtime($file) : 0,
         'created_at' => is_file($file) ? date('c', filemtime($file)) : '',
-        'sha1' => (($type === 'clsconfig_file' || $type === 'gamedbd_backup') && function_exists('sha1_file') && is_file($file)) ? sha1_file($file) : '',
+        'sha1' => (function_exists('sha1_file') && is_file($file)) ? sha1_file($file) : '',
     ];
 }
 
@@ -3999,14 +4047,128 @@ function listBackupFiles($dir, $pattern, $type, $limit)
     return array_slice($items, 0, max(1, intval($limit)));
 }
 
+function backupNowTypeDefinitions(array $config)
+{
+    return [
+        'gamedbd' => [
+            'key' => 'gamedbd',
+            'label' => 'GameDB',
+            'command_key' => 'gamedbd_backup_command',
+            'dir_key' => 'gamedbd_backup_dir',
+            'enabled_key' => 'gamedbd_backup_enabled',
+            'file_pattern' => 'gamedbd-backup-*.tgz',
+            'backup_item_type' => 'gamedbd_backup',
+            'response_key' => 'gamedbd_backups',
+        ],
+        'clsconfig' => [
+            'key' => 'clsconfig',
+            'label' => 'CLSConfig',
+            'command_key' => 'clsconfig_archive_backup_command',
+            'dir_key' => 'clsconfig_archive_backup_dir',
+            'enabled_key' => 'clsconfig_archive_backup_enabled',
+            'file_pattern' => 'clsconfig-backup-*.tgz',
+            'backup_item_type' => 'clsconfig_archive',
+            'response_key' => 'clsconfig_archives',
+        ],
+        'mysql' => [
+            'key' => 'mysql',
+            'label' => 'MySQL/MariaDB',
+            'command_key' => 'mysql_backup_command',
+            'dir_key' => 'mysql_backup_dir',
+            'enabled_key' => 'mysql_backup_enabled',
+            'file_pattern' => 'mysql-backup-*.sql.gz',
+            'backup_item_type' => 'mysql_backup',
+            'response_key' => 'mysql_backups',
+        ],
+        'uniquenamed' => [
+            'key' => 'uniquenamed',
+            'label' => 'UniqueNamed',
+            'command_key' => 'uniquenamed_backup_command',
+            'dir_key' => 'uniquenamed_backup_dir',
+            'enabled_key' => 'uniquenamed_backup_enabled',
+            'file_pattern' => 'uniquenamed-backup-*.tgz',
+            'backup_item_type' => 'uniquenamed_backup',
+            'response_key' => 'uniquenamed_backups',
+        ],
+        'panel' => [
+            'key' => 'panel',
+            'label' => 'Painel Web',
+            'command_key' => 'panel_backup_command',
+            'dir_key' => 'panel_backup_dir',
+            'enabled_key' => 'panel_backup_enabled',
+            'file_pattern' => 'panel-backup-*.tgz',
+            'backup_item_type' => 'panel_backup',
+            'response_key' => 'panel_backups',
+        ],
+        'full' => [
+            'key' => 'full',
+            'label' => 'Backup Completo',
+            'command_key' => 'full_backup_command',
+            'dir_key' => 'full_backup_dir',
+            'enabled_key' => 'full_backup_enabled',
+            'file_pattern' => 'full-backup-*.tgz',
+            'backup_item_type' => 'full_backup',
+            'response_key' => 'full_backups',
+        ],
+    ];
+}
+
+function backupNowNormalizeType($type)
+{
+    $type = strtolower(trim((string) $type));
+    $aliases = [
+        'db' => 'gamedbd',
+        'gamedb' => 'gamedbd',
+        'database' => 'gamedbd',
+        'mariadb' => 'mysql',
+        'unique' => 'uniquenamed',
+        'clsconfig_archive' => 'clsconfig',
+        'web' => 'panel',
+        'site' => 'panel',
+        'all' => 'full',
+    ];
+
+    return isset($aliases[$type]) ? $aliases[$type] : $type;
+}
+
+function availableBackupNowTypes(array $config)
+{
+    $available = [];
+    foreach (backupNowTypeDefinitions($config) as $key => $spec) {
+        $enabledKey = trim((string) array_value($spec, 'enabled_key', ''));
+        if ($enabledKey !== '' && !truthyValue(array_value($config, $enabledKey, true))) {
+            continue;
+        }
+        $available[] = $key;
+    }
+    return $available;
+}
+
+function backupNowDefinition(array $config, $type)
+{
+    $type = backupNowNormalizeType($type);
+    $definitions = backupNowTypeDefinitions($config);
+    if (!isset($definitions[$type])) {
+        throw new InvalidArgumentException('type de backup invalido: ' . $type . '. Use: ' . implode(', ', availableBackupNowTypes($config)));
+    }
+
+    return $definitions[$type];
+}
+
 function listClsconfigBackups(array $config, $limit = 100)
 {
     $roleJson = listBackupFiles(array_value($config, 'clsconfig_backup_dir', ''), 'roleid-*.json', 'role_json', $limit);
     $clsconfigFiles = listBackupFiles(array_value($config, 'clsconfig_file_backup_dir', ''), 'clsconfig-roleid-*', 'clsconfig_file', $limit);
     $exportLogs = listBackupFiles(array_value($config, 'clsconfig_export_log_dir', ''), 'exportclsconfig-*.log', 'export_log', $limit);
-    $gamedbdBackups = listBackupFiles(array_value($config, 'gamedbd_backup_dir', ''), 'gamedbd-backup-*.tgz', 'gamedbd_backup', $limit);
+    $definitions = backupNowTypeDefinitions($config);
+    $gamedbdBackups = listBackupFiles(array_value($config, 'gamedbd_backup_dir', ''), array_value(array_value($definitions, 'gamedbd', []), 'file_pattern', 'gamedbd-backup-*.tgz'), 'gamedbd_backup', $limit);
+    $clsconfigArchives = listBackupFiles(array_value($config, 'clsconfig_archive_backup_dir', ''), array_value(array_value($definitions, 'clsconfig', []), 'file_pattern', 'clsconfig-backup-*.tgz'), 'clsconfig_archive', $limit);
+    $mysqlBackups = listBackupFiles(array_value($config, 'mysql_backup_dir', ''), array_value(array_value($definitions, 'mysql', []), 'file_pattern', 'mysql-backup-*.sql.gz'), 'mysql_backup', $limit);
+    $uniquenamedBackups = listBackupFiles(array_value($config, 'uniquenamed_backup_dir', ''), array_value(array_value($definitions, 'uniquenamed', []), 'file_pattern', 'uniquenamed-backup-*.tgz'), 'uniquenamed_backup', $limit);
+    $panelBackups = listBackupFiles(array_value($config, 'panel_backup_dir', ''), array_value(array_value($definitions, 'panel', []), 'file_pattern', 'panel-backup-*.tgz'), 'panel_backup', $limit);
+    $fullBackups = listBackupFiles(array_value($config, 'full_backup_dir', ''), array_value(array_value($definitions, 'full', []), 'file_pattern', 'full-backup-*.tgz'), 'full_backup', $limit);
 
-    $all = array_merge($roleJson, $clsconfigFiles, $exportLogs, $gamedbdBackups);
+    $all = array_merge($roleJson, $clsconfigFiles, $exportLogs, $gamedbdBackups, $clsconfigArchives, $mysqlBackups, $uniquenamedBackups, $panelBackups, $fullBackups);
     usort($all, function ($a, $b) {
         return intval(array_value($b, 'mtime', 0)) <=> intval(array_value($a, 'mtime', 0));
     });
@@ -4016,12 +4178,24 @@ function listClsconfigBackups(array $config, $limit = 100)
         'clsconfig_files' => $clsconfigFiles,
         'export_logs' => $exportLogs,
         'gamedbd_backups' => $gamedbdBackups,
+        'clsconfig_archives' => $clsconfigArchives,
+        'mysql_backups' => $mysqlBackups,
+        'uniquenamed_backups' => $uniquenamedBackups,
+        'panel_backups' => $panelBackups,
+        'full_backups' => $fullBackups,
+        'available_backup_types' => availableBackupNowTypes($config),
+        'supported_types' => availableBackupNowTypes($config),
         'all' => array_slice($all, 0, max(1, intval($limit))),
         'dirs' => [
             'role_json' => safeBackupRealPath(array_value($config, 'clsconfig_backup_dir', '')),
             'clsconfig_files' => safeBackupRealPath(array_value($config, 'clsconfig_file_backup_dir', '')),
             'export_logs' => safeBackupRealPath(array_value($config, 'clsconfig_export_log_dir', '')),
             'gamedbd_backups' => safeBackupRealPath(array_value($config, 'gamedbd_backup_dir', '')),
+            'clsconfig_archives' => safeBackupRealPath(array_value($config, 'clsconfig_archive_backup_dir', '')),
+            'mysql_backups' => safeBackupRealPath(array_value($config, 'mysql_backup_dir', '')),
+            'uniquenamed_backups' => safeBackupRealPath(array_value($config, 'uniquenamed_backup_dir', '')),
+            'panel_backups' => safeBackupRealPath(array_value($config, 'panel_backup_dir', '')),
+            'full_backups' => safeBackupRealPath(array_value($config, 'full_backup_dir', '')),
         ],
     ];
 }
@@ -4169,6 +4343,141 @@ function createGamedbdSafetyBackup(array $config, $reason = 'manual', $force = f
     return $parsed;
 }
 
+function backupNowReasonValue(array $request)
+{
+    $reason = trim((string) firstArrayValue($request, ['reason', 'label', 'note'], 'manual'));
+    $backup = array_value($request, 'backup', null);
+    if ($reason === '' && is_array($backup)) {
+        $reason = trim((string) firstArrayValue($backup, ['reason', 'label', 'note'], 'manual'));
+    }
+
+    if ($reason === '') {
+        $reason = 'manual';
+    }
+
+    $reason = preg_replace('/[^a-zA-Z0-9_.:-]+/', '_', $reason);
+    $reason = trim((string) $reason, '_');
+    return $reason !== '' ? $reason : 'manual';
+}
+
+function backupNowTypeValue(array $request)
+{
+    $type = trim((string) firstArrayValue($request, ['type', 'backup_type', 'backupType', 'kind'], ''));
+    $backup = array_value($request, 'backup', null);
+    if ($type === '' && is_array($backup)) {
+        $type = trim((string) firstArrayValue($backup, ['type', 'backup_type', 'backupType', 'kind'], ''));
+    }
+
+    return backupNowNormalizeType($type);
+}
+
+function executeBackupNowByDefinition(array $config, array $definition, $reason, $dryRun = false)
+{
+    $type = trim((string) array_value($definition, 'key', ''));
+    $label = trim((string) array_value($definition, 'label', strtoupper($type)));
+    $dirKey = trim((string) array_value($definition, 'dir_key', ''));
+    $commandKey = trim((string) array_value($definition, 'command_key', ''));
+    $backupItemType = trim((string) array_value($definition, 'backup_item_type', $type));
+    $filePattern = trim((string) array_value($definition, 'file_pattern', ''));
+    $enabledKey = trim((string) array_value($definition, 'enabled_key', ''));
+
+    if ($enabledKey !== '' && !truthyValue(array_value($config, $enabledKey, true))) {
+        throw new Exception('Backup ' . $type . ' desabilitado na configuracao da API');
+    }
+
+    $backupDir = trim((string) array_value($config, $dirKey, ''));
+    if ($backupDir === '') {
+        throw new Exception('Diretorio de backup nao configurado para ' . $type);
+    }
+
+    if (!is_dir($backupDir) && !@mkdir($backupDir, 0750, true)) {
+        throw new Exception('Nao foi possivel criar diretorio de backup para ' . $type . ': ' . $backupDir);
+    }
+
+    if (!is_dir($backupDir) || !is_writable($backupDir)) {
+        throw new Exception('Diretorio de backup sem permissao de escrita para ' . $type . ': ' . $backupDir);
+    }
+
+    $command = trim((string) array_value($config, $commandKey, ''));
+    if ($command === '') {
+        throw new Exception('Comando de backup nao configurado para ' . $type);
+    }
+
+    $safeReason = backupNowReasonValue(['reason' => $reason]);
+    if ($dryRun) {
+        return [
+            'type' => $type,
+            'label' => $label,
+            'dry_run' => true,
+            'mode' => 'dry_run',
+            'command' => $command,
+            'target_dir' => safeBackupRealPath($backupDir),
+            'file_pattern' => $filePattern,
+            'backup_item_type' => $backupItemType,
+            'reason' => $safeReason,
+        ];
+    }
+
+    $result = executeServerOpsCommand(
+        $command . ' ' . escapeshellarg($backupDir) . ' ' . escapeshellarg($safeReason),
+        intval(array_value($config, 'backup_now_timeout_seconds', 1800))
+    );
+
+    if (empty($result['success'])) {
+        throw new Exception(
+            'Backup ' . $type . ' falhou (exit ' . intval(array_value($result, 'exit_code', 1)) . '): '
+            . trim((string) array_value($result, 'stdout_excerpt', ''))
+        );
+    }
+
+    $parsed = is_array(array_value($result, 'parsed', null)) ? array_value($result, 'parsed', []) : [];
+    if (empty($parsed)) {
+        $parsed = [
+            'stdout' => trim((string) array_value($result, 'stdout_excerpt', '')),
+        ];
+    }
+
+    $file = trim((string) array_value($parsed, 'file', ''));
+    if ($file !== '' && is_file($file)) {
+        $parsed = array_merge($parsed, backupFileInfo($file, $backupItemType));
+    }
+
+    $parsed['type'] = $type;
+    $parsed['label'] = $label;
+    $parsed['backup_item_type'] = $backupItemType;
+    $parsed['mode'] = 'created';
+    $parsed['reason'] = $safeReason;
+    return $parsed;
+}
+
+function handleBackupNowRequest(array $config, array $request)
+{
+    $type = backupNowTypeValue($request);
+    if ($type === '') {
+        throw new InvalidArgumentException('Informe type para backupNow. Use: ' . implode(', ', availableBackupNowTypes($config)));
+    }
+
+    $dryRun = truthyValue(firstArrayValue($request, ['dry_run', 'dryRun'], false));
+    $force = truthyValue(array_value($request, 'force', false));
+    $reason = backupNowReasonValue($request);
+    $definition = backupNowDefinition($config, $type);
+
+    if ($type === 'gamedbd' && !$dryRun) {
+        $backup = createGamedbdSafetyBackup($config, $reason, $force);
+        $backup['type'] = 'gamedbd';
+        $backup['label'] = trim((string) array_value($definition, 'label', 'GameDB'));
+    } else {
+        $backup = executeBackupNowByDefinition($config, $definition, $reason, $dryRun);
+    }
+
+    return [
+        'success' => true,
+        'backup' => $backup,
+        'supported_types' => availableBackupNowTypes($config),
+        'requested_at' => gmdate('c'),
+    ];
+}
+
 function executeMailSendCommand(array $config, array $payload)
 {
     $command = trim((string) array_value($config, 'mail_send_command', ''));
@@ -4227,6 +4536,254 @@ function executeMailSendCommand(array $config, array $payload)
     ];
 }
 
+function restoreHistoryFile(array $config)
+{
+    return trim((string) array_value($config, 'restore_history_file', __DIR__ . '/backups/restore/history.log'));
+}
+
+function restoreTypeDefinitions(array $config)
+{
+    return [
+        'role_json' => [
+            'key' => 'role_json',
+            'label' => 'Role JSON',
+            'dir_key' => 'clsconfig_backup_dir',
+            'file_regex' => '/^roleid-\d+-\d{8}-\d{6}-[a-f0-9]{8}\.json$/i',
+            'supported' => true,
+            'severity' => 'low',
+            'restore_level' => 'light',
+            'requires_confirmation' => true,
+            'confirm_token' => 'RESTORE_ROLE_JSON',
+            'dry_run_supported' => true,
+            'requires_gamedbd_backup' => true,
+            'safety_backup_types' => ['gamedbd_backup'],
+            'affected_components' => ['gamedbd', 'clsconfig_template'],
+            'affected_services' => [],
+            'summary' => 'Restaura o template editavel do role a partir de um backup JSON seguro.',
+        ],
+        'clsconfig_file' => [
+            'key' => 'clsconfig_file',
+            'label' => 'CLSConfig File',
+            'dir_key' => 'clsconfig_file_backup_dir',
+            'file_regex' => '/^clsconfig-roleid-\d+-\d{8}-\d{6}-[a-f0-9]{8}$/i',
+            'supported' => true,
+            'severity' => 'low',
+            'restore_level' => 'light',
+            'requires_confirmation' => true,
+            'confirm_token' => 'RESTORE_CLSCONFIG',
+            'dry_run_supported' => true,
+            'requires_gamedbd_backup' => true,
+            'safety_backup_types' => ['gamedbd_backup', 'clsconfig_file'],
+            'affected_components' => ['clsconfig_file'],
+            'affected_services' => [],
+            'summary' => 'Substitui o arquivo clsconfig atual por um backup de arquivo e cria backup de seguranca antes da troca.',
+        ],
+        'clsconfig_archive' => [
+            'key' => 'clsconfig_archive',
+            'label' => 'CLSConfig Archive',
+            'dir_key' => 'clsconfig_archive_backup_dir',
+            'file_regex' => '/^clsconfig-backup-\d{8}-\d{6}-[a-f0-9]{8}\.tgz$/i',
+            'supported' => false,
+            'severity' => 'medium',
+            'restore_level' => 'intermediate',
+            'requires_confirmation' => true,
+            'confirm_token' => 'RESTORE_CLSCONFIG_ARCHIVE',
+            'dry_run_supported' => false,
+            'requires_gamedbd_backup' => true,
+            'safety_backup_types' => ['gamedbd_backup'],
+            'affected_components' => ['clsconfig_archive', 'gamedbd/dbdata/clsconfig'],
+            'affected_services' => [],
+            'summary' => 'Contrato reservado para restore futuro de pacote clsconfig compactado.',
+        ],
+        'gamedbd_backup' => [
+            'key' => 'gamedbd_backup',
+            'label' => 'GameDB Backup',
+            'dir_key' => 'gamedbd_backup_dir',
+            'file_regex' => '/^gamedbd-backup-\d{8}-\d{6}-[a-f0-9]{8}\.tgz$/i',
+            'supported' => false,
+            'severity' => 'critical',
+            'restore_level' => 'critical',
+            'requires_confirmation' => true,
+            'confirm_token' => 'RESTORE_GAMEDBD',
+            'dry_run_supported' => false,
+            'requires_gamedbd_backup' => false,
+            'safety_backup_types' => ['gamedbd_backup'],
+            'affected_components' => ['gamedbd'],
+            'affected_services' => ['gamedbd', 'gdeliveryd', 'glinkd', 'gamed'],
+            'summary' => 'Contrato reservado para restore futuro do GameDB completo.',
+        ],
+        'mysql_backup' => [
+            'key' => 'mysql_backup',
+            'label' => 'MySQL/MariaDB Backup',
+            'dir_key' => 'mysql_backup_dir',
+            'file_regex' => '/^mysql-backup-\d{8}-\d{6}-[a-f0-9]{8}\.sql\.gz$/i',
+            'supported' => false,
+            'severity' => 'medium',
+            'restore_level' => 'intermediate',
+            'requires_confirmation' => true,
+            'confirm_token' => 'RESTORE_MYSQL',
+            'dry_run_supported' => false,
+            'requires_gamedbd_backup' => true,
+            'safety_backup_types' => ['mysql_backup', 'gamedbd_backup'],
+            'affected_components' => ['mysql'],
+            'affected_services' => ['mysql'],
+            'summary' => 'Contrato reservado para restore futuro do banco MySQL/MariaDB.',
+        ],
+        'uniquenamed_backup' => [
+            'key' => 'uniquenamed_backup',
+            'label' => 'UniqueNamed Backup',
+            'dir_key' => 'uniquenamed_backup_dir',
+            'file_regex' => '/^uniquenamed-backup-\d{8}-\d{6}-[a-f0-9]{8}\.tgz$/i',
+            'supported' => false,
+            'severity' => 'medium',
+            'restore_level' => 'intermediate',
+            'requires_confirmation' => true,
+            'confirm_token' => 'RESTORE_UNIQUENAMED',
+            'dry_run_supported' => false,
+            'requires_gamedbd_backup' => true,
+            'safety_backup_types' => ['uniquenamed_backup', 'gamedbd_backup'],
+            'affected_components' => ['uniquenamed'],
+            'affected_services' => ['uniquenamed', 'gdeliveryd', 'glinkd', 'gamed'],
+            'summary' => 'Contrato reservado para restore futuro do UniqueNamed.',
+        ],
+        'panel_backup' => [
+            'key' => 'panel_backup',
+            'label' => 'Panel Backup',
+            'dir_key' => 'panel_backup_dir',
+            'file_regex' => '/^panel-backup-\d{8}-\d{6}-[a-f0-9]{8}\.tgz$/i',
+            'supported' => false,
+            'severity' => 'medium',
+            'restore_level' => 'intermediate',
+            'requires_confirmation' => true,
+            'confirm_token' => 'RESTORE_PANEL',
+            'dry_run_supported' => false,
+            'requires_gamedbd_backup' => false,
+            'safety_backup_types' => ['panel_backup'],
+            'affected_components' => ['panel'],
+            'affected_services' => ['httpd'],
+            'summary' => 'Contrato reservado para restore futuro do painel web.',
+        ],
+        'full_backup' => [
+            'key' => 'full_backup',
+            'label' => 'Full Backup',
+            'dir_key' => 'full_backup_dir',
+            'file_regex' => '/^full-backup-\d{8}-\d{6}-[a-f0-9]{8}\.tgz$/i',
+            'supported' => false,
+            'severity' => 'critical',
+            'restore_level' => 'critical',
+            'requires_confirmation' => true,
+            'confirm_token' => 'RESTORE_FULL',
+            'dry_run_supported' => false,
+            'requires_gamedbd_backup' => false,
+            'safety_backup_types' => ['full_backup'],
+            'affected_components' => ['gamedbd', 'mysql', 'uniquenamed', 'clsconfig', 'panel'],
+            'affected_services' => ['gamedbd', 'mysql', 'uniquenamed', 'gdeliveryd', 'glinkd', 'gamed', 'httpd'],
+            'summary' => 'Contrato reservado para restore futuro de pacote completo do servidor.',
+        ],
+        'export_log' => [
+            'key' => 'export_log',
+            'label' => 'Export Log',
+            'dir_key' => 'clsconfig_export_log_dir',
+            'file_regex' => '/^exportclsconfig-\d{8}-\d{6}-[a-f0-9]{8}\.log$/i',
+            'supported' => false,
+            'severity' => 'none',
+            'restore_level' => 'none',
+            'requires_confirmation' => false,
+            'confirm_token' => '',
+            'dry_run_supported' => false,
+            'requires_gamedbd_backup' => false,
+            'safety_backup_types' => [],
+            'affected_components' => [],
+            'affected_services' => [],
+            'summary' => 'Arquivo de log nao restauravel.',
+        ],
+    ];
+}
+
+function restoreNormalizeType($type)
+{
+    $type = strtolower(trim((string) $type));
+    $aliases = [
+        'role' => 'role_json',
+        'role_backup' => 'role_json',
+        'json' => 'role_json',
+        'clsconfig' => 'clsconfig_archive',
+        'clsconfigfile' => 'clsconfig_file',
+        'clsconfig_backup' => 'clsconfig_archive',
+        'gamedbd' => 'gamedbd_backup',
+        'gamedb' => 'gamedbd_backup',
+        'db' => 'gamedbd_backup',
+        'mysql' => 'mysql_backup',
+        'mariadb' => 'mysql_backup',
+        'unique' => 'uniquenamed_backup',
+        'uniquenamed' => 'uniquenamed_backup',
+        'panel' => 'panel_backup',
+        'web' => 'panel_backup',
+        'full' => 'full_backup',
+    ];
+
+    return isset($aliases[$type]) ? $aliases[$type] : $type;
+}
+
+function restoreTypeDefinition(array $config, $type)
+{
+    $type = restoreNormalizeType($type);
+    $definitions = restoreTypeDefinitions($config);
+    return isset($definitions[$type]) ? $definitions[$type] : null;
+}
+
+function restoreCanExecuteType(array $definition)
+{
+    return !empty($definition['supported']);
+}
+
+function restoreDetectTypeFromName(array $config, $name)
+{
+    $name = basename(str_replace('\\', '/', trim((string) $name)));
+    if ($name === '') {
+        return '';
+    }
+
+    foreach (restoreTypeDefinitions($config) as $type => $definition) {
+        $pattern = trim((string) array_value($definition, 'file_regex', ''));
+        if ($pattern !== '' && preg_match($pattern, $name)) {
+            return $type;
+        }
+    }
+
+    return '';
+}
+
+function restoreTypeCatalog(array $config)
+{
+    $catalog = [];
+    foreach (restoreTypeDefinitions($config) as $type => $definition) {
+        $catalog[] = [
+            'type' => $type,
+            'label' => array_value($definition, 'label', $type),
+            'supported' => restoreCanExecuteType($definition),
+            'severity' => array_value($definition, 'severity', 'none'),
+            'restore_level' => array_value($definition, 'restore_level', 'none'),
+            'requires_confirmation' => !empty($definition['requires_confirmation']),
+            'confirm_token' => (string) array_value($definition, 'confirm_token', ''),
+            'dry_run_supported' => !empty($definition['dry_run_supported']),
+            'requires_gamedbd_backup' => !empty($definition['requires_gamedbd_backup']),
+            'safety_backup_types' => array_values(array_map('strval', array_value($definition, 'safety_backup_types', []))),
+            'affected_components' => array_values(array_map('strval', array_value($definition, 'affected_components', []))),
+            'affected_services' => array_values(array_map('strval', array_value($definition, 'affected_services', []))),
+            'summary' => (string) array_value($definition, 'summary', ''),
+        ];
+    }
+
+    return $catalog;
+}
+
+function restoreRequestActor(array $request)
+{
+    $actor = trimOneLineText(firstArrayValue($request, ['actor', 'updated_by', 'updatedBy'], 'api'));
+    return $actor !== '' ? $actor : 'api';
+}
+
 function restoreRequestBackupName(array $request)
 {
     $candidates = [
@@ -4253,31 +4810,25 @@ function restoreRequestBackupName(array $request)
     return '';
 }
 
-function restoreRequestBackupType(array $request, $name)
+function restoreRequestBackupType(array $config, array $request, $name)
 {
-    $type = trim((string) array_value($request, 'type', ''));
+    $type = restoreNormalizeType(array_value($request, 'type', ''));
     $backup = array_value($request, 'backup', null);
     if ($type === '' && is_array($backup)) {
-        $type = trim((string) array_value($backup, 'type', ''));
+        $type = restoreNormalizeType(array_value($backup, 'type', ''));
     }
 
     if ($type === '') {
-        if (preg_match('/^roleid-\d+-/', $name)) {
-            return 'role_json';
-        }
-
-        if (preg_match('/^clsconfig-roleid-\d+-/', $name)) {
-            return 'clsconfig_file';
-        }
+        $type = restoreDetectTypeFromName($config, $name);
     }
 
     return $type;
 }
 
-function backupContentRequestType(array $request)
+function backupContentRequestType(array $config, array $request)
 {
     $name = restoreRequestBackupName($request);
-    return restoreRequestBackupType($request, $name);
+    return restoreRequestBackupType($config, $request, $name);
 }
 
 function restoreRequestDryRun(array $request)
@@ -4328,19 +4879,17 @@ function resolveRestoreBackupFile(array $config, array $request, &$type)
         throw new Exception('Informe backup.name ou backup.file para restaurar');
     }
 
-    $type = restoreRequestBackupType($request, $name);
-    if ($type === 'export_log') {
-        throw new Exception('export_log nao e restauravel');
+    $type = restoreRequestBackupType($config, $request, $name);
+    $definition = restoreTypeDefinition($config, $type);
+    if (!is_array($definition)) {
+        throw new Exception('Tipo de backup invalido para restore: ' . ($type !== '' ? $type : $name));
     }
 
-    if ($type === 'role_json') {
-        $dir = array_value($config, 'clsconfig_backup_dir', '');
-        $pattern = '/^roleid-\d+-\d{8}-\d{6}-[a-f0-9]{8}\.json$/i';
-    } elseif ($type === 'clsconfig_file') {
-        $dir = array_value($config, 'clsconfig_file_backup_dir', '');
-        $pattern = '/^clsconfig-roleid-\d+-\d{8}-\d{6}-[a-f0-9]{8}$/i';
-    } else {
-        throw new Exception('Tipo de backup invalido para restore: ' . $type);
+    $dirKey = trim((string) array_value($definition, 'dir_key', ''));
+    $dir = $dirKey !== '' ? array_value($config, $dirKey, '') : '';
+    $pattern = trim((string) array_value($definition, 'file_regex', ''));
+    if ($pattern === '') {
+        throw new Exception('Tipo de backup sem padrao seguro configurado: ' . $type);
     }
 
     if (!preg_match($pattern, $name)) {
@@ -4802,7 +5351,7 @@ function serverOpsSystemctlState(array $units)
     return '';
 }
 
-function serverOpsCollectService(array $config, array $service)
+function serverOpsCollectService(array $config, array $service, $instancesSnapshot = null)
 {
     $key = trim((string) array_value($service, 'key', ''));
     $pids = serverOpsCollectPids(array_value($service, 'process_names', []));
@@ -4811,7 +5360,9 @@ function serverOpsCollectService(array $config, array $service)
     $systemdState = serverOpsSystemctlState(array_value($service, 'systemd_units', []));
 
     if ($key === 'gamed') {
-        $instancesSnapshot = getManageableInstancesSnapshot($config);
+        if (!is_array($instancesSnapshot)) {
+            $instancesSnapshot = getManageableInstancesSnapshot($config);
+        }
         $worldIndex = [];
         foreach ((array) array_value($instancesSnapshot, 'instances', []) as $instance) {
             $code = trim((string) array_value($instance, 'code', ''));
@@ -4858,11 +5409,11 @@ function serverOpsCollectService(array $config, array $service)
     ];
 }
 
-function getServiceStatusSnapshot(array $config)
+function getServiceStatusSnapshot(array $config, $instancesSnapshot = null)
 {
     $services = [];
     foreach (serverOpsKnownServices() as $service) {
-        $services[] = serverOpsCollectService($config, $service);
+        $services[] = serverOpsCollectService($config, $service, $instancesSnapshot);
     }
 
     return [
@@ -4872,7 +5423,7 @@ function getServiceStatusSnapshot(array $config)
     ];
 }
 
-function getManageableServicesSnapshot(array $config)
+function getManageableServicesSnapshotFromStatus(array $config, array $status)
 {
     $known = [];
     foreach (serverOpsKnownServices() as $service) {
@@ -4890,7 +5441,6 @@ function getManageableServicesSnapshot(array $config)
         $aliasesByKey[$key][] = (string) $alias;
     }
 
-    $status = getServiceStatusSnapshot($config);
     $statusIndex = [];
     foreach (array_value($status, 'services', []) as $item) {
         $key = trim((string) array_value($item, 'key', ''));
@@ -4926,6 +5476,11 @@ function getManageableServicesSnapshot(array $config)
         'count' => count($manageable),
         'collected_at' => array_value($status, 'collected_at', gmdate('c')),
     ];
+}
+
+function getManageableServicesSnapshot(array $config)
+{
+    return getManageableServicesSnapshotFromStatus($config, getServiceStatusSnapshot($config));
 }
 
 function instanceControlNormalizeCode($code)
@@ -5344,6 +5899,636 @@ function getManageableInstancesSnapshot(array $config)
             'catalog' => $catalogPath,
             'autostart' => $autostartPath,
             'gs_conf' => $gsConfPath,
+        ],
+    ];
+}
+
+function controlCenterRound($value, $precision = 2)
+{
+    if (!is_numeric($value)) {
+        return null;
+    }
+
+    return round(floatval($value), intval($precision));
+}
+
+function controlCenterPercent($used, $total, $precision = 2)
+{
+    $used = floatval($used);
+    $total = floatval($total);
+    if ($total <= 0) {
+        return null;
+    }
+
+    return controlCenterRound(($used / $total) * 100, $precision);
+}
+
+function controlCenterFormatDuration($seconds)
+{
+    $seconds = max(0, intval(round($seconds)));
+    $days = intdiv($seconds, 86400);
+    $seconds %= 86400;
+    $hours = intdiv($seconds, 3600);
+    $seconds %= 3600;
+    $minutes = intdiv($seconds, 60);
+    $seconds %= 60;
+
+    $parts = [];
+    if ($days > 0) {
+        $parts[] = $days . 'd';
+    }
+    if ($hours > 0 || !empty($parts)) {
+        $parts[] = $hours . 'h';
+    }
+    if ($minutes > 0 || !empty($parts)) {
+        $parts[] = $minutes . 'm';
+    }
+    $parts[] = $seconds . 's';
+
+    return implode(' ', $parts);
+}
+
+function controlCenterReadCpuCounters()
+{
+    $path = '/proc/stat';
+    if (!is_file($path) || !is_readable($path)) {
+        return null;
+    }
+
+    $lines = @file($path, FILE_IGNORE_NEW_LINES);
+    if (!is_array($lines)) {
+        return null;
+    }
+
+    foreach ($lines as $line) {
+        $line = trim((string) $line);
+        if (strpos($line, 'cpu ') !== 0) {
+            continue;
+        }
+
+        $parts = preg_split('/\s+/', $line);
+        if (!is_array($parts) || count($parts) < 5) {
+            return null;
+        }
+
+        $total = 0.0;
+        $idle = 0.0;
+        foreach (array_values(array_slice($parts, 1)) as $idx => $value) {
+            if (!is_numeric($value)) {
+                continue;
+            }
+            $value = floatval($value);
+            $total += $value;
+            if ($idx === 3 || $idx === 4) {
+                $idle += $value;
+            }
+        }
+
+        if ($total <= 0) {
+            return null;
+        }
+
+        return [
+            'total' => $total,
+            'idle' => $idle,
+        ];
+    }
+
+    return null;
+}
+
+function controlCenterCpuSnapshot(array $config)
+{
+    $sampleUs = intval(array_value($config, 'control_center_cpu_sample_microseconds', 200000));
+    $sampleUs = max(50000, min(500000, $sampleUs));
+
+    $first = controlCenterReadCpuCounters();
+    if (!is_array($first)) {
+        return [
+            'available' => false,
+            'usage_percent' => null,
+            'sample_ms' => intval(round($sampleUs / 1000)),
+            'source' => '/proc/stat',
+        ];
+    }
+
+    usleep($sampleUs);
+    $second = controlCenterReadCpuCounters();
+    if (!is_array($second)) {
+        return [
+            'available' => false,
+            'usage_percent' => null,
+            'sample_ms' => intval(round($sampleUs / 1000)),
+            'source' => '/proc/stat',
+        ];
+    }
+
+    $deltaTotal = floatval($second['total']) - floatval($first['total']);
+    $deltaIdle = floatval($second['idle']) - floatval($first['idle']);
+    $usage = null;
+    if ($deltaTotal > 0) {
+        $usage = (($deltaTotal - $deltaIdle) / $deltaTotal) * 100;
+    }
+
+    return [
+        'available' => $usage !== null,
+        'usage_percent' => ($usage !== null) ? controlCenterRound($usage, 2) : null,
+        'sample_ms' => intval(round($sampleUs / 1000)),
+        'source' => '/proc/stat',
+    ];
+}
+
+function controlCenterMemorySnapshot()
+{
+    $path = '/proc/meminfo';
+    if (!is_file($path) || !is_readable($path)) {
+        return [
+            'available' => false,
+        ];
+    }
+
+    $lines = @file($path, FILE_IGNORE_NEW_LINES);
+    if (!is_array($lines)) {
+        return [
+            'available' => false,
+        ];
+    }
+
+    $mem = [];
+    foreach ($lines as $line) {
+        if (preg_match('/^([A-Za-z_]+):\s+(\d+)\s+kB$/', trim((string) $line), $matches)) {
+            $mem[$matches[1]] = intval($matches[2]) * 1024;
+        }
+    }
+
+    $total = intval(array_value($mem, 'MemTotal', 0));
+    $available = intval(array_value($mem, 'MemAvailable', 0));
+    if ($available <= 0) {
+        $available = intval(array_value($mem, 'MemFree', 0))
+            + intval(array_value($mem, 'Buffers', 0))
+            + intval(array_value($mem, 'Cached', 0));
+    }
+
+    if ($total <= 0) {
+        return [
+            'available' => false,
+        ];
+    }
+
+    $used = max(0, $total - $available);
+    $swapTotal = intval(array_value($mem, 'SwapTotal', 0));
+    $swapFree = intval(array_value($mem, 'SwapFree', 0));
+    $swapUsed = max(0, $swapTotal - $swapFree);
+
+    return [
+        'available' => true,
+        'total_bytes' => $total,
+        'available_bytes' => $available,
+        'used_bytes' => $used,
+        'used_percent' => controlCenterPercent($used, $total, 2),
+        'total_mb' => controlCenterRound($total / 1048576, 2),
+        'available_mb' => controlCenterRound($available / 1048576, 2),
+        'used_mb' => controlCenterRound($used / 1048576, 2),
+        'swap_total_bytes' => $swapTotal,
+        'swap_used_bytes' => $swapUsed,
+        'swap_total_mb' => controlCenterRound($swapTotal / 1048576, 2),
+        'swap_used_mb' => controlCenterRound($swapUsed / 1048576, 2),
+        'swap_used_percent' => controlCenterPercent($swapUsed, $swapTotal, 2),
+        'source' => '/proc/meminfo',
+    ];
+}
+
+function controlCenterDiskSnapshot(array $config)
+{
+    $path = trim((string) array_value($config, 'control_center_disk_path', '/'));
+    if ($path === '') {
+        $path = '/';
+    }
+
+    $total = @disk_total_space($path);
+    $free = @disk_free_space($path);
+    if ($total === false || $free === false || $total <= 0) {
+        return [
+            'available' => false,
+            'path' => $path,
+        ];
+    }
+
+    $used = max(0, $total - $free);
+
+    return [
+        'available' => true,
+        'path' => $path,
+        'total_bytes' => $total,
+        'free_bytes' => $free,
+        'used_bytes' => $used,
+        'used_percent' => controlCenterPercent($used, $total, 2),
+        'total_gb' => controlCenterRound($total / 1073741824, 2),
+        'free_gb' => controlCenterRound($free / 1073741824, 2),
+        'used_gb' => controlCenterRound($used / 1073741824, 2),
+    ];
+}
+
+function controlCenterUptimeSnapshot()
+{
+    $path = '/proc/uptime';
+    if (!is_file($path) || !is_readable($path)) {
+        return [
+            'available' => false,
+            'uptime_seconds' => null,
+            'uptime_human' => '',
+        ];
+    }
+
+    $raw = trim((string) @file_get_contents($path));
+    if ($raw === '') {
+        return [
+            'available' => false,
+            'uptime_seconds' => null,
+            'uptime_human' => '',
+        ];
+    }
+
+    $parts = preg_split('/\s+/', $raw);
+    $seconds = isset($parts[0]) ? floatval($parts[0]) : 0;
+    if ($seconds <= 0) {
+        return [
+            'available' => false,
+            'uptime_seconds' => null,
+            'uptime_human' => '',
+        ];
+    }
+
+    return [
+        'available' => true,
+        'uptime_seconds' => intval(round($seconds)),
+        'uptime_human' => controlCenterFormatDuration($seconds),
+        'source' => '/proc/uptime',
+    ];
+}
+
+function controlCenterLoadAverageSnapshot()
+{
+    $loads = function_exists('sys_getloadavg') ? @sys_getloadavg() : false;
+    if (!is_array($loads) || count($loads) < 3) {
+        $path = '/proc/loadavg';
+        if (is_file($path) && is_readable($path)) {
+            $raw = trim((string) @file_get_contents($path));
+            if ($raw !== '') {
+                $parts = preg_split('/\s+/', $raw);
+                if (count($parts) >= 3) {
+                    $loads = [floatval($parts[0]), floatval($parts[1]), floatval($parts[2])];
+                }
+            }
+        }
+    }
+
+    if (!is_array($loads) || count($loads) < 3) {
+        return [
+            'available' => false,
+            '1m' => null,
+            '5m' => null,
+            '15m' => null,
+        ];
+    }
+
+    return [
+        'available' => true,
+        '1m' => controlCenterRound($loads[0], 2),
+        '5m' => controlCenterRound($loads[1], 2),
+        '15m' => controlCenterRound($loads[2], 2),
+    ];
+}
+
+function controlCenterPingSnapshot(array $config)
+{
+    $target = trim((string) array_value($config, 'control_center_ping_target', ''));
+    $timeout = max(1, min(5, intval(array_value($config, 'control_center_ping_timeout_seconds', 1))));
+
+    if ($target === '') {
+        return [
+            'requested' => false,
+            'target' => '',
+            'reachable' => null,
+            'latency_ms' => null,
+            'warning' => 'Ping desabilitado na configuracao',
+        ];
+    }
+
+    if (!serverOpsShellAvailable()) {
+        return [
+            'requested' => true,
+            'target' => $target,
+            'reachable' => null,
+            'latency_ms' => null,
+            'warning' => 'shell_exec indisponivel para ping',
+        ];
+    }
+
+    $output = serverOpsRun('ping -c 1 -W ' . $timeout . ' ' . escapeshellarg($target) . ' 2>/dev/null');
+    if ($output === '') {
+        return [
+            'requested' => true,
+            'target' => $target,
+            'reachable' => false,
+            'latency_ms' => null,
+            'warning' => 'Sem resposta do comando ping',
+        ];
+    }
+
+    $reachable = (stripos($output, '0% packet loss') !== false)
+        || preg_match('/\b1\s+(packets\s+)?received\b/i', $output);
+    $latencyMs = null;
+    if (preg_match('/time[=<]([0-9.]+)\s*ms/i', $output, $matches)) {
+        $latencyMs = controlCenterRound($matches[1], 2);
+    }
+
+    return [
+        'requested' => true,
+        'target' => $target,
+        'reachable' => (bool) $reachable,
+        'latency_ms' => $latencyMs,
+        'warning' => ($reachable ? '' : 'Alvo sem resposta ao ping'),
+    ];
+}
+
+function controlCenterRecentOperationsSnapshot(array $config)
+{
+    $limit = max(1, min(20, intval(array_value($config, 'control_center_recent_operations_limit', 5))));
+
+    try {
+        $history = getServerOperationsHistoryHandler($config, ['limit' => $limit]);
+        $recent = array_values(array_value($history, 'operations', []));
+    } catch (Exception $e) {
+        return [
+            'latest' => null,
+            'running' => null,
+            'recent' => [],
+            'count' => 0,
+            'warning' => $e->getMessage(),
+            'history_file' => rtrim(serverOpsLogDir($config), '/\\') . DIRECTORY_SEPARATOR . 'history.log',
+        ];
+    }
+
+    $running = null;
+    foreach ($recent as $operation) {
+        if (!empty($operation['running'])) {
+            $running = $operation;
+            break;
+        }
+    }
+
+    return [
+        'latest' => !empty($recent) ? $recent[0] : null,
+        'running' => $running,
+        'recent' => $recent,
+        'count' => count($recent),
+        'warning' => '',
+        'history_file' => array_value($history, 'history_file', rtrim(serverOpsLogDir($config), '/\\') . DIRECTORY_SEPARATOR . 'history.log'),
+    ];
+}
+
+function controlCenterServiceSummary(array $config, array $serviceStatus, array $manageableServices)
+{
+    $summary = [
+        'total' => 0,
+        'online' => 0,
+        'offline' => 0,
+        'unknown' => 0,
+        'manageable_total' => 0,
+        'manageable_online' => 0,
+        'manageable_offline' => 0,
+        'manageable_unknown' => 0,
+        'critical_offline' => [],
+    ];
+
+    $criticalKeys = array_values(array_unique(array_merge(
+        array_values(array_map('strval', array_value($config, 'server_ops_verify_services', []))),
+        ['mysql', 'httpd']
+    )));
+
+    foreach ((array) array_value($serviceStatus, 'services', []) as $item) {
+        $summary['total']++;
+        $state = trim((string) array_value($item, 'state', 'unknown'));
+        if ($state === 'online') {
+            $summary['online']++;
+        } elseif ($state === 'offline') {
+            $summary['offline']++;
+        } else {
+            $summary['unknown']++;
+        }
+
+        $key = trim((string) array_value($item, 'key', ''));
+        if ($key !== '' && in_array($key, $criticalKeys, true) && $state !== 'online') {
+            $summary['critical_offline'][] = $key;
+        }
+    }
+
+    foreach ((array) array_value($manageableServices, 'services', []) as $item) {
+        $summary['manageable_total']++;
+        $state = trim((string) array_value($item, 'state', 'unknown'));
+        if ($state === 'online') {
+            $summary['manageable_online']++;
+        } elseif ($state === 'offline') {
+            $summary['manageable_offline']++;
+        } else {
+            $summary['manageable_unknown']++;
+        }
+    }
+
+    $summary['critical_offline'] = array_values(array_unique($summary['critical_offline']));
+    return $summary;
+}
+
+function controlCenterInstanceSummary(array $instancesSnapshot)
+{
+    $instances = (array) array_value($instancesSnapshot, 'instances', []);
+    $configured = 0;
+    $selectable = 0;
+
+    foreach ($instances as $item) {
+        if (!empty($item['configured'])) {
+            $configured++;
+        }
+        if (!empty($item['selectable'])) {
+            $selectable++;
+        }
+    }
+
+    return [
+        'total' => intval(array_value($instancesSnapshot, 'count', count($instances))),
+        'running' => intval(array_value($instancesSnapshot, 'running_count', 0)),
+        'stopped' => max(0, intval(array_value($instancesSnapshot, 'count', count($instances))) - intval(array_value($instancesSnapshot, 'running_count', 0))),
+        'auto_start' => intval(array_value($instancesSnapshot, 'auto_start_count', 0)),
+        'configured' => $configured,
+        'selectable' => $selectable,
+    ];
+}
+
+function controlCenterBuildAlerts(array $serviceSummary, array $instanceSummary, array $host, array $maintenance, array $operations, array $watchdog = [])
+{
+    $alerts = [];
+
+    foreach ((array) array_value($serviceSummary, 'critical_offline', []) as $serviceKey) {
+        $alerts[] = [
+            'severity' => 'critical',
+            'type' => 'service_offline',
+            'scope' => 'service',
+            'key' => $serviceKey,
+            'message' => 'Servico critico offline: ' . $serviceKey,
+        ];
+    }
+
+    if (!empty($maintenance['enabled'])) {
+        $alerts[] = [
+            'severity' => 'warning',
+            'type' => 'maintenance_enabled',
+            'scope' => 'server',
+            'key' => 'maintenance',
+            'message' => 'Modo de manutencao ativo',
+        ];
+    }
+
+    $cpuUsage = array_value(array_value($host, 'cpu', []), 'usage_percent', null);
+    if ($cpuUsage !== null && floatval($cpuUsage) >= 95) {
+        $alerts[] = [
+            'severity' => 'warning',
+            'type' => 'cpu_high',
+            'scope' => 'host',
+            'key' => 'cpu',
+            'message' => 'Uso de CPU elevado: ' . $cpuUsage . '%',
+        ];
+    }
+
+    $memoryUsage = array_value(array_value($host, 'memory', []), 'used_percent', null);
+    if ($memoryUsage !== null && floatval($memoryUsage) >= 90) {
+        $alerts[] = [
+            'severity' => 'warning',
+            'type' => 'memory_high',
+            'scope' => 'host',
+            'key' => 'memory',
+            'message' => 'Uso de memoria elevado: ' . $memoryUsage . '%',
+        ];
+    }
+
+    $diskUsage = array_value(array_value($host, 'disk', []), 'used_percent', null);
+    if ($diskUsage !== null && floatval($diskUsage) >= 90) {
+        $alerts[] = [
+            'severity' => 'critical',
+            'type' => 'disk_high',
+            'scope' => 'host',
+            'key' => 'disk',
+            'message' => 'Uso de disco elevado: ' . $diskUsage . '%',
+        ];
+    }
+
+    $ping = array_value($host, 'ping', []);
+    if (!empty($ping['requested']) && array_key_exists('reachable', $ping) && empty($ping['reachable'])) {
+        $alerts[] = [
+            'severity' => 'warning',
+            'type' => 'ping_unreachable',
+            'scope' => 'host',
+            'key' => 'ping',
+            'message' => 'Ping sem resposta para ' . array_value($ping, 'target', ''),
+        ];
+    }
+
+    if (is_array(array_value($operations, 'running', null))) {
+        $alerts[] = [
+            'severity' => 'info',
+            'type' => 'operation_running',
+            'scope' => 'operations',
+            'key' => trim((string) array_value(array_value($operations, 'running', []), 'id', '')),
+            'message' => 'Operacao em andamento: ' . trim((string) array_value(array_value($operations, 'running', []), 'type', '')),
+        ];
+    }
+
+    if (!empty($watchdog['enabled'])) {
+        $unhealthyServices = array_values(array_map('strval', array_value($watchdog, 'unhealthy_services', [])));
+        if (!empty($watchdog['critical_failure'])) {
+            $alerts[] = [
+                'severity' => 'critical',
+                'type' => 'watchdog_critical_failure',
+                'scope' => 'watchdog',
+                'key' => 'watchdog',
+                'message' => 'Watchdog detectou falha critica'
+                    . (!empty($unhealthyServices) ? (': ' . implode(', ', $unhealthyServices)) : ''),
+            ];
+        } elseif (!empty($unhealthyServices)) {
+            $alerts[] = [
+                'severity' => 'warning',
+                'type' => 'watchdog_degraded',
+                'scope' => 'watchdog',
+                'key' => 'watchdog',
+                'message' => 'Watchdog detectou servicos degradados: ' . implode(', ', $unhealthyServices),
+            ];
+        }
+    }
+
+    if (intval(array_value($instanceSummary, 'running', 0)) <= 0 && intval(array_value($instanceSummary, 'auto_start', 0)) > 0) {
+        $alerts[] = [
+            'severity' => 'warning',
+            'type' => 'instances_not_running',
+            'scope' => 'instances',
+            'key' => 'autostart',
+            'message' => 'Nenhuma instancia ativa apesar de haver instancias marcadas para auto-start',
+        ];
+    }
+
+    return $alerts;
+}
+
+function getControlCenterSnapshot(array $config)
+{
+    $startedAt = microtime(true);
+
+    $instancesSnapshot = getManageableInstancesSnapshot($config);
+    $serviceStatus = getServiceStatusSnapshot($config, $instancesSnapshot);
+    $manageableServices = getManageableServicesSnapshotFromStatus($config, $serviceStatus);
+    $maintenanceState = array_value(getMaintenanceModeHandler($config), 'maintenance', maintenanceDefaultState());
+    $watchdogStatus = watchdogSummaryPayload($config);
+    $operations = controlCenterRecentOperationsSnapshot($config);
+
+    $host = [
+        'hostname' => function_exists('gethostname') ? (gethostname() ?: php_uname('n')) : php_uname('n'),
+        'os' => PHP_OS,
+        'kernel' => php_uname('r'),
+        'php_version' => PHP_VERSION,
+        'php_sapi' => PHP_SAPI,
+        'uptime' => controlCenterUptimeSnapshot(),
+        'load_average' => controlCenterLoadAverageSnapshot(),
+        'cpu' => controlCenterCpuSnapshot($config),
+        'memory' => controlCenterMemorySnapshot(),
+        'disk' => controlCenterDiskSnapshot($config),
+        'ping' => controlCenterPingSnapshot($config),
+    ];
+    $host['response_time_ms'] = controlCenterRound((microtime(true) - $startedAt) * 1000, 2);
+
+    $serviceSummary = controlCenterServiceSummary($config, $serviceStatus, $manageableServices);
+    $instanceSummary = controlCenterInstanceSummary($instancesSnapshot);
+    $alerts = controlCenterBuildAlerts($serviceSummary, $instanceSummary, $host, $maintenanceState, $operations, $watchdogStatus);
+
+    return [
+        'success' => true,
+        'snapshot' => [
+            'host' => $host,
+            'services' => [
+                'all' => array_values(array_value($serviceStatus, 'services', [])),
+                'manageable' => array_values(array_value($manageableServices, 'services', [])),
+                'summary' => $serviceSummary,
+                'collected_at' => array_value($serviceStatus, 'collected_at', gmdate('c')),
+            ],
+            'instances' => [
+                'items' => array_values(array_value($instancesSnapshot, 'instances', [])),
+                'summary' => $instanceSummary,
+                'source_files' => array_value($instancesSnapshot, 'source_files', []),
+                'collected_at' => array_value($instancesSnapshot, 'collected_at', gmdate('c')),
+            ],
+            'maintenance' => $maintenanceState,
+            'watchdog' => $watchdogStatus,
+            'operations' => $operations,
+            'alerts' => $alerts,
+            'collected_at' => gmdate('c'),
         ],
     ];
 }
@@ -6307,12 +7492,82 @@ function serverOpsLogSources(array $config)
     $securityDir = trim((string) array_value($config, 'security_log_dir', ''));
 
     return [
+        'logservice' => [
+            '/root/logs/logservice.log',
+            '/home/logs/logservice.log',
+            '/var/log/logservice*.log',
+        ],
+        'uniquenamed' => [
+            '/root/logs/uniquenamed.log',
+            '/root/logs/uniquenamed*.log',
+            '/home/logs/uniquenamed.log',
+            '/home/logs/uniquenamed*.log',
+            '/var/log/uniquenamed*.log',
+        ],
+        'authd' => [
+            '/root/logs/authd.log',
+            '/root/logs/authd*.log',
+            '/home/logs/authd.log',
+            '/home/logs/authd*.log',
+            '/var/log/authd*.log',
+        ],
         'gamedbd' => [
+            '/root/logs/gamedbd.log',
             '/root/logs/gamedbd*_err.log',
             '/root/logs/gamedbd*_std.log',
+            '/home/logs/gamedbd.log',
             '/home/logs/gamedbd*_err.log',
             '/home/logs/gamedbd*_std.log',
             '/var/log/gamedbd*.log',
+        ],
+        'gacd' => [
+            '/root/logs/gacd.log',
+            '/root/logs/gacd*.log',
+            '/home/logs/gacd.log',
+            '/home/logs/gacd*.log',
+            '/var/log/gacd*.log',
+        ],
+        'gfactiond' => [
+            '/root/logs/gfactiond.log',
+            '/root/logs/gfactiond*.log',
+            '/home/logs/gfactiond.log',
+            '/home/logs/gfactiond*.log',
+            '/var/log/gfactiond*.log',
+        ],
+        'gdeliveryd' => [
+            '/root/logs/gdeliveryd.log',
+            '/root/logs/gdeliveryd*.log',
+            '/home/logs/gdeliveryd.log',
+            '/home/logs/gdeliveryd*.log',
+            '/var/log/gdeliveryd*.log',
+        ],
+        'glinkd' => [
+            '/root/logs/glink*.log',
+            '/home/logs/glink*.log',
+            '/var/log/glink*.log',
+        ],
+        'gs01' => [
+            '/root/logs/gs01.log',
+            '/root/logs/gs01*.log',
+            '/home/logs/gs01.log',
+            '/home/logs/gs01*.log',
+            '/var/log/gs01*.log',
+        ],
+        'world2' => [
+            '/root/logs/world2.log',
+            '/home/logs/world2.log',
+            '/var/log/world2.log',
+        ],
+        'world2.formatlog' => [
+            '/root/logs/world2.formatlog',
+            '/home/logs/world2.formatlog',
+            '/var/log/world2.formatlog',
+        ],
+        'mysql' => [
+            '/var/log/mysqld.log',
+            '/var/log/mysql/error.log',
+            '/var/log/mariadb/mariadb.log',
+            '/var/log/mariadb/mariadb.err',
         ],
         'exportclsconfig' => array_filter([
             ($exportDir !== '') ? rtrim($exportDir, '/\\') . DIRECTORY_SEPARATOR . '*.log' : '',
@@ -6335,12 +7590,38 @@ function serverOpsLogSources(array $config)
     ];
 }
 
-function serverOpsResolveLogFile($source, array $config)
+function serverOpsAvailableLogSources(array $config)
+{
+    $sources = serverOpsLogSources($config);
+    $keys = array_keys($sources);
+    natcasesort($keys);
+    return array_values($keys);
+}
+
+function serverOpsNormalizeLogSource($source)
 {
     $source = strtolower(trim((string) $source));
+    $aliases = [
+        'gamed' => 'gs01',
+        'world' => 'gs01',
+        'worldserver' => 'gs01',
+        'glink' => 'glinkd',
+        'world2formatlog' => 'world2.formatlog',
+        'world2_formatlog' => 'world2.formatlog',
+        'world2format' => 'world2.formatlog',
+    ];
+
+    return isset($aliases[$source]) ? $aliases[$source] : $source;
+}
+
+function serverOpsResolveLogFile($source, array $config)
+{
+    $source = serverOpsNormalizeLogSource($source);
     $sources = serverOpsLogSources($config);
     if (!isset($sources[$source])) {
-        throw new InvalidArgumentException('source de log invalido: ' . $source);
+        throw new InvalidArgumentException(
+            'source de log invalido: ' . $source . '. Use: ' . implode(', ', serverOpsAvailableLogSources($config))
+        );
     }
 
     $candidates = [];
@@ -6414,9 +7695,10 @@ function serverOpsGuessLevel($line)
 
 function getServerLogsSnapshot(array $config, $source, $lines = 100, $query = '')
 {
-    $source = strtolower(trim((string) $source));
+    $source = serverOpsNormalizeLogSource($source);
     $lines = max(1, min(500, intval($lines)));
     $query = trim((string) $query);
+    $availableSources = serverOpsAvailableLogSources($config);
     $file = serverOpsResolveLogFile($source, $config);
 
     if ($file === '') {
@@ -6425,6 +7707,7 @@ function getServerLogsSnapshot(array $config, $source, $lines = 100, $query = ''
             'source' => $source,
             'file' => '',
             'entries' => [],
+            'available_sources' => $availableSources,
             'warning' => 'Arquivo de log nao encontrado para a origem selecionada',
             'collected_at' => gmdate('c'),
         ];
@@ -6456,6 +7739,7 @@ function getServerLogsSnapshot(array $config, $source, $lines = 100, $query = ''
         'source' => $source,
         'file' => $file,
         'entries' => $entries,
+        'available_sources' => $availableSources,
         'warning' => '',
         'collected_at' => gmdate('c'),
     ];
@@ -6929,6 +8213,864 @@ function setMaintenanceModeHandler(array $config, array $request)
 {
     $payload = normalizeMaintenanceRequest($request, $config);
     return applyMaintenanceMode($config, $payload);
+}
+
+function watchdogConfigFile(array $config)
+{
+    return trim((string) array_value($config, 'watchdog_config_file', __DIR__ . '/backups/watchdog/config.json'));
+}
+
+function watchdogStateFile(array $config)
+{
+    return trim((string) array_value($config, 'watchdog_state_file', __DIR__ . '/backups/watchdog/state.json'));
+}
+
+function watchdogHistoryFile(array $config)
+{
+    return trim((string) array_value($config, 'watchdog_history_file', __DIR__ . '/backups/watchdog/history.log'));
+}
+
+function watchdogLockFile(array $config)
+{
+    return trim((string) array_value($config, 'watchdog_lock_file', __DIR__ . '/backups/watchdog/runner.lock'));
+}
+
+function watchdogDefaultConfig(array $config)
+{
+    $critical = array_value($config, 'watchdog_critical_services', serverOpsManageableServiceKeys($config));
+    if (!is_array($critical)) {
+        $critical = [$critical];
+    }
+
+    $critical = array_values(array_unique(array_filter(array_map(function ($value) {
+        return trim((string) $value);
+    }, $critical), function ($value) {
+        return $value !== '';
+    })));
+
+    return [
+        'enabled' => truthyValue(array_value($config, 'watchdog_enabled_default', false)),
+        'critical_services' => $critical,
+        'failure_threshold' => max(1, intval(array_value($config, 'watchdog_failure_threshold', 2))),
+        'cooldown_seconds' => max(0, intval(array_value($config, 'watchdog_cooldown_seconds', 300))),
+        'max_restart_attempts' => max(1, intval(array_value($config, 'watchdog_max_restart_attempts', 3))),
+        'verify_restart' => !array_key_exists('watchdog_verify_restart', $config) || truthyValue(array_value($config, 'watchdog_verify_restart', true)),
+        'pause_during_maintenance' => !array_key_exists('watchdog_pause_during_maintenance', $config) || truthyValue(array_value($config, 'watchdog_pause_during_maintenance', true)),
+        'updated_by' => 'default',
+        'updated_at' => null,
+    ];
+}
+
+function watchdogDefaultState()
+{
+    return [
+        'last_result' => 'idle',
+        'last_check_at' => null,
+        'last_success_at' => null,
+        'last_error' => '',
+        'last_action' => '',
+        'last_action_at' => null,
+        'last_run_source' => '',
+        'cooldown_until' => null,
+        'critical_failure' => false,
+        'maintenance_blocked' => false,
+        'failure_counts' => [],
+        'restart_counts' => [],
+        'tracked_services' => [],
+        'healthy_services' => [],
+        'unhealthy_services' => [],
+        'trigger_services' => [],
+        'services' => [],
+        'last_operation' => null,
+    ];
+}
+
+function watchdogNormalizeCounterMap($value)
+{
+    $normalized = [];
+    if (!is_array($value)) {
+        return $normalized;
+    }
+
+    foreach ($value as $key => $count) {
+        $serviceKey = strtolower(trim((string) $key));
+        if ($serviceKey === '') {
+            continue;
+        }
+        $normalized[$serviceKey] = max(0, intval($count));
+    }
+
+    ksort($normalized);
+    return $normalized;
+}
+
+function watchdogNormalizeServiceListValue($value, array $config, $required = false)
+{
+    return normalizeServerOpsServiceKeys(['services' => $value], $config, $required);
+}
+
+function watchdogReadConfig(array $config)
+{
+    $defaults = watchdogDefaultConfig($config);
+    $path = watchdogConfigFile($config);
+    if ($path === '' || !is_file($path) || !is_readable($path)) {
+        return $defaults;
+    }
+
+    $raw = @file_get_contents($path);
+    if (!is_string($raw) || trim($raw) === '') {
+        return $defaults;
+    }
+
+    $decoded = json_decode($raw, true);
+    if (json_last_error() !== JSON_ERROR_NONE || !is_array($decoded)) {
+        return $defaults;
+    }
+
+    $normalized = $defaults;
+    $normalized['enabled'] = array_key_exists('enabled', $decoded)
+        ? truthyValue(array_value($decoded, 'enabled', $defaults['enabled']))
+        : $defaults['enabled'];
+
+    $criticalValue = array_key_exists('critical_services', $decoded)
+        ? array_value($decoded, 'critical_services', [])
+        : array_value($decoded, 'services', []);
+    if (!empty($criticalValue)) {
+        try {
+            $normalized['critical_services'] = watchdogNormalizeServiceListValue($criticalValue, $config, true);
+        } catch (Exception $e) {
+            $normalized['critical_services'] = $defaults['critical_services'];
+        }
+    }
+
+    $normalized['failure_threshold'] = max(
+        1,
+        intval(array_value($decoded, 'failure_threshold', array_value($decoded, 'failureThreshold', $defaults['failure_threshold'])))
+    );
+    $normalized['cooldown_seconds'] = max(
+        0,
+        intval(array_value($decoded, 'cooldown_seconds', array_value($decoded, 'cooldownSeconds', $defaults['cooldown_seconds'])))
+    );
+    $normalized['max_restart_attempts'] = max(
+        1,
+        intval(array_value($decoded, 'max_restart_attempts', array_value($decoded, 'maxRestartAttempts', $defaults['max_restart_attempts'])))
+    );
+    $normalized['verify_restart'] = array_key_exists('verify_restart', $decoded) || array_key_exists('verifyRestart', $decoded)
+        ? truthyValue(array_value($decoded, 'verify_restart', array_value($decoded, 'verifyRestart', $defaults['verify_restart'])))
+        : $defaults['verify_restart'];
+    $normalized['pause_during_maintenance'] = array_key_exists('pause_during_maintenance', $decoded) || array_key_exists('pauseDuringMaintenance', $decoded)
+        ? truthyValue(array_value($decoded, 'pause_during_maintenance', array_value($decoded, 'pauseDuringMaintenance', $defaults['pause_during_maintenance'])))
+        : $defaults['pause_during_maintenance'];
+    $normalized['updated_by'] = trimOneLineText(array_value($decoded, 'updated_by', array_value($decoded, 'updatedBy', $defaults['updated_by'])));
+    $normalized['updated_at'] = array_value($decoded, 'updated_at', array_value($decoded, 'updatedAt', $defaults['updated_at']));
+
+    return $normalized;
+}
+
+function watchdogReadState(array $config)
+{
+    $defaults = watchdogDefaultState();
+    $path = watchdogStateFile($config);
+    if ($path === '' || !is_file($path) || !is_readable($path)) {
+        return $defaults;
+    }
+
+    $raw = @file_get_contents($path);
+    if (!is_string($raw) || trim($raw) === '') {
+        return $defaults;
+    }
+
+    $decoded = json_decode($raw, true);
+    if (json_last_error() !== JSON_ERROR_NONE || !is_array($decoded)) {
+        return $defaults;
+    }
+
+    $state = array_merge($defaults, $decoded);
+    $state['critical_failure'] = truthyValue(array_value($state, 'critical_failure', false));
+    $state['maintenance_blocked'] = truthyValue(array_value($state, 'maintenance_blocked', false));
+    $state['failure_counts'] = watchdogNormalizeCounterMap(array_value($state, 'failure_counts', []));
+    $state['restart_counts'] = watchdogNormalizeCounterMap(array_value($state, 'restart_counts', []));
+    $state['tracked_services'] = array_values(array_map('strval', array_value($state, 'tracked_services', [])));
+    $state['healthy_services'] = array_values(array_map('strval', array_value($state, 'healthy_services', [])));
+    $state['unhealthy_services'] = array_values(array_map('strval', array_value($state, 'unhealthy_services', [])));
+    $state['trigger_services'] = array_values(array_map('strval', array_value($state, 'trigger_services', [])));
+    $state['services'] = is_array(array_value($state, 'services', null)) ? array_values(array_value($state, 'services', [])) : [];
+    $state['last_operation'] = is_array(array_value($state, 'last_operation', null)) ? array_value($state, 'last_operation', null) : null;
+
+    return $state;
+}
+
+function watchdogHydrateState(array $state)
+{
+    $state = array_merge(watchdogDefaultState(), $state);
+    $cooldownUntilTs = serverOpsParseTimestamp(array_value($state, 'cooldown_until', null));
+    $state['cooldown_remaining_seconds'] = $cooldownUntilTs > 0 ? max(0, $cooldownUntilTs - time()) : 0;
+    return $state;
+}
+
+function watchdogFilesPayload(array $config)
+{
+    return [
+        'config_file' => watchdogConfigFile($config),
+        'state_file' => watchdogStateFile($config),
+        'history_file' => watchdogHistoryFile($config),
+        'lock_file' => watchdogLockFile($config),
+    ];
+}
+
+function watchdogPersistConfig(array $config, array $watchdogConfig)
+{
+    writeAtomicFile(watchdogConfigFile($config), safeJsonEncode($watchdogConfig));
+}
+
+function watchdogPersistState(array $config, array $state)
+{
+    $persisted = $state;
+    unset($persisted['cooldown_remaining_seconds']);
+    writeAtomicFile(watchdogStateFile($config), safeJsonEncode($persisted));
+}
+
+function watchdogAppendHistory(array $config, array $entry)
+{
+    appendLogLine(watchdogHistoryFile($config), safeJsonEncode($entry));
+}
+
+function watchdogReadHistory(array $config, $limit)
+{
+    $limit = max(1, min(500, intval($limit)));
+    $path = watchdogHistoryFile($config);
+    if ($path === '' || !is_file($path) || !is_readable($path)) {
+        return [];
+    }
+
+    $lines = @file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    if (!is_array($lines) || empty($lines)) {
+        return [];
+    }
+
+    $lines = array_reverse(array_slice($lines, -$limit));
+    $entries = [];
+    foreach ($lines as $line) {
+        $decoded = json_decode((string) $line, true);
+        if (is_array($decoded)) {
+            $entries[] = $decoded;
+        } else {
+            $entries[] = [
+                'type' => 'raw',
+                'line' => (string) $line,
+            ];
+        }
+    }
+
+    return $entries;
+}
+
+function watchdogAcquireLock(array $config)
+{
+    $path = watchdogLockFile($config);
+    if ($path === '') {
+        throw new Exception('watchdog_lock_file nao configurado');
+    }
+
+    ensureWritableDirectory(dirname($path));
+    $handle = @fopen($path, 'c+');
+    if (!is_resource($handle)) {
+        throw new Exception('Falha ao abrir lockfile do watchdog');
+    }
+
+    if (!@flock($handle, LOCK_EX | LOCK_NB)) {
+        @fclose($handle);
+        return null;
+    }
+
+    @ftruncate($handle, 0);
+    @fwrite($handle, json_encode([
+        'pid' => function_exists('getmypid') ? getmypid() : null,
+        'locked_at' => gmdate('c'),
+    ], JSON_UNESCAPED_SLASHES));
+
+    return $handle;
+}
+
+function watchdogReleaseLock($handle)
+{
+    if (is_resource($handle)) {
+        @flock($handle, LOCK_UN);
+        @fclose($handle);
+    }
+}
+
+function watchdogBuildServiceHealth(array $trackedServices, array $snapshot, array $failureCounts, array $restartCounts, $incrementFailures = true)
+{
+    $index = [];
+    foreach ((array) array_value($snapshot, 'services', []) as $service) {
+        $key = strtolower(trim((string) array_value($service, 'key', '')));
+        if ($key !== '') {
+            $index[$key] = $service;
+        }
+    }
+
+    $healthy = [];
+    $unhealthy = [];
+    $rows = [];
+    foreach ($trackedServices as $key) {
+        $item = isset($index[$key]) ? $index[$key] : [
+            'key' => $key,
+            'state' => 'unknown',
+            'pid' => null,
+            'process_count' => 0,
+            'listening' => false,
+            'port' => 0,
+        ];
+        $isHealthy = array_value($item, 'state', 'unknown') === 'online';
+
+        if ($isHealthy) {
+            $failureCounts[$key] = 0;
+            $restartCounts[$key] = 0;
+            $healthy[] = $key;
+        } else {
+            $failureCounts[$key] = $incrementFailures
+                ? (intval(array_value($failureCounts, $key, 0)) + 1)
+                : intval(array_value($failureCounts, $key, 0));
+            $restartCounts[$key] = intval(array_value($restartCounts, $key, 0));
+            $unhealthy[] = $key;
+        }
+
+        $rows[] = [
+            'key' => $key,
+            'state' => array_value($item, 'state', 'unknown'),
+            'pid' => array_value($item, 'pid', null),
+            'process_count' => intval(array_value($item, 'process_count', 0)),
+            'listening' => truthyValue(array_value($item, 'listening', false)),
+            'port' => intval(array_value($item, 'port', 0)),
+            'healthy' => $isHealthy,
+            'failure_count' => intval(array_value($failureCounts, $key, 0)),
+            'restart_count' => intval(array_value($restartCounts, $key, 0)),
+        ];
+    }
+
+    return [
+        'services' => $rows,
+        'healthy_services' => $healthy,
+        'unhealthy_services' => $unhealthy,
+        'failure_counts' => watchdogNormalizeCounterMap($failureCounts),
+        'restart_counts' => watchdogNormalizeCounterMap($restartCounts),
+        'collected_at' => array_value($snapshot, 'collected_at', gmdate('c')),
+    ];
+}
+
+function watchdogTriggerServices(array $unhealthyServices, array $failureCounts, $threshold)
+{
+    $threshold = max(1, intval($threshold));
+    $trigger = [];
+    foreach ($unhealthyServices as $key) {
+        if (intval(array_value($failureCounts, $key, 0)) >= $threshold) {
+            $trigger[] = $key;
+        }
+    }
+    return array_values(array_unique(array_map('strval', $trigger)));
+}
+
+function watchdogSummarizeOperationResult($result)
+{
+    if (!is_array($result)) {
+        return null;
+    }
+
+    $operation = array_value($result, 'operation', null);
+    return [
+        'success' => truthyValue(array_value($result, 'success', false)),
+        'dry_run' => truthyValue(array_value($result, 'dry_run', false)),
+        'error' => trim((string) array_value($result, 'error', '')),
+        'operation' => is_array($operation) ? [
+            'id' => trim((string) array_value($operation, 'id', '')),
+            'stage' => trim((string) array_value($operation, 'stage', '')),
+            'log_file' => trim((string) array_value($operation, 'log_file', '')),
+        ] : null,
+    ];
+}
+
+function watchdogShouldLogHistory(array $previousState, array $currentState, array $options, $operationAttempted = false)
+{
+    if (!empty($options['manual']) || !empty($options['force']) || !empty($options['dry_run']) || $operationAttempted) {
+        return true;
+    }
+
+    foreach (['last_result', 'critical_failure', 'maintenance_blocked', 'last_error', 'cooldown_until'] as $key) {
+        if (array_value($previousState, $key, null) !== array_value($currentState, $key, null)) {
+            return true;
+        }
+    }
+
+    foreach (['unhealthy_services', 'trigger_services'] as $key) {
+        if (array_values(array_map('strval', array_value($previousState, $key, []))) !== array_values(array_map('strval', array_value($currentState, $key, [])))) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function watchdogSummaryPayload(array $config, array $watchdogConfig = null, array $state = null)
+{
+    $watchdogConfig = is_array($watchdogConfig) ? $watchdogConfig : watchdogReadConfig($config);
+    $state = watchdogHydrateState(is_array($state) ? $state : watchdogReadState($config));
+
+    return [
+        'enabled' => !empty($watchdogConfig['enabled']),
+        'critical_services' => array_values(array_map('strval', array_value($watchdogConfig, 'critical_services', []))),
+        'failure_threshold' => intval(array_value($watchdogConfig, 'failure_threshold', 0)),
+        'cooldown_seconds' => intval(array_value($watchdogConfig, 'cooldown_seconds', 0)),
+        'max_restart_attempts' => intval(array_value($watchdogConfig, 'max_restart_attempts', 0)),
+        'verify_restart' => truthyValue(array_value($watchdogConfig, 'verify_restart', true)),
+        'pause_during_maintenance' => truthyValue(array_value($watchdogConfig, 'pause_during_maintenance', true)),
+        'last_result' => trim((string) array_value($state, 'last_result', 'idle')),
+        'last_check_at' => array_value($state, 'last_check_at', null),
+        'last_success_at' => array_value($state, 'last_success_at', null),
+        'last_error' => trim((string) array_value($state, 'last_error', '')),
+        'last_action' => trim((string) array_value($state, 'last_action', '')),
+        'last_action_at' => array_value($state, 'last_action_at', null),
+        'last_run_source' => trim((string) array_value($state, 'last_run_source', '')),
+        'cooldown_until' => array_value($state, 'cooldown_until', null),
+        'cooldown_remaining_seconds' => intval(array_value($state, 'cooldown_remaining_seconds', 0)),
+        'critical_failure' => truthyValue(array_value($state, 'critical_failure', false)),
+        'maintenance_blocked' => truthyValue(array_value($state, 'maintenance_blocked', false)),
+        'tracked_services' => array_values(array_map('strval', array_value($state, 'tracked_services', []))),
+        'healthy_services' => array_values(array_map('strval', array_value($state, 'healthy_services', []))),
+        'unhealthy_services' => array_values(array_map('strval', array_value($state, 'unhealthy_services', []))),
+        'trigger_services' => array_values(array_map('strval', array_value($state, 'trigger_services', []))),
+    ];
+}
+
+function watchdogMergedRequest(array $request)
+{
+    $nested = array_value($request, 'watchdog', null);
+    if (!is_array($nested)) {
+        return $request;
+    }
+
+    $merged = array_merge($nested, $request);
+    unset($merged['watchdog']);
+    return $merged;
+}
+
+function normalizeWatchdogConfigRequest(array $request, array $config, array $current = null)
+{
+    $request = watchdogMergedRequest($request);
+    $current = is_array($current) ? $current : watchdogReadConfig($config);
+    $updated = $current;
+
+    if (array_key_exists('enabled', $request)) {
+        $updated['enabled'] = truthyValue(array_value($request, 'enabled', $current['enabled']));
+    }
+
+    $hasCriticalServices = array_key_exists('critical_services', $request)
+        || array_key_exists('criticalServices', $request)
+        || array_key_exists('services', $request);
+    if ($hasCriticalServices) {
+        $criticalValue = array_key_exists('critical_services', $request)
+            ? array_value($request, 'critical_services', [])
+            : (array_key_exists('criticalServices', $request)
+                ? array_value($request, 'criticalServices', [])
+                : array_value($request, 'services', []));
+        $updated['critical_services'] = watchdogNormalizeServiceListValue($criticalValue, $config, true);
+    }
+
+    if (empty($updated['critical_services'])) {
+        throw new InvalidArgumentException('critical_services nao pode ficar vazio');
+    }
+
+    if (array_key_exists('failure_threshold', $request) || array_key_exists('failureThreshold', $request)) {
+        $failureThreshold = intval(array_value($request, 'failure_threshold', array_value($request, 'failureThreshold', $current['failure_threshold'])));
+        if ($failureThreshold < 1 || $failureThreshold > 20) {
+            throw new InvalidArgumentException('failure_threshold deve ficar entre 1 e 20');
+        }
+        $updated['failure_threshold'] = $failureThreshold;
+    }
+
+    if (array_key_exists('cooldown_seconds', $request) || array_key_exists('cooldownSeconds', $request)) {
+        $cooldownSeconds = intval(array_value($request, 'cooldown_seconds', array_value($request, 'cooldownSeconds', $current['cooldown_seconds'])));
+        if ($cooldownSeconds < 0 || $cooldownSeconds > 86400) {
+            throw new InvalidArgumentException('cooldown_seconds deve ficar entre 0 e 86400');
+        }
+        $updated['cooldown_seconds'] = $cooldownSeconds;
+    }
+
+    if (array_key_exists('max_restart_attempts', $request) || array_key_exists('maxRestartAttempts', $request)) {
+        $maxRestartAttempts = intval(array_value($request, 'max_restart_attempts', array_value($request, 'maxRestartAttempts', $current['max_restart_attempts'])));
+        if ($maxRestartAttempts < 1 || $maxRestartAttempts > 20) {
+            throw new InvalidArgumentException('max_restart_attempts deve ficar entre 1 e 20');
+        }
+        $updated['max_restart_attempts'] = $maxRestartAttempts;
+    }
+
+    if (array_key_exists('verify_restart', $request) || array_key_exists('verifyRestart', $request)) {
+        $updated['verify_restart'] = truthyValue(array_value($request, 'verify_restart', array_value($request, 'verifyRestart', $current['verify_restart'])));
+    }
+
+    if (array_key_exists('pause_during_maintenance', $request) || array_key_exists('pauseDuringMaintenance', $request)) {
+        $updated['pause_during_maintenance'] = truthyValue(array_value($request, 'pause_during_maintenance', array_value($request, 'pauseDuringMaintenance', $current['pause_during_maintenance'])));
+    }
+
+    $updatedBy = trimOneLineText(array_value($request, 'updated_by', array_value($request, 'actor', 'api')));
+    if (containsControlChars($updatedBy)) {
+        throw new InvalidArgumentException('updated_by contem caracteres de controle invalidos');
+    }
+    $updated['updated_by'] = $updatedBy !== '' ? $updatedBy : 'api';
+    $updated['updated_at'] = gmdate('c');
+
+    return [
+        'dry_run' => truthyValue(array_value($request, 'dry_run', array_value($request, 'dryRun', false))),
+        'config' => $updated,
+    ];
+}
+
+function applyWatchdogConfig(array $config, array $previous, array $current, $dryRun = false, $historyType = 'watchdog_config')
+{
+    $now = gmdate('c');
+    $historyEntry = [
+        'type' => $historyType,
+        'changed_at' => $now,
+        'previous' => $previous,
+        'current' => $current,
+        'dry_run' => !empty($dryRun),
+    ];
+
+    if (empty($dryRun)) {
+        watchdogPersistConfig($config, $current);
+        watchdogAppendHistory($config, $historyEntry);
+    }
+
+    return [
+        'success' => true,
+        'watchdog' => watchdogSummaryPayload($config, $current, watchdogReadState($config)),
+        'config' => $current,
+        'dry_run' => !empty($dryRun),
+        'history_entry' => $historyEntry,
+        'files' => watchdogFilesPayload($config),
+    ];
+}
+
+function saveWatchdogConfigHandler(array $config, array $request)
+{
+    $previous = watchdogReadConfig($config);
+    $payload = normalizeWatchdogConfigRequest($request, $config, $previous);
+    return applyWatchdogConfig($config, $previous, $payload['config'], !empty($payload['dry_run']), 'watchdog_config');
+}
+
+function setWatchdogEnabledHandler(array $config, $enabled, array $request)
+{
+    $request = watchdogMergedRequest($request);
+    $request['enabled'] = !empty($enabled);
+    $previous = watchdogReadConfig($config);
+    $payload = normalizeWatchdogConfigRequest($request, $config, $previous);
+    return applyWatchdogConfig(
+        $config,
+        $previous,
+        $payload['config'],
+        !empty($payload['dry_run']),
+        !empty($enabled) ? 'watchdog_enabled' : 'watchdog_disabled'
+    );
+}
+
+function getWatchdogStatusHandler(array $config)
+{
+    $watchdogConfig = watchdogReadConfig($config);
+    $state = watchdogHydrateState(watchdogReadState($config));
+    $historyLimit = max(1, min(50, intval(array_value($config, 'watchdog_recent_history_limit', 20))));
+
+    return [
+        'success' => true,
+        'watchdog' => array_merge(
+            watchdogSummaryPayload($config, $watchdogConfig, $state),
+            [
+                'config' => $watchdogConfig,
+                'state' => $state,
+                'history_preview' => watchdogReadHistory($config, $historyLimit),
+                'files' => watchdogFilesPayload($config),
+                'runner' => [
+                    'script' => trim((string) array_value($config, 'watchdog_runner_script', '/usr/local/sbin/pw-watchdog-runner.sh')),
+                    'cron_file' => trim((string) array_value($config, 'watchdog_cron_file', '/etc/cron.d/apicls-watchdog')),
+                    'check_interval_seconds' => max(30, intval(array_value($config, 'watchdog_check_interval_seconds', 60))),
+                ],
+            ]
+        ),
+        'collected_at' => gmdate('c'),
+    ];
+}
+
+function getWatchdogHistoryHandler(array $config, array $request)
+{
+    $limit = max(1, min(500, intval(array_value($request, 'limit', array_value($config, 'watchdog_recent_history_limit', 20)))));
+    return [
+        'success' => true,
+        'limit' => $limit,
+        'entries' => watchdogReadHistory($config, $limit),
+        'history_file' => watchdogHistoryFile($config),
+        'collected_at' => gmdate('c'),
+    ];
+}
+
+function runWatchdogCheck(array $config, array $options = [])
+{
+    $manual = !empty($options['manual']);
+    $force = !empty($options['force']);
+    $dryRun = !empty($options['dry_run']);
+    $source = trim((string) array_value($options, 'source', $manual ? 'api' : 'runner'));
+    if ($source === '') {
+        $source = $manual ? 'api' : 'runner';
+    }
+
+    $lock = watchdogAcquireLock($config);
+    if ($lock === null) {
+        return [
+            'success' => false,
+            'result' => 'busy',
+            'message' => 'Watchdog ja esta em execucao',
+            'source' => $source,
+            'manual' => $manual,
+            'force' => $force,
+            'dry_run' => $dryRun,
+            'files' => watchdogFilesPayload($config),
+            'checked_at' => gmdate('c'),
+        ];
+    }
+
+    try {
+        $watchdogConfig = watchdogReadConfig($config);
+        $previousState = watchdogHydrateState(watchdogReadState($config));
+        $state = array_merge(watchdogDefaultState(), $previousState);
+        $now = gmdate('c');
+        $message = 'Watchdog executado';
+        $success = true;
+        $operationAttempted = false;
+        $operationSummary = null;
+
+        $state['last_check_at'] = $now;
+        $state['last_run_source'] = $source;
+        $state['maintenance_blocked'] = false;
+        $state['last_operation'] = null;
+
+        if (!$manual && empty($watchdogConfig['enabled']) && !$force) {
+            $state['last_result'] = 'disabled';
+            $state['critical_failure'] = false;
+            $state['last_error'] = '';
+            $state['trigger_services'] = [];
+            $message = 'Watchdog desabilitado';
+        } else {
+            $maintenance = array_value(getMaintenanceModeHandler($config), 'maintenance', maintenanceDefaultState());
+            if (!empty($maintenance['enabled']) && !empty($watchdogConfig['pause_during_maintenance']) && !$force) {
+                $state['last_result'] = 'skipped_maintenance';
+                $state['critical_failure'] = false;
+                $state['maintenance_blocked'] = true;
+                $state['last_error'] = '';
+                $state['trigger_services'] = [];
+                $message = 'Watchdog pausado por manutencao ativa';
+            } else {
+                $trackedServices = array_values(array_map('strval', array_value($watchdogConfig, 'critical_services', [])));
+                if (empty($trackedServices)) {
+                    throw new Exception('Watchdog sem critical_services configurados');
+                }
+
+                $health = watchdogBuildServiceHealth(
+                    $trackedServices,
+                    getServiceStatusSnapshot($config),
+                    watchdogNormalizeCounterMap(array_value($state, 'failure_counts', [])),
+                    watchdogNormalizeCounterMap(array_value($state, 'restart_counts', [])),
+                    true
+                );
+
+                $state['tracked_services'] = $trackedServices;
+                $state['services'] = array_value($health, 'services', []);
+                $state['healthy_services'] = array_value($health, 'healthy_services', []);
+                $state['unhealthy_services'] = array_value($health, 'unhealthy_services', []);
+                $state['failure_counts'] = array_value($health, 'failure_counts', []);
+                $state['restart_counts'] = array_value($health, 'restart_counts', []);
+
+                $cooldownUntilTs = serverOpsParseTimestamp(array_value($state, 'cooldown_until', null));
+                $inCooldown = !$force && $cooldownUntilTs > time();
+
+                if (empty($state['unhealthy_services'])) {
+                    $state['last_result'] = 'healthy';
+                    $state['critical_failure'] = false;
+                    $state['last_error'] = '';
+                    $state['cooldown_until'] = null;
+                    $state['trigger_services'] = [];
+                    $state['last_success_at'] = $now;
+                    $message = 'Todos os servicos criticos estao online';
+                } else {
+                    $state['trigger_services'] = watchdogTriggerServices(
+                        array_value($state, 'unhealthy_services', []),
+                        array_value($state, 'failure_counts', []),
+                        array_value($watchdogConfig, 'failure_threshold', 2)
+                    );
+
+                    if ($inCooldown) {
+                        $state['last_result'] = 'cooldown';
+                        $state['critical_failure'] = false;
+                        $state['last_error'] = '';
+                        $message = 'Watchdog em cooldown com servicos degradados';
+                    } elseif (empty($state['trigger_services'])) {
+                        $state['last_result'] = 'degraded';
+                        $state['critical_failure'] = false;
+                        $state['last_error'] = '';
+                        $message = 'Servicos degradados abaixo do limiar de restart';
+                    } else {
+                        $blocked = [];
+                        if (!$force) {
+                            foreach ((array) $state['trigger_services'] as $serviceKey) {
+                                if (intval(array_value($state['restart_counts'], $serviceKey, 0)) >= intval(array_value($watchdogConfig, 'max_restart_attempts', 3))) {
+                                    $blocked[] = $serviceKey;
+                                }
+                            }
+                        }
+
+                        if (!empty($blocked)) {
+                            $state['last_result'] = 'critical_failure';
+                            $state['critical_failure'] = true;
+                            $state['last_error'] = 'Limite de tentativas atingido para: ' . implode(', ', $blocked);
+                            $message = $state['last_error'];
+                            $success = false;
+                        } else {
+                            $operationAttempted = true;
+                            $operation = handleServiceOperationRequest($config, 'restart', [
+                                'services' => array_values($state['trigger_services']),
+                                'verify' => !empty($watchdogConfig['verify_restart']),
+                                'dry_run' => $dryRun,
+                            ]);
+                            $operationSummary = watchdogSummarizeOperationResult($operation);
+                            $state['last_action'] = 'restart';
+                            $state['last_action_at'] = $now;
+                            $state['last_operation'] = $operationSummary;
+
+                            if (!$dryRun) {
+                                $restartCounts = watchdogNormalizeCounterMap(array_value($state, 'restart_counts', []));
+                                foreach ((array) $state['trigger_services'] as $serviceKey) {
+                                    $restartCounts[$serviceKey] = intval(array_value($restartCounts, $serviceKey, 0)) + 1;
+                                }
+                                $state['restart_counts'] = $restartCounts;
+
+                                $cooldownSeconds = intval(array_value($watchdogConfig, 'cooldown_seconds', 0));
+                                $state['cooldown_until'] = $cooldownSeconds > 0 ? gmdate('c', time() + $cooldownSeconds) : null;
+                            }
+
+                            if (!empty($operation['success'])) {
+                                if ($dryRun) {
+                                    $state['last_result'] = 'restart_dry_run';
+                                    $state['critical_failure'] = false;
+                                    $state['last_error'] = '';
+                                    $message = 'Watchdog validou restart em dry_run';
+                                } else {
+                                    $postRestartHealth = watchdogBuildServiceHealth(
+                                        $trackedServices,
+                                        getServiceStatusSnapshot($config),
+                                        watchdogNormalizeCounterMap(array_value($state, 'failure_counts', [])),
+                                        watchdogNormalizeCounterMap(array_value($state, 'restart_counts', [])),
+                                        false
+                                    );
+
+                                    $state['services'] = array_value($postRestartHealth, 'services', []);
+                                    $state['healthy_services'] = array_value($postRestartHealth, 'healthy_services', []);
+                                    $state['unhealthy_services'] = array_value($postRestartHealth, 'unhealthy_services', []);
+                                    $state['failure_counts'] = array_value($postRestartHealth, 'failure_counts', []);
+                                    $state['restart_counts'] = array_value($postRestartHealth, 'restart_counts', []);
+                                    $state['trigger_services'] = watchdogTriggerServices(
+                                        array_value($state, 'unhealthy_services', []),
+                                        array_value($state, 'failure_counts', []),
+                                        array_value($watchdogConfig, 'failure_threshold', 2)
+                                    );
+
+                                    if (empty($state['unhealthy_services'])) {
+                                        $state['last_result'] = 'restart_success';
+                                        $state['critical_failure'] = false;
+                                        $state['last_error'] = '';
+                                        $state['last_success_at'] = $now;
+                                        $message = 'Watchdog executou restart automatico com sucesso';
+                                    } else {
+                                        $state['last_result'] = 'restart_partial';
+                                        $state['critical_failure'] = true;
+                                        $state['last_error'] = 'Restart executado, mas alguns servicos continuam degradados';
+                                        $message = $state['last_error'];
+                                        $success = false;
+                                    }
+                                }
+                            } else {
+                                $state['last_result'] = 'restart_failed';
+                                $state['critical_failure'] = true;
+                                $state['last_error'] = trim((string) array_value($operationSummary, 'error', 'Falha ao reiniciar servicos via watchdog'));
+                                $message = $state['last_error'];
+                                $success = false;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        $state = watchdogHydrateState($state);
+        if (empty($dryRun)) {
+            watchdogPersistState($config, $state);
+        }
+
+        $historyEntry = [
+            'type' => 'watchdog_check',
+            'checked_at' => $now,
+            'source' => $source,
+            'manual' => $manual,
+            'force' => $force,
+            'dry_run' => $dryRun,
+            'success' => $success,
+            'result' => array_value($state, 'last_result', 'idle'),
+            'message' => $message,
+            'critical_failure' => truthyValue(array_value($state, 'critical_failure', false)),
+            'unhealthy_services' => array_values(array_map('strval', array_value($state, 'unhealthy_services', []))),
+            'trigger_services' => array_values(array_map('strval', array_value($state, 'trigger_services', []))),
+            'failure_counts' => watchdogNormalizeCounterMap(array_value($state, 'failure_counts', [])),
+            'restart_counts' => watchdogNormalizeCounterMap(array_value($state, 'restart_counts', [])),
+            'operation' => $operationSummary,
+        ];
+
+        $historyLogged = false;
+        $historyEntryPayload = null;
+        if (watchdogShouldLogHistory($previousState, $state, $options, $operationAttempted)) {
+            $historyEntryPayload = $historyEntry;
+            if (empty($dryRun)) {
+                watchdogAppendHistory($config, $historyEntry);
+                $historyLogged = true;
+            }
+        }
+
+        return [
+            'success' => $success,
+            'result' => array_value($state, 'last_result', 'idle'),
+            'message' => $message,
+            'source' => $source,
+            'manual' => $manual,
+            'force' => $force,
+            'dry_run' => $dryRun,
+            'history_logged' => $historyLogged,
+            'history_entry' => $historyEntryPayload,
+            'watchdog' => watchdogSummaryPayload($config, $watchdogConfig, $state),
+            'state' => $state,
+            'config' => $watchdogConfig,
+            'operation' => $operationSummary,
+            'files' => watchdogFilesPayload($config),
+            'checked_at' => $now,
+        ];
+    } finally {
+        watchdogReleaseLock($lock);
+    }
+}
+
+function runWatchdogCheckNowHandler(array $config, array $request)
+{
+    $request = watchdogMergedRequest($request);
+    return runWatchdogCheck($config, [
+        'source' => trimOneLineText(array_value($request, 'source', 'api')),
+        'manual' => true,
+        'force' => truthyValue(array_value($request, 'force', false)),
+        'dry_run' => truthyValue(array_value($request, 'dry_run', array_value($request, 'dryRun', false))),
+    ]);
 }
 
 function restartOperationLogFiles(array $config, $operationId)
@@ -8247,6 +10389,16 @@ if (php_sapi_name() !== 'cli' || isset($_GET['action'])) {
             }
             break;
 
+        case 'getControlCenterSnapshot':
+            try {
+                respondJson(getControlCenterSnapshot($CONFIG));
+            } catch (InvalidArgumentException $e) {
+                respondJson(['error' => $e->getMessage()], 400);
+            } catch (Exception $e) {
+                respondJson(['error' => $e->getMessage()], 500);
+            }
+            break;
+
         case 'getManageableServices':
             try {
                 respondJson(getManageableServicesSnapshot($CONFIG));
@@ -8507,6 +10659,60 @@ if (php_sapi_name() !== 'cli' || isset($_GET['action'])) {
             }
             break;
 
+        case 'getWatchdogStatus':
+            try {
+                respondJson(getWatchdogStatusHandler($CONFIG));
+            } catch (InvalidArgumentException $e) {
+                respondJson(['error' => $e->getMessage()], 400);
+            } catch (Exception $e) {
+                respondJson(['error' => $e->getMessage()], 500);
+            }
+            break;
+
+        case 'getWatchdogHistory':
+            try {
+                respondJson(getWatchdogHistoryHandler($CONFIG, $_GET));
+            } catch (InvalidArgumentException $e) {
+                respondJson(['error' => $e->getMessage()], 400);
+            } catch (Exception $e) {
+                respondJson(['error' => $e->getMessage()], 500);
+            }
+            break;
+
+        case 'saveWatchdogConfig':
+        case 'enableWatchdog':
+        case 'disableWatchdog':
+        case 'runWatchdogCheckNow':
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                respondJson(['error' => 'Use POST para ' . $action], 405);
+                exit;
+            }
+
+            $request = readRequestPayload();
+            if (isset($request['__json_error'])) {
+                respondJson(['error' => 'JSON invalido: ' . $request['__json_error']], 400);
+                exit;
+            }
+
+            try {
+                if ($action === 'saveWatchdogConfig') {
+                    $result = saveWatchdogConfigHandler($CONFIG, $request);
+                } elseif ($action === 'enableWatchdog') {
+                    $result = setWatchdogEnabledHandler($CONFIG, true, $request);
+                } elseif ($action === 'disableWatchdog') {
+                    $result = setWatchdogEnabledHandler($CONFIG, false, $request);
+                } else {
+                    $result = runWatchdogCheckNowHandler($CONFIG, $request);
+                }
+
+                respondJson($result, !empty($result['success']) ? 200 : 500);
+            } catch (InvalidArgumentException $e) {
+                respondJson(['error' => $e->getMessage()], 400);
+            } catch (Exception $e) {
+                respondJson(['error' => $e->getMessage()], 500);
+            }
+            break;
+
         case 'startServer':
         case 'stopServer':
             if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -8615,6 +10821,27 @@ if (php_sapi_name() !== 'cli' || isset($_GET['action'])) {
                     'success' => true,
                     'backup' => $backup,
                 ]);
+            } catch (Exception $e) {
+                respondJson(['error' => $e->getMessage()], 500);
+            }
+            break;
+
+        case 'backupNow':
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                respondJson(['error' => 'Use POST para backupNow'], 405);
+                exit;
+            }
+
+            $request = readRequestPayload();
+            if (isset($request['__json_error'])) {
+                respondJson(['error' => 'JSON invalido: ' . $request['__json_error']], 400);
+                exit;
+            }
+
+            try {
+                respondJson(handleBackupNowRequest($CONFIG, $request));
+            } catch (InvalidArgumentException $e) {
+                respondJson(['error' => $e->getMessage()], 400);
             } catch (Exception $e) {
                 respondJson(['error' => $e->getMessage()], 500);
             }
@@ -8764,10 +10991,33 @@ if (php_sapi_name() !== 'cli' || isset($_GET['action'])) {
 
         default:
             respondJson([
-                'error' => 'Acao invalida. Use: getRole, getRoles, getRoleEditable, getRolesEditable, getClasses, getClsconfig, getClsconfigDebug, getItemCatalog, getServiceStatus, getManageableServices, getManageableInstances, setInstanceAutoStart, startInstance, startInstances, stopInstance, stopInstances, restartInstance, restartInstances, getServerOperationStatus, getServerOperationsHistory, getServerLogs, sendSystemMessage, getMaintenanceMode, setMaintenanceMode, startServer, stopServer, restartServer, startService, stopService, restartService, sendMailItem, sendMailGold, kickRole, banAccount, unbanAccount, listBackups, backupGamedbd, getBackupContent, restoreBackup, exportClsconfig, saveRoleEditable, saveClsconfigTemplate',
+                'error' => 'Acao invalida. Use: getRole, getRoles, getRoleEditable, getRolesEditable, getClasses, getClsconfig, getClsconfigDebug, getItemCatalog, getServiceStatus, getControlCenterSnapshot, getManageableServices, getManageableInstances, setInstanceAutoStart, startInstance, startInstances, stopInstance, stopInstances, restartInstance, restartInstances, getServerOperationStatus, getServerOperationsHistory, getServerLogs, sendSystemMessage, getMaintenanceMode, setMaintenanceMode, getWatchdogStatus, getWatchdogHistory, saveWatchdogConfig, enableWatchdog, disableWatchdog, runWatchdogCheckNow, startServer, stopServer, restartServer, startService, stopService, restartService, sendMailItem, sendMailGold, kickRole, banAccount, unbanAccount, listBackups, backupGamedbd, backupNow, getBackupContent, restoreBackup, exportClsconfig, saveRoleEditable, saveClsconfigTemplate',
             ], 400);
             break;
     }
 
     exit;
+} elseif (php_sapi_name() === 'cli') {
+    $cliAction = isset($argv[1]) ? trim((string) $argv[1]) : '';
+    if ($cliAction === 'watchdog-runner') {
+        try {
+            $result = runWatchdogCheck($CONFIG, [
+                'source' => 'cli',
+                'manual' => false,
+                'force' => false,
+                'dry_run' => false,
+            ]);
+            echo safeJsonEncode($result) . PHP_EOL;
+            exit(!empty($result['success']) ? 0 : 1);
+        } catch (Exception $e) {
+            $payload = [
+                'success' => false,
+                'result' => 'error',
+                'error' => $e->getMessage(),
+                'checked_at' => gmdate('c'),
+            ];
+            echo safeJsonEncode($payload) . PHP_EOL;
+            exit(1);
+        }
+    }
 }

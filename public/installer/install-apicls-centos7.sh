@@ -113,7 +113,7 @@ if [ -z "$SECRET" ]; then
   if command -v openssl >/dev/null 2>&1; then
     SECRET="$(openssl rand -hex 20)"
   else
-    SECRET="$(tr -dc 'a-zA-Z0-9' </dev/urandom | head -c 40 || true)"
+    SECRET="$(tr -dc 'a-zA-Z0-9' </dev/urandom 2>/dev/null | head -c 40 || true)"
   fi
   [ -n "$SECRET" ] || die "Nao foi possivel gerar secret automaticamente."
   warn "Nenhum --secret informado. Gerei um novo secret para cadastrar no painel."
@@ -214,12 +214,12 @@ if ! grep -q "kickRole" "$TMP_API" || ! grep -q "banAccount" "$TMP_API" || ! gre
   die "api_cls.php parece desatualizado. Ele precisa conter kickRole, banAccount e unbanAccount."
 fi
 
-if ! grep -q "getServiceStatus" "$TMP_API" || ! grep -q "getServerLogs" "$TMP_API"; then
-  die "api_cls.php parece desatualizado. Ele precisa conter getServiceStatus e getServerLogs."
+if ! grep -q "getServiceStatus" "$TMP_API" || ! grep -q "getControlCenterSnapshot" "$TMP_API" || ! grep -q "getServerLogs" "$TMP_API"; then
+  die "api_cls.php parece desatualizado. Ele precisa conter getServiceStatus, getControlCenterSnapshot e getServerLogs."
 fi
 
-if ! grep -q "sendSystemMessage" "$TMP_API" || ! grep -q "getMaintenanceMode" "$TMP_API" || ! grep -q "getManageableServices" "$TMP_API" || ! grep -q "getManageableInstances" "$TMP_API" || ! grep -q "setInstanceAutoStart" "$TMP_API" || ! grep -q "startInstance" "$TMP_API" || ! grep -q "startInstances" "$TMP_API" || ! grep -q "stopInstance" "$TMP_API" || ! grep -q "stopInstances" "$TMP_API" || ! grep -q "restartInstance" "$TMP_API" || ! grep -q "restartInstances" "$TMP_API" || ! grep -q "getServerOperationStatus" "$TMP_API" || ! grep -q "getServerOperationsHistory" "$TMP_API" || ! grep -q "setMaintenanceMode" "$TMP_API" || ! grep -q "startServer" "$TMP_API" || ! grep -q "stopServer" "$TMP_API" || ! grep -q "restartServer" "$TMP_API" || ! grep -q "startService" "$TMP_API" || ! grep -q "stopService" "$TMP_API" || ! grep -q "restartService" "$TMP_API"; then
-  die "api_cls.php parece desatualizado. Ele precisa conter sendSystemMessage, getMaintenanceMode, getManageableServices, getManageableInstances, setInstanceAutoStart, startInstance, startInstances, stopInstance, stopInstances, restartInstance, restartInstances, getServerOperationStatus, getServerOperationsHistory, setMaintenanceMode, startServer, stopServer, restartServer, startService, stopService e restartService."
+if ! grep -q "sendSystemMessage" "$TMP_API" || ! grep -q "getMaintenanceMode" "$TMP_API" || ! grep -q "getManageableServices" "$TMP_API" || ! grep -q "getManageableInstances" "$TMP_API" || ! grep -q "setInstanceAutoStart" "$TMP_API" || ! grep -q "startInstance" "$TMP_API" || ! grep -q "startInstances" "$TMP_API" || ! grep -q "stopInstance" "$TMP_API" || ! grep -q "stopInstances" "$TMP_API" || ! grep -q "restartInstance" "$TMP_API" || ! grep -q "restartInstances" "$TMP_API" || ! grep -q "getServerOperationStatus" "$TMP_API" || ! grep -q "getServerOperationsHistory" "$TMP_API" || ! grep -q "setMaintenanceMode" "$TMP_API" || ! grep -q "startServer" "$TMP_API" || ! grep -q "stopServer" "$TMP_API" || ! grep -q "restartServer" "$TMP_API" || ! grep -q "startService" "$TMP_API" || ! grep -q "stopService" "$TMP_API" || ! grep -q "restartService" "$TMP_API" || ! grep -q "backupNow" "$TMP_API"; then
+  die "api_cls.php parece desatualizado. Ele precisa conter sendSystemMessage, getMaintenanceMode, getManageableServices, getManageableInstances, setInstanceAutoStart, startInstance, startInstances, stopInstance, stopInstances, restartInstance, restartInstances, getServerOperationStatus, getServerOperationsHistory, setMaintenanceMode, startServer, stopServer, restartServer, startService, stopService, restartService e backupNow."
 fi
 
 if grep -q "'api_secret'" "$TMP_API"; then
@@ -240,7 +240,13 @@ fi
 
 mkdir -p "$INSTALL_DIR/backups/clsconfig/export-logs"
 mkdir -p "$INSTALL_DIR/backups/clsconfig/files"
+mkdir -p "$INSTALL_DIR/backups/clsconfig/archives"
 mkdir -p "$INSTALL_DIR/backups/gamedbd"
+mkdir -p "$INSTALL_DIR/backups/mysql"
+mkdir -p "$INSTALL_DIR/backups/uniquenamed"
+mkdir -p "$INSTALL_DIR/backups/panel"
+mkdir -p "$INSTALL_DIR/backups/full"
+mkdir -p "$INSTALL_DIR/backups/watchdog"
 mkdir -p "$INSTALL_DIR/backups/security-logs"
 mkdir -p "$INSTALL_DIR/backups/sysmsg-logs"
 mkdir -p "$INSTALL_DIR/backups/maintenance"
@@ -282,7 +288,7 @@ if id apache >/dev/null 2>&1; then
 fi
 
 TS="$(date -u +%Y%m%d-%H%M%S)"
-RAND="$(tr -dc 'a-f0-9' </dev/urandom | head -c 8 || true)"
+RAND="$(tr -dc 'a-f0-9' </dev/urandom 2>/dev/null | head -c 8 || true)"
 if [ -z "$RAND" ]; then
   RAND="$(date +%s)"
 fi
@@ -346,6 +352,462 @@ echo json_encode($payload, JSON_UNESCAPED_SLASHES) . PHP_EOL;
 ' "$OUT" "$BYTES" "$SHA1" "$REASON" "${INCLUDES[@]}"
 
 rm -f "$ERR"
+EOF
+
+cat > /usr/local/sbin/backupclsconfig-api.sh <<'EOF'
+#!/bin/bash
+set -euo pipefail
+
+BACKUP_ROOT="${1:-/var/www/html/apicls/backups/clsconfig/archives}"
+REASON="${2:-manual}"
+
+if [ "$(id -u)" != "0" ]; then
+  echo "backupclsconfig-api.sh precisa rodar como root" >&2
+  exit 10
+fi
+
+mkdir -p "$BACKUP_ROOT"
+chmod 750 "$BACKUP_ROOT" 2>/dev/null || true
+if id apache >/dev/null 2>&1; then
+  chown apache:apache "$BACKUP_ROOT" 2>/dev/null || true
+fi
+
+TS="$(date -u +%Y%m%d-%H%M%S)"
+RAND="$(tr -dc 'a-f0-9' </dev/urandom 2>/dev/null | head -c 8 || true)"
+if [ -z "$RAND" ]; then
+  RAND="$(date +%s)"
+fi
+
+OUT="$BACKUP_ROOT/clsconfig-backup-$TS-$RAND.tgz"
+TMP="$BACKUP_ROOT/.clsconfig-backup-$TS-$RAND.tmp"
+ERR="$BACKUP_ROOT/.clsconfig-backup-$TS-$RAND.err"
+
+INCLUDES=()
+for path in \
+  "gamedbd/clsconfig" \
+  "gamedbd/dbdata/clsconfig"; do
+  if [ -e "/home/$path" ]; then
+    INCLUDES+=("$path")
+  fi
+done
+
+if [ "${#INCLUDES[@]}" -eq 0 ]; then
+  echo "Nenhum arquivo clsconfig encontrado em /home/gamedbd" >&2
+  exit 11
+fi
+
+tar -C /home \
+  --warning=no-file-changed \
+  --ignore-failed-read \
+  -czf "$TMP" \
+  "${INCLUDES[@]}" 2>"$ERR" || TAR_EXIT=$?
+
+TAR_EXIT="${TAR_EXIT:-0}"
+if [ "$TAR_EXIT" -ne 0 ] && [ "$TAR_EXIT" -ne 1 ]; then
+  cat "$ERR" >&2 || true
+  rm -f "$TMP"
+  exit "$TAR_EXIT"
+fi
+
+mv -f "$TMP" "$OUT"
+chmod 640 "$OUT" 2>/dev/null || true
+if id apache >/dev/null 2>&1; then
+  chown apache:apache "$OUT" 2>/dev/null || true
+fi
+
+BYTES="$(stat -c '%s' "$OUT" 2>/dev/null || wc -c < "$OUT")"
+SHA1="$(sha1sum "$OUT" | awk '{print $1}')"
+
+php -r '
+$payload = [
+    "type" => "clsconfig_archive",
+    "file" => $argv[1],
+    "name" => basename($argv[1]),
+    "bytes" => (int) $argv[2],
+    "sha1" => $argv[3],
+    "created_at" => gmdate("c"),
+    "reason" => $argv[4],
+    "includes" => array_slice($argv, 5),
+];
+echo json_encode($payload, JSON_UNESCAPED_SLASHES) . PHP_EOL;
+' "$OUT" "$BYTES" "$SHA1" "$REASON" "${INCLUDES[@]}"
+
+rm -f "$ERR"
+EOF
+
+cat > /usr/local/sbin/backupmysql-api.sh <<'EOF'
+#!/bin/bash
+set -euo pipefail
+
+BACKUP_ROOT="${1:-/var/www/html/apicls/backups/mysql}"
+REASON="${2:-manual}"
+
+if [ "$(id -u)" != "0" ]; then
+  echo "backupmysql-api.sh precisa rodar como root" >&2
+  exit 10
+fi
+
+MYSQLDUMP_BIN="$(command -v mysqldump 2>/dev/null || true)"
+GZIP_BIN="$(command -v gzip 2>/dev/null || true)"
+MYSQL_DEFAULTS_FILE="/root/.my.cnf"
+MYSQL_ARGS=()
+
+[ -n "$MYSQLDUMP_BIN" ] || { echo "mysqldump nao encontrado" >&2; exit 11; }
+[ -n "$GZIP_BIN" ] || { echo "gzip nao encontrado" >&2; exit 12; }
+
+if [ -f "$MYSQL_DEFAULTS_FILE" ]; then
+  MYSQL_ARGS+=(--defaults-extra-file="$MYSQL_DEFAULTS_FILE")
+fi
+
+mkdir -p "$BACKUP_ROOT"
+chmod 750 "$BACKUP_ROOT" 2>/dev/null || true
+if id apache >/dev/null 2>&1; then
+  chown apache:apache "$BACKUP_ROOT" 2>/dev/null || true
+fi
+
+TS="$(date -u +%Y%m%d-%H%M%S)"
+RAND="$(tr -dc 'a-f0-9' </dev/urandom 2>/dev/null | head -c 8 || true)"
+if [ -z "$RAND" ]; then
+  RAND="$(date +%s)"
+fi
+
+OUT="$BACKUP_ROOT/mysql-backup-$TS-$RAND.sql.gz"
+TMP="$BACKUP_ROOT/.mysql-backup-$TS-$RAND.tmp"
+ERR="$BACKUP_ROOT/.mysql-backup-$TS-$RAND.err"
+
+"$MYSQLDUMP_BIN" \
+  "${MYSQL_ARGS[@]}" \
+  --all-databases \
+  --events \
+  --routines \
+  --triggers \
+  --single-transaction \
+  --quick \
+  --lock-tables=false 2>"$ERR" | "$GZIP_BIN" -c > "$TMP" || DUMP_EXIT=$?
+
+DUMP_EXIT="${DUMP_EXIT:-0}"
+if [ "$DUMP_EXIT" -ne 0 ]; then
+  ERR_TEXT="$(cat "$ERR" 2>/dev/null || true)"
+  if printf '%s' "$ERR_TEXT" | grep -qi 'access denied'; then
+    cat >&2 <<'MYSQL_AUTH_HINT'
+mysqldump nao autenticou. Configure um arquivo /root/.my.cnf com as credenciais do MariaDB, por exemplo:
+[client]
+user=root
+password=SUA_SENHA
+host=localhost
+MYSQL_AUTH_HINT
+  fi
+  printf '%s\n' "$ERR_TEXT" >&2
+  rm -f "$TMP"
+  exit "$DUMP_EXIT"
+fi
+
+mv -f "$TMP" "$OUT"
+chmod 640 "$OUT" 2>/dev/null || true
+if id apache >/dev/null 2>&1; then
+  chown apache:apache "$OUT" 2>/dev/null || true
+fi
+
+BYTES="$(stat -c '%s' "$OUT" 2>/dev/null || wc -c < "$OUT")"
+SHA1="$(sha1sum "$OUT" | awk '{print $1}')"
+
+php -r '
+$payload = [
+    "type" => "mysql_backup",
+    "file" => $argv[1],
+    "name" => basename($argv[1]),
+    "bytes" => (int) $argv[2],
+    "sha1" => $argv[3],
+    "created_at" => gmdate("c"),
+    "reason" => $argv[4],
+    "source" => "all_databases",
+];
+echo json_encode($payload, JSON_UNESCAPED_SLASHES) . PHP_EOL;
+' "$OUT" "$BYTES" "$SHA1" "$REASON"
+
+rm -f "$ERR"
+EOF
+
+cat > /usr/local/sbin/backupuniquenamed-api.sh <<'EOF'
+#!/bin/bash
+set -euo pipefail
+
+BACKUP_ROOT="${1:-/var/www/html/apicls/backups/uniquenamed}"
+REASON="${2:-manual}"
+
+if [ "$(id -u)" != "0" ]; then
+  echo "backupuniquenamed-api.sh precisa rodar como root" >&2
+  exit 10
+fi
+
+mkdir -p "$BACKUP_ROOT"
+chmod 750 "$BACKUP_ROOT" 2>/dev/null || true
+if id apache >/dev/null 2>&1; then
+  chown apache:apache "$BACKUP_ROOT" 2>/dev/null || true
+fi
+
+TS="$(date -u +%Y%m%d-%H%M%S)"
+RAND="$(tr -dc 'a-f0-9' </dev/urandom 2>/dev/null | head -c 8 || true)"
+if [ -z "$RAND" ]; then
+  RAND="$(date +%s)"
+fi
+
+OUT="$BACKUP_ROOT/uniquenamed-backup-$TS-$RAND.tgz"
+TMP="$BACKUP_ROOT/.uniquenamed-backup-$TS-$RAND.tmp"
+ERR="$BACKUP_ROOT/.uniquenamed-backup-$TS-$RAND.err"
+
+INCLUDES=()
+for path in \
+  "uniquenamed/gamesys.conf" \
+  "uniquenamed/uname" \
+  "uniquenamed/dbdata" \
+  "uniquenamed/dblogs" \
+  "uniquenamed/backup"; do
+  if [ -e "/home/$path" ]; then
+    INCLUDES+=("$path")
+  fi
+done
+
+if [ "${#INCLUDES[@]}" -eq 0 ]; then
+  echo "Nenhum arquivo uniquenamed encontrado em /home/uniquenamed" >&2
+  exit 11
+fi
+
+tar -C /home \
+  --warning=no-file-changed \
+  --ignore-failed-read \
+  -czf "$TMP" \
+  "${INCLUDES[@]}" 2>"$ERR" || TAR_EXIT=$?
+
+TAR_EXIT="${TAR_EXIT:-0}"
+if [ "$TAR_EXIT" -ne 0 ] && [ "$TAR_EXIT" -ne 1 ]; then
+  cat "$ERR" >&2 || true
+  rm -f "$TMP"
+  exit "$TAR_EXIT"
+fi
+
+mv -f "$TMP" "$OUT"
+chmod 640 "$OUT" 2>/dev/null || true
+if id apache >/dev/null 2>&1; then
+  chown apache:apache "$OUT" 2>/dev/null || true
+fi
+
+BYTES="$(stat -c '%s' "$OUT" 2>/dev/null || wc -c < "$OUT")"
+SHA1="$(sha1sum "$OUT" | awk '{print $1}')"
+
+php -r '
+$payload = [
+    "type" => "uniquenamed_backup",
+    "file" => $argv[1],
+    "name" => basename($argv[1]),
+    "bytes" => (int) $argv[2],
+    "sha1" => $argv[3],
+    "created_at" => gmdate("c"),
+    "reason" => $argv[4],
+    "includes" => array_slice($argv, 5),
+];
+echo json_encode($payload, JSON_UNESCAPED_SLASHES) . PHP_EOL;
+' "$OUT" "$BYTES" "$SHA1" "$REASON" "${INCLUDES[@]}"
+
+rm -f "$ERR"
+EOF
+
+cat > /usr/local/sbin/backuppanel-api.sh <<'EOF'
+#!/bin/bash
+set -euo pipefail
+
+BACKUP_ROOT="${1:-/var/www/html/apicls/backups/panel}"
+REASON="${2:-manual}"
+PANEL_DIR="/var/www/html/apicls"
+
+if [ "$(id -u)" != "0" ]; then
+  echo "backuppanel-api.sh precisa rodar como root" >&2
+  exit 10
+fi
+
+if [ ! -d "$PANEL_DIR" ]; then
+  echo "Diretorio do painel nao encontrado: $PANEL_DIR" >&2
+  exit 11
+fi
+
+mkdir -p "$BACKUP_ROOT"
+chmod 750 "$BACKUP_ROOT" 2>/dev/null || true
+if id apache >/dev/null 2>&1; then
+  chown apache:apache "$BACKUP_ROOT" 2>/dev/null || true
+fi
+
+TS="$(date -u +%Y%m%d-%H%M%S)"
+RAND="$(tr -dc 'a-f0-9' </dev/urandom 2>/dev/null | head -c 8 || true)"
+if [ -z "$RAND" ]; then
+  RAND="$(date +%s)"
+fi
+
+OUT="$BACKUP_ROOT/panel-backup-$TS-$RAND.tgz"
+TMP="$BACKUP_ROOT/.panel-backup-$TS-$RAND.tmp"
+ERR="$BACKUP_ROOT/.panel-backup-$TS-$RAND.err"
+
+tar -C /var/www/html \
+  --warning=no-file-changed \
+  --ignore-failed-read \
+  -czf "$TMP" \
+  "apicls" 2>"$ERR" || TAR_EXIT=$?
+
+TAR_EXIT="${TAR_EXIT:-0}"
+if [ "$TAR_EXIT" -ne 0 ] && [ "$TAR_EXIT" -ne 1 ]; then
+  cat "$ERR" >&2 || true
+  rm -f "$TMP"
+  exit "$TAR_EXIT"
+fi
+
+mv -f "$TMP" "$OUT"
+chmod 640 "$OUT" 2>/dev/null || true
+if id apache >/dev/null 2>&1; then
+  chown apache:apache "$OUT" 2>/dev/null || true
+fi
+
+BYTES="$(stat -c '%s' "$OUT" 2>/dev/null || wc -c < "$OUT")"
+SHA1="$(sha1sum "$OUT" | awk '{print $1}')"
+
+php -r '
+$payload = [
+    "type" => "panel_backup",
+    "file" => $argv[1],
+    "name" => basename($argv[1]),
+    "bytes" => (int) $argv[2],
+    "sha1" => $argv[3],
+    "created_at" => gmdate("c"),
+    "reason" => $argv[4],
+    "source" => "/var/www/html/apicls",
+];
+echo json_encode($payload, JSON_UNESCAPED_SLASHES) . PHP_EOL;
+' "$OUT" "$BYTES" "$SHA1" "$REASON"
+
+rm -f "$ERR"
+EOF
+
+cat > /usr/local/sbin/backupfull-api.sh <<'EOF'
+#!/bin/bash
+set -euo pipefail
+
+BACKUP_ROOT="${1:-/var/www/html/apicls/backups/full}"
+REASON="${2:-manual}"
+
+if [ "$(id -u)" != "0" ]; then
+  echo "backupfull-api.sh precisa rodar como root" >&2
+  exit 10
+fi
+
+mkdir -p "$BACKUP_ROOT"
+chmod 750 "$BACKUP_ROOT" 2>/dev/null || true
+if id apache >/dev/null 2>&1; then
+  chown apache:apache "$BACKUP_ROOT" 2>/dev/null || true
+fi
+
+TS="$(date -u +%Y%m%d-%H%M%S)"
+RAND="$(tr -dc 'a-f0-9' </dev/urandom 2>/dev/null | head -c 8 || true)"
+if [ -z "$RAND" ]; then
+  RAND="$(date +%s)"
+fi
+
+OUT="$BACKUP_ROOT/full-backup-$TS-$RAND.tgz"
+TMP="$BACKUP_ROOT/.full-backup-$TS-$RAND.tmp"
+ERR="$BACKUP_ROOT/.full-backup-$TS-$RAND.err"
+WORKDIR="$BACKUP_ROOT/.full-backup-$TS-$RAND.work"
+PARTS_DIR="$WORKDIR/parts"
+
+rm -rf "$WORKDIR"
+mkdir -p "$PARTS_DIR"
+
+run_part() {
+  local name="$1"
+  local script="$2"
+  local target="$PARTS_DIR/$name"
+  local output_file="$WORKDIR/$name.json"
+  mkdir -p "$target"
+  local json=""
+  if ! json="$("$script" "$target" "$REASON")"; then
+    printf 'Falha no componente %s:\n%s\n' "$name" "$json" >&2
+    rm -rf "$WORKDIR"
+    exit 20
+  fi
+  printf '%s\n' "$json" > "$output_file"
+}
+
+run_part "gamedbd" "/usr/local/sbin/backupgamedbd-api.sh"
+run_part "mysql" "/usr/local/sbin/backupmysql-api.sh"
+run_part "uniquenamed" "/usr/local/sbin/backupuniquenamed-api.sh"
+run_part "clsconfig" "/usr/local/sbin/backupclsconfig-api.sh"
+run_part "panel" "/usr/local/sbin/backuppanel-api.sh"
+
+php -r '
+$files = array_slice($argv, 1);
+$manifest = [
+    "type" => "full_backup_manifest",
+    "created_at" => gmdate("c"),
+    "components" => [],
+];
+foreach ($files as $file) {
+    $json = @file_get_contents($file);
+    $decoded = json_decode((string) $json, true);
+    if (is_array($decoded)) {
+        $manifest["components"][] = $decoded;
+    }
+}
+echo json_encode($manifest, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
+' "$WORKDIR/gamedbd.json" "$WORKDIR/mysql.json" "$WORKDIR/uniquenamed.json" "$WORKDIR/clsconfig.json" "$WORKDIR/panel.json" > "$WORKDIR/manifest.json"
+
+tar -C "$WORKDIR" \
+  --warning=no-file-changed \
+  --ignore-failed-read \
+  -czf "$TMP" \
+  "manifest.json" "parts" 2>"$ERR" || TAR_EXIT=$?
+
+TAR_EXIT="${TAR_EXIT:-0}"
+if [ "$TAR_EXIT" -ne 0 ] && [ "$TAR_EXIT" -ne 1 ]; then
+  cat "$ERR" >&2 || true
+  rm -f "$TMP"
+  rm -rf "$WORKDIR"
+  exit "$TAR_EXIT"
+fi
+
+mv -f "$TMP" "$OUT"
+chmod 640 "$OUT" 2>/dev/null || true
+if id apache >/dev/null 2>&1; then
+  chown apache:apache "$OUT" 2>/dev/null || true
+fi
+
+BYTES="$(stat -c '%s' "$OUT" 2>/dev/null || wc -c < "$OUT")"
+SHA1="$(sha1sum "$OUT" | awk '{print $1}')"
+
+php -r '
+$payload = [
+    "type" => "full_backup",
+    "file" => $argv[1],
+    "name" => basename($argv[1]),
+    "bytes" => (int) $argv[2],
+    "sha1" => $argv[3],
+    "created_at" => gmdate("c"),
+    "reason" => $argv[4],
+    "components" => ["gamedbd", "mysql", "uniquenamed", "clsconfig", "panel"],
+];
+echo json_encode($payload, JSON_UNESCAPED_SLASHES) . PHP_EOL;
+' "$OUT" "$BYTES" "$SHA1" "$REASON"
+
+rm -f "$ERR"
+rm -rf "$WORKDIR"
+EOF
+
+cat > /usr/local/sbin/pw-watchdog-runner.sh <<'EOF'
+#!/bin/bash
+set -euo pipefail
+
+API_FILE="${1:-/var/www/html/apicls/api_cls.php}"
+
+PHP_BIN="$(command -v php 2>/dev/null || true)"
+[ -n "$PHP_BIN" ] || { echo "php nao encontrado" >&2; exit 10; }
+[ -f "$API_FILE" ] || { echo "api_cls.php nao encontrado: $API_FILE" >&2; exit 11; }
+
+"$PHP_BIN" "$API_FILE" watchdog-runner
 EOF
 
 cat > /usr/local/bin/pw_send_mail.php <<'PHPMAIL_EOF'
@@ -1042,9 +1504,9 @@ done
 printf '{"success":true,"action":"stop","count":%s,"instances":[%s]}\n' "$count" "$results"
 EOF
 
-sed -i 's/\r$//' /usr/local/sbin/exportclsconfig-api.sh /usr/local/sbin/backupgamedbd-api.sh /usr/local/bin/pw_send_mail.php /usr/local/sbin/sendreward-api.sh /usr/local/sbin/panel_service_control.sh /usr/local/sbin/panel_start.sh /usr/local/sbin/panel_stop.sh /usr/local/sbin/panel_restart.sh /usr/local/sbin/panel_instance_start.sh /usr/local/sbin/panel_instance_stop.sh
-chown root:root /usr/local/sbin/exportclsconfig-api.sh /usr/local/sbin/backupgamedbd-api.sh /usr/local/bin/pw_send_mail.php /usr/local/sbin/sendreward-api.sh /usr/local/sbin/panel_service_control.sh /usr/local/sbin/panel_start.sh /usr/local/sbin/panel_stop.sh /usr/local/sbin/panel_restart.sh /usr/local/sbin/panel_instance_start.sh /usr/local/sbin/panel_instance_stop.sh
-chmod 750 /usr/local/sbin/exportclsconfig-api.sh /usr/local/sbin/backupgamedbd-api.sh /usr/local/bin/pw_send_mail.php /usr/local/sbin/sendreward-api.sh /usr/local/sbin/panel_service_control.sh /usr/local/sbin/panel_start.sh /usr/local/sbin/panel_stop.sh /usr/local/sbin/panel_restart.sh /usr/local/sbin/panel_instance_start.sh /usr/local/sbin/panel_instance_stop.sh
+sed -i 's/\r$//' /usr/local/sbin/exportclsconfig-api.sh /usr/local/sbin/backupgamedbd-api.sh /usr/local/sbin/backupclsconfig-api.sh /usr/local/sbin/backupmysql-api.sh /usr/local/sbin/backupuniquenamed-api.sh /usr/local/sbin/backuppanel-api.sh /usr/local/sbin/backupfull-api.sh /usr/local/sbin/pw-watchdog-runner.sh /usr/local/bin/pw_send_mail.php /usr/local/sbin/sendreward-api.sh /usr/local/sbin/panel_service_control.sh /usr/local/sbin/panel_start.sh /usr/local/sbin/panel_stop.sh /usr/local/sbin/panel_restart.sh /usr/local/sbin/panel_instance_start.sh /usr/local/sbin/panel_instance_stop.sh
+chown root:root /usr/local/sbin/exportclsconfig-api.sh /usr/local/sbin/backupgamedbd-api.sh /usr/local/sbin/backupclsconfig-api.sh /usr/local/sbin/backupmysql-api.sh /usr/local/sbin/backupuniquenamed-api.sh /usr/local/sbin/backuppanel-api.sh /usr/local/sbin/backupfull-api.sh /usr/local/sbin/pw-watchdog-runner.sh /usr/local/bin/pw_send_mail.php /usr/local/sbin/sendreward-api.sh /usr/local/sbin/panel_service_control.sh /usr/local/sbin/panel_start.sh /usr/local/sbin/panel_stop.sh /usr/local/sbin/panel_restart.sh /usr/local/sbin/panel_instance_start.sh /usr/local/sbin/panel_instance_stop.sh
+chmod 750 /usr/local/sbin/exportclsconfig-api.sh /usr/local/sbin/backupgamedbd-api.sh /usr/local/sbin/backupclsconfig-api.sh /usr/local/sbin/backupmysql-api.sh /usr/local/sbin/backupuniquenamed-api.sh /usr/local/sbin/backuppanel-api.sh /usr/local/sbin/backupfull-api.sh /usr/local/sbin/pw-watchdog-runner.sh /usr/local/bin/pw_send_mail.php /usr/local/sbin/sendreward-api.sh /usr/local/sbin/panel_service_control.sh /usr/local/sbin/panel_start.sh /usr/local/sbin/panel_stop.sh /usr/local/sbin/panel_restart.sh /usr/local/sbin/panel_instance_start.sh /usr/local/sbin/panel_instance_stop.sh
 
 if [ -e "$SUDOERS_FILE" ] && [ ! -f "$SUDOERS_FILE" ]; then
   die "$SUDOERS_FILE existe, mas nao e arquivo. Remova ou renomeie esse caminho."
@@ -1053,6 +1515,11 @@ fi
 cat > "$SUDOERS_FILE" <<EOF
 $WEB_USER ALL=(root) NOPASSWD: /usr/local/sbin/exportclsconfig-api.sh
 $WEB_USER ALL=(root) NOPASSWD: /usr/local/sbin/backupgamedbd-api.sh
+$WEB_USER ALL=(root) NOPASSWD: /usr/local/sbin/backupclsconfig-api.sh
+$WEB_USER ALL=(root) NOPASSWD: /usr/local/sbin/backupmysql-api.sh
+$WEB_USER ALL=(root) NOPASSWD: /usr/local/sbin/backupuniquenamed-api.sh
+$WEB_USER ALL=(root) NOPASSWD: /usr/local/sbin/backuppanel-api.sh
+$WEB_USER ALL=(root) NOPASSWD: /usr/local/sbin/backupfull-api.sh
 $WEB_USER ALL=(root) NOPASSWD: /usr/local/sbin/sendreward-api.sh
 $WEB_USER ALL=(root) NOPASSWD: /usr/local/sbin/panel_service_control.sh
 $WEB_USER ALL=(root) NOPASSWD: /usr/local/sbin/panel_start.sh
@@ -1064,11 +1531,19 @@ EOF
 chmod 440 "$SUDOERS_FILE"
 visudo -cf "$SUDOERS_FILE" >/dev/null || die "sudoers invalido em $SUDOERS_FILE"
 
+cat > /etc/cron.d/apicls-watchdog <<'EOF'
+* * * * * __WEB_USER__ /usr/local/sbin/pw-watchdog-runner.sh >/dev/null 2>&1
+EOF
+sed -i "s/__WEB_USER__/$WEB_USER/g" /etc/cron.d/apicls-watchdog
+chmod 644 /etc/cron.d/apicls-watchdog
+
 chown -R "$WEB_USER:$WEB_USER" "$INSTALL_DIR"
 chmod 750 "$INSTALL_DIR"
 chmod 640 "$INSTALL_DIR/api_cls.php"
 find "$INSTALL_DIR/backups" -type d -exec chmod 750 {} \;
 find "$INSTALL_DIR/backups" -type f -exec chmod 640 {} \; 2>/dev/null || true
+chown root:"$WEB_USER" /usr/local/sbin/pw-watchdog-runner.sh
+chmod 750 /usr/local/sbin/pw-watchdog-runner.sh
 
 php -l "$INSTALL_DIR/api_cls.php" >/dev/null || die "api_cls.php instalado com erro de sintaxe."
 php -l /usr/local/bin/pw_send_mail.php >/dev/null || die "pw_send_mail.php instalado com erro de sintaxe."
@@ -1135,6 +1610,13 @@ else
   warn "Teste getServiceStatus falhou. Saida: $SERVICE_STATUS_OUT"
 fi
 
+CONTROL_CENTER_OUT="$(curl -s -H "x-sync-secret: $SECRET" "$BASE_URL?action=getControlCenterSnapshot" 2>/dev/null || true)"
+if echo "$CONTROL_CENTER_OUT" | grep -q '"snapshot"'; then
+  log "Teste getControlCenterSnapshot OK."
+else
+  warn "Teste getControlCenterSnapshot falhou. Saida: $CONTROL_CENTER_OUT"
+fi
+
 MANAGEABLE_OUT="$(curl -s -H "x-sync-secret: $SECRET" "$BASE_URL?action=getManageableServices" 2>/dev/null || true)"
 if echo "$MANAGEABLE_OUT" | grep -q '"supported_actions"'; then
   log "Teste getManageableServices OK."
@@ -1147,6 +1629,20 @@ if echo "$INSTANCE_OUT" | grep -q '"instances"'; then
   log "Teste getManageableInstances OK."
 else
   warn "Teste getManageableInstances falhou. Saida: $INSTANCE_OUT"
+fi
+
+SERVER_LOGS_OUT="$(curl -s -H "x-sync-secret: $SECRET" "$BASE_URL?action=getServerLogs&source=apicls&lines=5" 2>/dev/null || true)"
+if echo "$SERVER_LOGS_OUT" | grep -q '"entries"'; then
+  log "Teste getServerLogs OK."
+else
+  warn "Teste getServerLogs falhou. Saida: $SERVER_LOGS_OUT"
+fi
+
+LIST_BACKUPS_OUT="$(curl -s -H "x-sync-secret: $SECRET" "$BASE_URL?action=listBackups&limit=5" 2>/dev/null || true)"
+if echo "$LIST_BACKUPS_OUT" | grep -q '"backups"'; then
+  log "Teste listBackups OK."
+else
+  warn "Teste listBackups falhou. Saida: $LIST_BACKUPS_OUT"
 fi
 
 INSTANCE_AUTOSTART_OUT="$(curl -s -X POST -H "x-sync-secret: $SECRET" -H "Content-Type: application/json" -d '{"code":"gs01","enabled":true,"dry_run":true}' "$BASE_URL?action=setInstanceAutoStart" 2>/dev/null || true)"
@@ -1233,6 +1729,20 @@ else
   warn "Teste setMaintenanceMode falhou. Saida: $MAINT_SET_OUT"
 fi
 
+WATCHDOG_STATUS_OUT="$(curl -s -H "x-sync-secret: $SECRET" "$BASE_URL?action=getWatchdogStatus" 2>/dev/null || true)"
+if echo "$WATCHDOG_STATUS_OUT" | grep -q '"watchdog"'; then
+  log "Teste getWatchdogStatus OK."
+else
+  warn "Teste getWatchdogStatus falhou. Saida: $WATCHDOG_STATUS_OUT"
+fi
+
+WATCHDOG_CONFIG_OUT="$(curl -s -X POST -H "x-sync-secret: $SECRET" -H "Content-Type: application/json" -d '{"enabled":true,"critical_services":["gdeliveryd","glinkd"],"failure_threshold":2,"cooldown_seconds":60,"max_restart_attempts":2,"verify_restart":true,"pause_during_maintenance":true,"dry_run":true}' "$BASE_URL?action=saveWatchdogConfig" 2>/dev/null || true)"
+if echo "$WATCHDOG_CONFIG_OUT" | grep -q '"success":true'; then
+  log "Teste saveWatchdogConfig OK (dry_run)."
+else
+  warn "Teste saveWatchdogConfig falhou. Saida: $WATCHDOG_CONFIG_OUT"
+fi
+
 RESTART_DRY_OUT="$(curl -s -X POST -H "x-sync-secret: $SECRET" -H "Content-Type: application/json" -d '{"reason":"install-test","countdown_seconds":60,"broadcast":true,"enable_maintenance":true,"backup_before_restart":true,"verify_after_restart":true,"dry_run":true}' "$BASE_URL?action=restartServer" 2>/dev/null || true)"
 if echo "$RESTART_DRY_OUT" | grep -q '"success":true'; then
   log "Teste restartServer OK (dry_run, usa autostart por padrao)."
@@ -1283,6 +1793,13 @@ else
 fi
 
 if [ -d /home/gamedbd ]; then
+  BACKUP_NOW_DRY_OUT="$(curl -s -X POST -H "x-sync-secret: $SECRET" -H "Content-Type: application/json" -d '{"type":"full","reason":"install-test","dry_run":true}' "$BASE_URL?action=backupNow" 2>/dev/null || true)"
+  if echo "$BACKUP_NOW_DRY_OUT" | grep -q '"success":true'; then
+    log "Teste backupNow OK (dry_run)."
+  else
+    warn "Teste backupNow falhou. Saida: $BACKUP_NOW_DRY_OUT"
+  fi
+
   BACKUP_OUT="$(curl -s -X POST -H "x-sync-secret: $SECRET" -H "Content-Type: application/json" -d '{"reason":"install-test","force":true}' "$BASE_URL?action=backupGamedbd" 2>/dev/null || true)"
   if echo "$BACKUP_OUT" | grep -q '"success":true'; then
     log "Teste backupGamedbd OK."
@@ -1305,12 +1822,28 @@ Usuario web: $WEB_USER
 
 Cadastre/atualize estes dados em: PW Admin -> Servidores
 
+Observacao:
+  Se backupNow type=mysql ou type=full falhar com Access denied no mysqldump,
+  crie /root/.my.cnf com credenciais validas do MariaDB antes de repetir o teste.
+  O cron do watchdog foi instalado em /etc/cron.d/apicls-watchdog e roda a cada minuto.
+
 Comandos de validacao:
   php -l $INSTALL_DIR/api_cls.php
   curl -s -H "x-sync-secret: $SECRET" "$BASE_URL?action=getClasses"
   curl -s -H "x-sync-secret: $SECRET" "$BASE_URL?action=getServiceStatus"
+  curl -s -H "x-sync-secret: $SECRET" "$BASE_URL?action=getControlCenterSnapshot"
   curl -s -H "x-sync-secret: $SECRET" "$BASE_URL?action=getManageableServices"
   curl -s -H "x-sync-secret: $SECRET" "$BASE_URL?action=getManageableInstances"
+  curl -s -H "x-sync-secret: $SECRET" "$BASE_URL?action=getServerLogs&source=apicls&lines=20"
+  curl -s -H "x-sync-secret: $SECRET" "$BASE_URL?action=getServerLogs&source=gdeliveryd&lines=20"
+  curl -s -H "x-sync-secret: $SECRET" "$BASE_URL?action=getServerLogs&source=gs01&lines=20"
+  curl -s -H "x-sync-secret: $SECRET" "$BASE_URL?action=getServerLogs&source=world2.formatlog&lines=20"
+  curl -s -H "x-sync-secret: $SECRET" "$BASE_URL?action=listBackups&limit=20"
+  curl -s -H "x-sync-secret: $SECRET" "$BASE_URL?action=getWatchdogStatus"
+  curl -s -H "x-sync-secret: $SECRET" "$BASE_URL?action=getWatchdogHistory&limit=20"
+  curl -s -X POST -H "x-sync-secret: $SECRET" -H "Content-Type: application/json" -d '{"enabled":true,"critical_services":["gdeliveryd","glinkd","gamed"],"failure_threshold":2,"cooldown_seconds":60,"max_restart_attempts":3,"verify_restart":true,"pause_during_maintenance":true}' "$BASE_URL?action=saveWatchdogConfig"
+  curl -s -X POST -H "x-sync-secret: $SECRET" -H "Content-Type: application/json" -d '{"actor":"manual-test"}' "$BASE_URL?action=enableWatchdog"
+  curl -s -X POST -H "x-sync-secret: $SECRET" -H "Content-Type: application/json" -d '{"dry_run":true,"force":true}' "$BASE_URL?action=runWatchdogCheckNow"
   curl -s -X POST -H "x-sync-secret: $SECRET" -H "Content-Type: application/json" -d '{"code":"gs01","enabled":true,"dry_run":true}' "$BASE_URL?action=setInstanceAutoStart"
   curl -s -X POST -H "x-sync-secret: $SECRET" -H "Content-Type: application/json" -d '{"code":"is24","verify":true,"dry_run":true}' "$BASE_URL?action=startInstance"
   curl -s -X POST -H "x-sync-secret: $SECRET" -H "Content-Type: application/json" -d '{"codes":["is24","is25"],"verify":true,"dry_run":true}' "$BASE_URL?action=startInstances"
@@ -1320,6 +1853,8 @@ Comandos de validacao:
   curl -s -X POST -H "x-sync-secret: $SECRET" -H "Content-Type: application/json" -d '{"codes":["is24","is25"],"verify":true,"dry_run":true}' "$BASE_URL?action=restartInstances"
   curl -s -H "x-sync-secret: $SECRET" "$BASE_URL?action=getServerOperationStatus"
   curl -s -H "x-sync-secret: $SECRET" "$BASE_URL?action=getServerOperationsHistory&limit=10"
+  curl -s -X POST -H "x-sync-secret: $SECRET" -H "Content-Type: application/json" -d '{"type":"mysql","reason":"manual-test","dry_run":true}' "$BASE_URL?action=backupNow"
+  curl -s -X POST -H "x-sync-secret: $SECRET" -H "Content-Type: application/json" -d '{"type":"full","reason":"manual-test","dry_run":true}' "$BASE_URL?action=backupNow"
   curl -s -X POST -H "x-sync-secret: $SECRET" -H "Content-Type: application/json" -d '{"reason":"manual-test","force":true}' "$BASE_URL?action=backupGamedbd"
   curl -s -X POST -H "x-sync-secret: $SECRET" -H "Content-Type: application/json" -d '{"roleid":1024,"reason":"manual-test","dry_run":true}' "$BASE_URL?action=kickRole"
   curl -s -X POST -H "x-sync-secret: $SECRET" -H "Content-Type: application/json" -d '{"message":"manual-test","kind":"system","priority":"normal","dry_run":true}' "$BASE_URL?action=sendSystemMessage"
