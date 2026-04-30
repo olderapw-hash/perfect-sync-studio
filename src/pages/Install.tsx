@@ -38,6 +38,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAuth } from "@/hooks/useAuth";
+import { CurrentReleaseCard } from "@/components/CurrentReleaseCard";
 import { useServers } from "@/hooks/useServers";
 import { supabase } from "@/integrations/supabase/client";
 import { testServerConnection } from "@/lib/serverConnection";
