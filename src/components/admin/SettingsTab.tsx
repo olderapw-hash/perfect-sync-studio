@@ -142,6 +142,9 @@ export const SettingsTab = () => {
       primary_color: form.primary_color.trim() || null,
       background_url: form.background_url.trim() || null,
       favicon_url: form.favicon_url.trim() || null,
+      footer_text: form.footer_text.trim() || null,
+      footer_link_label: form.footer_link_label.trim() || null,
+      footer_link_url: form.footer_link_url.trim() || null,
       updated_by: user?.id ?? null,
       updated_at: new Date().toISOString(),
     };
