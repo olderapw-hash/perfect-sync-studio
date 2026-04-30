@@ -114,10 +114,11 @@ const App = () => (
                     {/* Central de Controle (NOC) — dashboard premium do snapshot. */}
                     <Route path="control-center" element={<ControlCenterPage />} />
 
-                    {/* Operação do Servidor v1 (status / logs / export) */}
+                    {/* Operação do Servidor v1 (status / logs / mensagens / export) */}
                     <Route path="server" element={<ServerOpsPage />}>
                       <Route path="instances" element={<InstancesPage />} />
                       <Route path="logs" element={<ServerLogsPage />} />
+                      <Route path="messages" element={<ServerMessagesPage />} />
                       <Route path="actions" element={<ServerActionsPage />} />
                       <Route path="history" element={<ServerHistoryPage />} />
                     </Route>
