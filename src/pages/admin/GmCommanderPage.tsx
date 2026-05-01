@@ -36,7 +36,9 @@ import {
   Mail,
   MessageSquare,
   RefreshCw,
+  Shield,
   ShieldAlert,
+  ShieldCheck,
   ShieldOff,
   Sparkles,
   VolumeX,
@@ -96,6 +98,10 @@ import {
   type GmActionHistoryEntry,
   type GmCommandCapability,
   type GmCommandCatalogResponse,
+  type GmPermissionMutationResponse,
+  type GmPermissionRule,
+  type GmPermissionStateResponse,
+  type GmPermissionSummary,
   type GrantMallCashResponse,
   type MallCashBalanceResponse,
   type MallCashWallet,
@@ -115,6 +121,11 @@ const FALLBACK_SUPPORTED = new Set([
   "muteAccount",
   "muteRole",
   "sendSystemMessage",
+  // GM Permissions v2 — backend confirmado.
+  "getGmPermissionCatalog",
+  "getGmPermissionState",
+  "grantGmPermission",
+  "revokeGmPermission",
 ]);
 
 const FALLBACK_UNSUPPORTED = new Set([
@@ -124,7 +135,6 @@ const FALLBACK_UNSUPPORTED = new Set([
   "clearRolePk",
   "reviveRole",
   "resetRoleQuest",
-  "grantGmPermission",
 ]);
 
 function normalizeCatalog(
@@ -271,6 +281,10 @@ export default function GmCommanderPage() {
               <MessageSquare className="h-3.5 w-3.5" />
               Comunicação
             </TabsTrigger>
+            <TabsTrigger value="permissions" className="gap-2">
+              <Shield className="h-3.5 w-3.5" />
+              Permissões GM
+            </TabsTrigger>
             <TabsTrigger value="history" className="gap-2">
               <HistoryIcon className="h-3.5 w-3.5" />
               Histórico
@@ -285,6 +299,9 @@ export default function GmCommanderPage() {
           </TabsContent>
           <TabsContent value="communication" className="space-y-4">
             <CommunicationTab caps={caps} onActed={refreshHistory} />
+          </TabsContent>
+          <TabsContent value="permissions" className="space-y-4">
+            <GmPermissionsTab caps={caps} onActed={refreshHistory} />
           </TabsContent>
           <TabsContent value="history">
             <HistoryTab tick={historyTick} />
@@ -1753,6 +1770,589 @@ function CommunicationTab({
           </Button>
         </div>
       </GmCard>
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Permissões GM — checklist denso (espelha pwadmin)                           */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Catálogo canônico das regras GM (fallback quando getGmPermissionCatalog
+ * não está disponível ou não traz labels). Os labels seguem exatamente a
+ * lista validada do servidor PW.
+ */
+const FALLBACK_RULE_CATALOG: GmPermissionRule[] = [
+  { id: 0, label: "Alternar nome / ID", category: "info" },
+  { id: 1, label: "Ocultar / ser Deus", category: "stealth" },
+  { id: 2, label: "Online ou nao", category: "info" },
+  { id: 3, label: "Conversa ou nao", category: "chat" },
+  { id: 4, label: "Mover para o papel", category: "movement" },
+  { id: 5, label: "Papel de busca", category: "info" },
+  { id: 6, label: "Mover como sera", category: "movement" },
+  { id: 7, label: "Mover para NPC", category: "movement" },
+  { id: 8, label: "Mover para mapa (copiar)", category: "movement" },
+  { id: 9, label: "Melhore a velocidade", category: "buff" },
+  { id: 10, label: "Acompanhe o jogador", category: "tracking" },
+  { id: 11, label: "Listar usuarios", category: "info" },
+  { id: 100, label: "Forca offline", category: "moderation" },
+  { id: 101, label: "Proibida conversa", category: "moderation" },
+  { id: 102, label: "Proibir o comercio", category: "moderation" },
+  { id: 103, label: "Proibir vender", category: "moderation" },
+  { id: 104, label: "Transmissao", category: "comm" },
+  { id: 105, label: "Desligar o servidor", category: "server" },
+  { id: 200, label: "Invocar monstro", category: "spawn" },
+  { id: 201, label: "Dispel convocacao", category: "spawn" },
+  { id: 202, label: "Pretender", category: "misc" },
+  { id: 203, label: "GM master", category: "elite" },
+  { id: 204, label: "Duplo exp", category: "boost" },
+  { id: 205, label: "Conexoes simultaneas (lambda)", category: "elite" },
+  { id: 206, label: "Gerente de atividades", category: "events" },
+  { id: 207, label: "Nenhum comercio", category: "moderation" },
+  { id: 208, label: "Sem leilao", category: "moderation" },
+  { id: 209, label: "Sem correspondencia", category: "moderation" },
+  { id: 210, label: "Nenhuma faccao", category: "moderation" },
+  { id: 211, label: "Dinheiro Duplo", category: "boost" },
+  { id: 212, label: "Duplo Drop", category: "boost" },
+  { id: 213, label: "Duplo Alma", category: "boost" },
+  { id: 214, label: "Nenhum ponto de venda", category: "moderation" },
+  { id: 215, label: "Interruptor PVP", category: "world" },
+];
+
+const TEMPLATE_DEFAULT_IDS = FALLBACK_RULE_CATALOG.map((r) => r.id);
+
+function mergeRuleCatalog(
+  serverRules?: GmPermissionRule[] | Record<string, GmPermissionRule>,
+): GmPermissionRule[] {
+  const map = new Map<number, GmPermissionRule>();
+  for (const r of FALLBACK_RULE_CATALOG) map.set(r.id, r);
+  if (Array.isArray(serverRules)) {
+    for (const r of serverRules) {
+      const merged = { ...map.get(r.id), ...r };
+      map.set(r.id, merged);
+    }
+  } else if (serverRules && typeof serverRules === "object") {
+    for (const [k, v] of Object.entries(serverRules)) {
+      const id = Number(k);
+      if (Number.isFinite(id)) {
+        const merged = { ...map.get(id), ...v, id };
+        map.set(id, merged);
+      }
+    }
+  }
+  return Array.from(map.values()).sort((a, b) => a.id - b.id);
+}
+
+function ruleLabel(r: GmPermissionRule): string {
+  return r.label ?? r.name ?? `Regra ${r.id}`;
+}
+
+function GmPermissionsTab({
+  caps,
+  onActed,
+}: {
+  caps: Map<string, GmCommandCapability>;
+  onActed: () => void;
+}) {
+  const { active } = useServers();
+  const [target, setTarget] = useState<{ kind: "userid" | "roleid"; value: string }>(
+    { kind: "userid", value: "" },
+  );
+  const [reason, setReason] = useState("gm-permission-update");
+  const [state, setState] = useState<GmPermissionStateResponse | null>(null);
+  const [catalogRules, setCatalogRules] = useState<GmPermissionRule[]>(FALLBACK_RULE_CATALOG);
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [loading, setLoading] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [missing, setMissing] = useState(false);
+  const [lastResult, setLastResult] = useState<GmPermissionMutationResponse | null>(null);
+
+  const supportedRead = isSupported("getGmPermissionState", caps);
+  const supportedGrant = isSupported("grantGmPermission", caps);
+  const supportedRevoke = isSupported("revokeGmPermission", caps);
+
+  // Carrega catálogo uma vez (não bloqueante).
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await pwApi.getGmPermissionCatalog();
+        if (cancelled) return;
+        setCatalogRules(mergeRuleCatalog(res.rule_catalog ?? res.rules));
+      } catch (e) {
+        if (e instanceof EndpointMissingError) {
+          // Catálogo ausente → mantém fallback canônico (já setado).
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const currentRules = useMemo<Set<number>>(() => {
+    const list =
+      state?.permission_state?.current_rules ?? state?.current_rules ?? [];
+    return new Set(list);
+  }, [state]);
+
+  const summary: GmPermissionSummary = state?.permission_summary ?? {};
+
+  const loadState = useCallback(async () => {
+    const v = Number(target.value);
+    if (!v) {
+      toast.error(`Informe ${target.kind} válido`);
+      return;
+    }
+    setLoading(true);
+    setMissing(false);
+    setLastResult(null);
+    try {
+      const res = await pwApi.getGmPermissionState({ [target.kind]: v });
+      setState(res);
+      const cur = res.permission_state?.current_rules ?? res.current_rules ?? [];
+      setSelected(new Set(cur));
+      if (res.rule_catalog) setCatalogRules(mergeRuleCatalog(res.rule_catalog));
+    } catch (e) {
+      if (e instanceof EndpointMissingError) setMissing(true);
+      else toast.error(e instanceof Error ? e.message : String(e));
+    } finally {
+      setLoading(false);
+    }
+  }, [target]);
+
+  const toggleRule = (id: number) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const selectAll = () => setSelected(new Set(catalogRules.map((r) => r.id)));
+  const clearAll = () => setSelected(new Set());
+  const selectTemplate = () => {
+    const templ =
+      state?.permission_state?.template_rules ??
+      state?.template_rules ??
+      TEMPLATE_DEFAULT_IDS;
+    setSelected(new Set(templ));
+  };
+
+  const buildPayload = (rule_ids?: number[]) => {
+    const v = Number(target.value);
+    return {
+      reason,
+      [target.kind]: v,
+      ...(rule_ids ? { rule_ids } : {}),
+    } as const;
+  };
+
+  const runMutation = async (
+    type: "grant" | "revoke",
+    mode: "template" | "selected" | "diff",
+  ) => {
+    const v = Number(target.value);
+    if (!v) {
+      toast.error(`Informe ${target.kind} válido`);
+      return;
+    }
+    if (!reason.trim()) {
+      toast.error("Reason obrigatório");
+      return;
+    }
+    let rule_ids: number[] | undefined;
+    if (mode === "template") {
+      rule_ids = undefined; // template completo
+    } else if (mode === "selected") {
+      rule_ids = Array.from(selected).sort((a, b) => a - b);
+      if (rule_ids.length === 0) {
+        toast.error("Selecione pelo menos uma regra");
+        return;
+      }
+    } else {
+      // diff: o que está selecionado mas NÃO está atual (grant) / o que está atual mas NÃO selecionado (revoke)
+      if (type === "grant") {
+        rule_ids = Array.from(selected).filter((id) => !currentRules.has(id));
+      } else {
+        rule_ids = Array.from(currentRules).filter((id) => !selected.has(id));
+      }
+      if (rule_ids.length === 0) {
+        toast.info("Nada a aplicar — checklist já espelha o estado atual");
+        return;
+      }
+    }
+    setBusy(true);
+    try {
+      const fn = type === "grant" ? pwApi.grantGmPermission : pwApi.revokeGmPermission;
+      const res = await fn(buildPayload(rule_ids));
+      setLastResult(res);
+      if (res.success) {
+        const ins = res.inserted_rule_count ?? res.permission_change?.inserted?.length ?? 0;
+        const del = res.deleted_rule_count ?? res.permission_change?.deleted?.length ?? 0;
+        toast.success(
+          `${type === "grant" ? "Grant" : "Revoke"} OK · +${ins} / -${del} regras`,
+        );
+        void logAuditEvent({
+          action: `gm.${type}GmPermission`,
+          tenantId: active?.id ?? null,
+          target: `${target.kind}:${v}`,
+          status: "ok",
+          metadata: { mode, rule_ids, inserted: ins, deleted: del },
+        });
+        await loadState();
+        onActed();
+      } else {
+        toast.error(res.error ?? "Falhou");
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (!supportedRead && !supportedGrant && !supportedRevoke) {
+    return <EndpointMissingNotice action="getGmPermissionState" />;
+  }
+  if (missing) return <EndpointMissingNotice action="getGmPermissionState" />;
+
+  // Agrupa regras por categoria pra leitura densa.
+  const grouped = catalogRules.reduce<Record<string, GmPermissionRule[]>>((acc, r) => {
+    const k = r.category ?? "outros";
+    (acc[k] = acc[k] ?? []).push(r);
+    return acc;
+  }, {});
+  const categoryOrder = [
+    "info",
+    "stealth",
+    "chat",
+    "movement",
+    "tracking",
+    "buff",
+    "boost",
+    "spawn",
+    "events",
+    "comm",
+    "moderation",
+    "world",
+    "elite",
+    "server",
+    "misc",
+    "outros",
+  ];
+  const orderedCats = Object.keys(grouped).sort(
+    (a, b) => categoryOrder.indexOf(a) - categoryOrder.indexOf(b),
+  );
+
+  return (
+    <div className="space-y-4">
+      {/* Alvo + reason */}
+      <Card className="bg-card/40">
+        <CardHeader className="pb-3">
+          <div className="flex items-start gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-purple-500/10 text-purple-400">
+              <Shield className="h-4 w-4" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <CardTitle className="text-sm font-extrabold uppercase tracking-wider">
+                  Permissões GM da conta
+                </CardTitle>
+                <CapBadge action="getGmPermissionState" caps={caps} />
+              </div>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">
+                Espelha o checklist do pwadmin. Consulte por <code>userid</code> ou{" "}
+                <code>roleid</code> e aplique grant/revoke total ou granular.
+              </p>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="grid gap-3 sm:grid-cols-[140px_1fr_auto]">
+            <Select
+              value={target.kind}
+              onValueChange={(v) =>
+                setTarget((t) => ({ ...t, kind: v as "userid" | "roleid" }))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="userid">userid</SelectItem>
+                <SelectItem value="roleid">roleid</SelectItem>
+              </SelectContent>
+            </Select>
+            <Input
+              value={target.value}
+              onChange={(e) => setTarget((t) => ({ ...t, value: e.target.value }))}
+              placeholder={target.kind === "userid" ? "1216" : "1024"}
+            />
+            <Button onClick={() => void loadState()} disabled={loading || !supportedRead}>
+              {loading ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <RefreshCw className="h-3.5 w-3.5" />
+              )}
+              Consultar
+            </Button>
+          </div>
+          <FieldRow label="Motivo (auditoria)">
+            <Input value={reason} onChange={(e) => setReason(e.target.value)} />
+          </FieldRow>
+        </CardContent>
+      </Card>
+
+      {/* Resumo */}
+      {state && (
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          <SummaryStat
+            label="Regras atuais"
+            value={summary.current_rule_count ?? currentRules.size}
+            tone="default"
+          />
+          <SummaryStat
+            label="Template"
+            value={`${summary.matching_rule_count ?? 0} / ${summary.template_rule_count ?? "—"}`}
+            tone={summary.fully_matches_template ? "success" : "warning"}
+          />
+          <SummaryStat
+            label="Faltantes"
+            value={summary.missing_rule_count ?? 0}
+            tone={(summary.missing_rule_count ?? 0) > 0 ? "warning" : "success"}
+          />
+          <SummaryStat
+            label="Status"
+            value={
+              summary.fully_matches_template
+                ? "FULL GM"
+                : summary.partially_matches_template
+                  ? "PARCIAL"
+                  : (summary.current_rule_count ?? currentRules.size) > 0
+                    ? "CUSTOM"
+                    : "SEM GM"
+            }
+            tone={
+              summary.fully_matches_template
+                ? "success"
+                : summary.partially_matches_template
+                  ? "warning"
+                  : "default"
+            }
+          />
+        </div>
+      )}
+
+      {/* Ações totais */}
+      <Card className="border-purple-500/30 bg-card/40">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-xs font-extrabold uppercase tracking-widest text-purple-400">
+            Template completo (todas as regras)
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-wrap gap-2">
+          <Button
+            onClick={() => void runMutation("grant", "template")}
+            disabled={busy || !supportedGrant || !target.value}
+            className="gap-1.5"
+          >
+            <ShieldCheck className="h-3.5 w-3.5" />
+            Grant TOTAL
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={() => void runMutation("revoke", "template")}
+            disabled={busy || !supportedRevoke || !target.value}
+            className="gap-1.5"
+          >
+            <ShieldOff className="h-3.5 w-3.5" />
+            Revoke TOTAL
+          </Button>
+          <span className="ml-auto text-[10px] italic text-muted-foreground">
+            Aplica/remove o template GM inteiro de uma vez.
+          </span>
+        </CardContent>
+      </Card>
+
+      {/* Checklist granular */}
+      <Card className="bg-card/40">
+        <CardHeader className="pb-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <CardTitle className="text-sm font-extrabold uppercase tracking-wider">
+              Regras GM ({selected.size}/{catalogRules.length} selecionadas)
+            </CardTitle>
+            <div className="flex flex-wrap gap-1.5">
+              <Button size="sm" variant="outline" onClick={selectTemplate}>
+                Template
+              </Button>
+              <Button size="sm" variant="outline" onClick={selectAll}>
+                Todas
+              </Button>
+              <Button size="sm" variant="outline" onClick={clearAll}>
+                Limpar
+              </Button>
+            </div>
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            Marque as regras desejadas. Use{" "}
+            <strong>Aplicar diff</strong> para sincronizar exatamente com o checklist.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <ScrollArea className="h-[420px] pr-2">
+            <div className="space-y-4">
+              {orderedCats.map((cat) => (
+                <div key={cat}>
+                  <div className="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    {cat}
+                  </div>
+                  <div className="grid gap-1 sm:grid-cols-2 lg:grid-cols-3">
+                    {grouped[cat].map((r) => {
+                      const isCurrent = currentRules.has(r.id);
+                      const isSel = selected.has(r.id);
+                      return (
+                        <button
+                          key={r.id}
+                          type="button"
+                          onClick={() => toggleRule(r.id)}
+                          className={cn(
+                            "flex items-start gap-2 rounded-md border px-2 py-1.5 text-left transition-colors",
+                            isSel
+                              ? "border-purple-500/60 bg-purple-500/10"
+                              : "border-border bg-card/40 hover:bg-card/60",
+                          )}
+                        >
+                          <div
+                            className={cn(
+                              "mt-0.5 flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded border",
+                              isSel
+                                ? "border-purple-400 bg-purple-500 text-white"
+                                : "border-muted-foreground/40",
+                            )}
+                          >
+                            {isSel && <CheckCircle2 className="h-3 w-3" />}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5 text-[11px]">
+                              <code className="font-mono text-[10px] text-muted-foreground">
+                                {r.id}
+                              </code>
+                              <span className="truncate font-semibold text-foreground">
+                                {ruleLabel(r)}
+                              </span>
+                            </div>
+                            {isCurrent && (
+                              <span className="text-[9px] font-bold uppercase tracking-widest text-success">
+                                ativa
+                              </span>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
+
+          <Separator />
+
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="default"
+              onClick={() => void runMutation("grant", "selected")}
+              disabled={busy || !supportedGrant || !target.value}
+              className="gap-1.5"
+            >
+              <ShieldCheck className="h-3.5 w-3.5" />
+              Grant selecionadas
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => void runMutation("revoke", "selected")}
+              disabled={busy || !supportedRevoke || !target.value}
+              className="gap-1.5"
+            >
+              <ShieldOff className="h-3.5 w-3.5" />
+              Revoke selecionadas
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => void runMutation("grant", "diff")}
+              disabled={busy || !supportedGrant || !target.value}
+              className="gap-1.5 border-purple-500/40 text-purple-400"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              Aplicar diff (grant faltantes)
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => void runMutation("revoke", "diff")}
+              disabled={busy || !supportedRevoke || !target.value}
+              className="gap-1.5"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              Aplicar diff (revoke extras)
+            </Button>
+            {busy && <Loader2 className="ml-2 h-4 w-4 animate-spin self-center" />}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Resultado da última mutação */}
+      {lastResult && (
+        <Card className="border-success/40 bg-success/5">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xs font-extrabold uppercase tracking-widest text-success">
+              Último resultado
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-1.5 text-[11px] sm:grid-cols-2">
+            <Row label="inseridas" value={lastResult.inserted_rule_count ?? 0} />
+            <Row label="removidas" value={lastResult.deleted_rule_count ?? 0} />
+            <Row
+              label="antes (count)"
+              value={lastResult.permission_summary_before?.current_rule_count ?? "—"}
+            />
+            <Row
+              label="depois (count)"
+              value={lastResult.permission_summary_after?.current_rule_count ?? "—"}
+            />
+            {lastResult.warning && (
+              <p className="col-span-full italic text-amber-500">⚠ {lastResult.warning}</p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+function SummaryStat({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: number | string;
+  tone: "default" | "success" | "warning";
+}) {
+  const ring =
+    tone === "success"
+      ? "border-success/40 bg-success/5 text-success"
+      : tone === "warning"
+        ? "border-amber-500/40 bg-amber-500/5 text-amber-500"
+        : "border-border bg-card/40 text-foreground";
+  return (
+    <div className={cn("rounded-lg border px-3 py-2", ring)}>
+      <div className="text-[9px] font-bold uppercase tracking-widest opacity-70">
+        {label}
+      </div>
+      <div className="mt-0.5 font-mono text-base font-extrabold">{value}</div>
     </div>
   );
 }

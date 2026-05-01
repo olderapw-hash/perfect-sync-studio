@@ -650,6 +650,35 @@ export const pwApi = {
   muteRole(body: MuteRolePayload) {
     return callAction<SecurityActionResponse>("muteRole", { method: "POST", body });
   },
+  /* ─────────── GM Permissions v2 ─────────── */
+  /** Catálogo estático das regras GM (id → label). */
+  getGmPermissionCatalog() {
+    return callAction<GmPermissionCatalogResponse>("getGmPermissionCatalog", { method: "GET" });
+  },
+  /** Estado atual de permissões GM de uma conta (por userid OU roleid). */
+  getGmPermissionState(target: { userid?: number; roleid?: number }) {
+    const query: Record<string, string> = {};
+    if (target.userid != null) query.userid = String(target.userid);
+    if (target.roleid != null) query.roleid = String(target.roleid);
+    return callAction<GmPermissionStateResponse>("getGmPermissionState", {
+      method: "GET",
+      query,
+    });
+  },
+  /** Concede permissões GM (template completo OU subset via rule_ids). */
+  grantGmPermission(body: GmPermissionMutationPayload) {
+    return callAction<GmPermissionMutationResponse>("grantGmPermission", {
+      method: "POST",
+      body: { ...body, confirm: "GRANT_GM_PERMISSION" as const },
+    });
+  },
+  /** Revoga permissões GM (template completo OU subset via rule_ids). */
+  revokeGmPermission(body: GmPermissionMutationPayload) {
+    return callAction<GmPermissionMutationResponse>("revokeGmPermission", {
+      method: "POST",
+      body: { ...body, confirm: "REVOKE_GM_PERMISSION" as const },
+    });
+  },
 };
 
 /* ─────────── GM Commander v1 — tipos ─────────── */
@@ -809,6 +838,102 @@ export interface MuteRolePayload {
   permanent?: boolean;
   reason: string;
   dry_run?: boolean;
+}
+
+/* ─────────── GM Permissions v2 — tipos ─────────── */
+
+/** Uma regra GM (id + label legível). */
+export interface GmPermissionRule {
+  id: number;
+  label?: string;
+  /** Algumas builds devolvem em pt-br ("nome") ou aliases. */
+  name?: string;
+  description?: string;
+  category?: string;
+  [k: string]: unknown;
+}
+
+export interface GmPermissionCatalogResponse {
+  success: boolean;
+  rule_catalog?: GmPermissionRule[];
+  /** Algumas versões devolvem como mapa id → rule. */
+  rules?: Record<string, GmPermissionRule>;
+  template_rule_ids?: number[];
+  collected_at?: string | number;
+  error?: string;
+}
+
+/**
+ * Resumo do estado atual da conta perante o template GM.
+ * Usado para destacar matches/missing/diffs no UI.
+ */
+export interface GmPermissionSummary {
+  template_available?: boolean;
+  current_rule_count?: number;
+  template_rule_count?: number;
+  fully_matches_template?: boolean;
+  partially_matches_template?: boolean;
+  missing_rule_count?: number;
+  matching_rule_count?: number;
+  [k: string]: unknown;
+}
+
+export interface GmPermissionStateResponse {
+  success: boolean;
+  userid?: number | null;
+  roleid?: number | null;
+  account?: string | null;
+  rule_catalog?: GmPermissionRule[];
+  permission_state?: {
+    current_rules?: number[];
+    template_rules?: number[];
+    matching_rules?: number[];
+    missing_rules?: number[];
+    [k: string]: unknown;
+  };
+  permission_summary?: GmPermissionSummary;
+  /** Algumas versões devolvem direto na raiz. */
+  current_rules?: number[];
+  template_rules?: number[];
+  matching_rules?: number[];
+  missing_rules?: number[];
+  collected_at?: string | number;
+  error?: string;
+}
+
+/**
+ * Payload de grant/revoke (compartilhado entre as duas actions).
+ *
+ *  - omitir `rule_ids` → aplica TEMPLATE COMPLETO
+ *  - enviar `rule_ids` → aplica/remove SUBSET granular
+ */
+export interface GmPermissionMutationPayload {
+  userid?: number;
+  roleid?: number;
+  reason: string;
+  rule_ids?: number[];
+  /** Anexado automaticamente pelo wrapper (não setar no UI). */
+  confirm?: "GRANT_GM_PERMISSION" | "REVOKE_GM_PERMISSION";
+}
+
+export interface GmPermissionMutationResponse {
+  success: boolean;
+  userid?: number | null;
+  roleid?: number | null;
+  account?: string | null;
+  permission_summary_before?: GmPermissionSummary;
+  permission_summary_after?: GmPermissionSummary;
+  permission_change?: {
+    inserted?: number[];
+    deleted?: number[];
+    [k: string]: unknown;
+  };
+  inserted_rule_count?: number;
+  deleted_rule_count?: number;
+  after_rules?: number[];
+  warning?: string;
+  error?: string;
+  [k: string]: unknown;
 }
 
 /* ─────────── Server Ops — histórico de operações ─────────── */
