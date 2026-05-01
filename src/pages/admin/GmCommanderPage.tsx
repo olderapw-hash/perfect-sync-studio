@@ -21,9 +21,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
+  ArrowLeft,
   ArrowRight,
   Ban,
   CheckCircle2,
+  ChevronRight,
   Clock,
   Coins,
   Gift,
@@ -545,6 +547,129 @@ function ConfirmActionDialog<T>({
 }
 
 /* -------------------------------------------------------------------------- */
+/* Action picker — menu de cards clicáveis para abrir cada ação                */
+/* -------------------------------------------------------------------------- */
+
+interface ActionItem {
+  id: string;
+  action: string;
+  title: string;
+  subtitle: string;
+  icon: typeof Gift;
+  tone?: "default" | "danger" | "warning" | "premium";
+  render: () => React.ReactNode;
+}
+
+function ActionPicker({
+  items,
+  caps,
+  emptyHint,
+}: {
+  items: ActionItem[];
+  caps: Map<string, GmCommandCapability>;
+  emptyHint?: string;
+}) {
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const active = items.find((i) => i.id === activeId) ?? null;
+
+  if (active) {
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setActiveId(null)}
+            className="gap-1.5"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Voltar
+          </Button>
+          <div className="text-[11px] text-muted-foreground">
+            <span className="opacity-60">Ações</span>
+            <ChevronRight className="mx-1 inline h-3 w-3" />
+            <span className="font-semibold text-foreground">{active.title}</span>
+          </div>
+        </div>
+        <div className="mx-auto max-w-2xl">{active.render()}</div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {emptyHint && (
+        <p className="mb-3 text-[11px] text-muted-foreground">{emptyHint}</p>
+      )}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {items.map((item) => {
+          const supported = isSupported(item.action, caps);
+          const toneRing =
+            item.tone === "danger"
+              ? "border-destructive/40 hover:border-destructive/70 hover:bg-destructive/5"
+              : item.tone === "warning"
+                ? "border-amber-500/40 hover:border-amber-500/70 hover:bg-amber-500/5"
+                : item.tone === "premium"
+                  ? "border-purple-500/40 hover:border-purple-500/70 hover:bg-purple-500/5"
+                  : "border-border hover:border-primary/60 hover:bg-primary/5";
+          const iconRing =
+            item.tone === "danger"
+              ? "bg-destructive/10 text-destructive"
+              : item.tone === "warning"
+                ? "bg-amber-500/10 text-amber-500"
+                : item.tone === "premium"
+                  ? "bg-purple-500/10 text-purple-400"
+                  : "bg-primary/10 text-primary";
+          const Icon = item.icon;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => supported && setActiveId(item.id)}
+              disabled={!supported}
+              className={cn(
+                "group flex flex-col items-start gap-3 rounded-xl border bg-card/40 p-4 text-left transition-all",
+                toneRing,
+                !supported && "cursor-not-allowed opacity-50",
+              )}
+            >
+              <div className="flex w-full items-start justify-between gap-2">
+                <div
+                  className={cn(
+                    "flex h-10 w-10 items-center justify-center rounded-lg",
+                    iconRing,
+                  )}
+                >
+                  <Icon className="h-5 w-5" />
+                </div>
+                <CapBadge action={item.action} caps={caps} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 className="text-sm font-extrabold uppercase tracking-wider text-foreground">
+                  {item.title}
+                </h3>
+                <p className="mt-1 line-clamp-2 text-[11px] text-muted-foreground">
+                  {item.subtitle}
+                </p>
+              </div>
+              <div className="flex w-full items-center justify-between text-[10px] text-muted-foreground">
+                <code className="font-mono opacity-70">?action={item.action}</code>
+                {supported && (
+                  <span className="flex items-center gap-1 font-semibold text-primary opacity-0 transition-opacity group-hover:opacity-100">
+                    Abrir
+                    <ChevronRight className="h-3 w-3" />
+                  </span>
+                )}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
 /* Compensação                                                                 */
 /* -------------------------------------------------------------------------- */
 
@@ -555,12 +680,39 @@ function CompensationTab({
   caps: Map<string, GmCommandCapability>;
   onActed: () => void;
 }) {
+  const items: ActionItem[] = [
+    {
+      id: "mail-item",
+      action: "sendMailItem",
+      title: "Enviar Item",
+      subtitle: "Anexa um item ao correio do personagem alvo.",
+      icon: Mail,
+      render: () => <SendMailItemCard caps={caps} onActed={onActed} />,
+    },
+    {
+      id: "mail-gold",
+      action: "sendMailGold",
+      title: "Enviar Moedas",
+      subtitle: "Moedas NORMAIS no inventário (não é gold da loja).",
+      icon: Coins,
+      render: () => <SendMailGoldCard caps={caps} onActed={onActed} />,
+    },
+    {
+      id: "mall-cash",
+      action: "grantMallCash",
+      title: "Gold da Loja",
+      subtitle: "Gold/CASH da Mall. NÃO confundir com sendMailGold.",
+      icon: Wallet,
+      tone: "premium",
+      render: () => <GrantMallCashCard caps={caps} onActed={onActed} />,
+    },
+  ];
   return (
-    <div className="grid gap-4 lg:grid-cols-3">
-      <SendMailItemCard caps={caps} onActed={onActed} />
-      <SendMailGoldCard caps={caps} onActed={onActed} />
-      <GrantMallCashCard caps={caps} onActed={onActed} />
-    </div>
+    <ActionPicker
+      items={items}
+      caps={caps}
+      emptyHint="Selecione uma ação de compensação para abrir o formulário."
+    />
   );
 }
 
@@ -986,14 +1138,41 @@ function ModerationTab({
   caps: Map<string, GmCommandCapability>;
   onActed: () => void;
 }) {
-  return (
-    <>
-      <div className="grid gap-4 lg:grid-cols-3">
-        <KickRoleCard caps={caps} onActed={onActed} />
-        <BanAccountCard caps={caps} onActed={onActed} />
-        <UnbanAccountCard caps={caps} onActed={onActed} />
-      </div>
-      <div className="grid gap-4 lg:grid-cols-2">
+  const items: ActionItem[] = [
+    {
+      id: "kick",
+      action: "kickRole",
+      title: "Kick",
+      subtitle: "Desconecta o personagem online (não bane).",
+      icon: LogOut,
+      tone: "warning",
+      render: () => <KickRoleCard caps={caps} onActed={onActed} />,
+    },
+    {
+      id: "ban",
+      action: "banAccount",
+      title: "Ban",
+      subtitle: "Bane uma conta — temporário ou permanente.",
+      icon: Ban,
+      tone: "danger",
+      render: () => <BanAccountCard caps={caps} onActed={onActed} />,
+    },
+    {
+      id: "unban",
+      action: "unbanAccount",
+      title: "Unban",
+      subtitle: "Remove o ban de uma conta.",
+      icon: ShieldOff,
+      render: () => <UnbanAccountCard caps={caps} onActed={onActed} />,
+    },
+    {
+      id: "mute-account",
+      action: "muteAccount",
+      title: "Mute Account",
+      subtitle: "Silencia uma conta inteira no chat global.",
+      icon: VolumeX,
+      tone: "warning",
+      render: () => (
         <MuteCard
           caps={caps}
           onActed={onActed}
@@ -1002,6 +1181,16 @@ function ModerationTab({
           title="Mute Account"
           subtitle="Silencia uma conta inteira no chat global."
         />
+      ),
+    },
+    {
+      id: "mute-role",
+      action: "muteRole",
+      title: "Mute Role",
+      subtitle: "Silencia apenas um personagem específico.",
+      icon: VolumeX,
+      tone: "warning",
+      render: () => (
         <MuteCard
           caps={caps}
           onActed={onActed}
@@ -1010,16 +1199,63 @@ function ModerationTab({
           title="Mute Role"
           subtitle="Silencia apenas um personagem específico."
         />
-      </div>
-      <div className="grid gap-4 lg:grid-cols-3">
-        <UnsupportedCard caps={caps} action="teleportRole" icon={Zap} title="Teleport" />
-        <UnsupportedCard caps={caps} action="summonRole" icon={Zap} title="Summon" />
-        <UnsupportedCard caps={caps} action="prisonRole" icon={ShieldOff} title="Prison" />
-        <UnsupportedCard caps={caps} action="clearRolePk" icon={ShieldOff} title="Clear PK" />
-        <UnsupportedCard caps={caps} action="reviveRole" icon={Sparkles} title="Revive" />
-        <UnsupportedCard caps={caps} action="resetRoleQuest" icon={Sparkles} title="Reset Quest" />
-      </div>
-    </>
+      ),
+    },
+    {
+      id: "teleport",
+      action: "teleportRole",
+      title: "Teleport",
+      subtitle: "Aguardando suporte na VPS.",
+      icon: Zap,
+      render: () => <UnsupportedCard caps={caps} action="teleportRole" icon={Zap} title="Teleport" />,
+    },
+    {
+      id: "summon",
+      action: "summonRole",
+      title: "Summon",
+      subtitle: "Aguardando suporte na VPS.",
+      icon: Zap,
+      render: () => <UnsupportedCard caps={caps} action="summonRole" icon={Zap} title="Summon" />,
+    },
+    {
+      id: "prison",
+      action: "prisonRole",
+      title: "Prison",
+      subtitle: "Aguardando suporte na VPS.",
+      icon: ShieldOff,
+      render: () => <UnsupportedCard caps={caps} action="prisonRole" icon={ShieldOff} title="Prison" />,
+    },
+    {
+      id: "clearpk",
+      action: "clearRolePk",
+      title: "Clear PK",
+      subtitle: "Aguardando suporte na VPS.",
+      icon: ShieldOff,
+      render: () => <UnsupportedCard caps={caps} action="clearRolePk" icon={ShieldOff} title="Clear PK" />,
+    },
+    {
+      id: "revive",
+      action: "reviveRole",
+      title: "Revive",
+      subtitle: "Aguardando suporte na VPS.",
+      icon: Sparkles,
+      render: () => <UnsupportedCard caps={caps} action="reviveRole" icon={Sparkles} title="Revive" />,
+    },
+    {
+      id: "reset-quest",
+      action: "resetRoleQuest",
+      title: "Reset Quest",
+      subtitle: "Aguardando suporte na VPS.",
+      icon: Sparkles,
+      render: () => <UnsupportedCard caps={caps} action="resetRoleQuest" icon={Sparkles} title="Reset Quest" />,
+    },
+  ];
+  return (
+    <ActionPicker
+      items={items}
+      caps={caps}
+      emptyHint="Selecione uma ação de moderação para abrir o formulário."
+    />
   );
 }
 
