@@ -21,9 +21,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
+  ArrowLeft,
   ArrowRight,
   Ban,
   CheckCircle2,
+  ChevronRight,
   Clock,
   Coins,
   Gift,
