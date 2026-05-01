@@ -160,7 +160,7 @@ const SECTIONS: NavSection[] = [
     proInTrial: true,
     children: [
       { to: "/admin/security", label: "Visão geral", end: true },
-      { to: "/admin/security/moderation", label: "Moderação" },
+      // ⚠️ "Moderação" removida: kick/ban/unban/mute estão em GM Commander → Moderação.
       { to: "/admin/security/history", label: "Histórico" },
       { to: "/admin/members", label: "Membros & permissões" },
       { to: "/admin/audit", label: "Auditoria" },
