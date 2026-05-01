@@ -52,6 +52,7 @@ import SecurityHistoryPage from "./pages/admin/SecurityHistoryPage.tsx";
 import SecuritySettingsPage from "./pages/admin/SecuritySettingsPage.tsx";
 import SitePage from "./pages/admin/SitePage.tsx";
 import InstallerReleasesPage from "./pages/admin/InstallerReleasesPage.tsx";
+import GmCommanderPage from "./pages/admin/GmCommanderPage.tsx";
 
 const queryClient = new QueryClient();
 
@@ -123,6 +124,9 @@ const App = () => (
                       <Route path="actions" element={<ServerActionsPage />} />
                       <Route path="history" element={<ServerHistoryPage />} />
                     </Route>
+
+                    {/* GM Commander — compensação, moderação e comunicação. */}
+                    <Route path="gm" element={<GmCommanderPage />} />
 
                     {/* Segurança v1 — layout com tabs e Outlet. */}
                     <Route path="security" element={<SecurityOverviewPage />}>
