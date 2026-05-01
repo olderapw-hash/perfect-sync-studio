@@ -47,7 +47,7 @@ import ServerMessagesPage from "./pages/admin/ServerMessagesPage.tsx";
 import ServerHistoryPage from "./pages/admin/ServerHistoryPage.tsx";
 import InstancesPage from "./pages/admin/InstancesPage.tsx";
 import SecurityOverviewPage from "./pages/admin/SecurityOverviewPage.tsx";
-import SecurityModerationPage from "./pages/admin/SecurityModerationPage.tsx";
+// SecurityModerationPage removida — kick/ban/mute consolidados em GM Commander.
 import SecurityHistoryPage from "./pages/admin/SecurityHistoryPage.tsx";
 import SecuritySettingsPage from "./pages/admin/SecuritySettingsPage.tsx";
 import SitePage from "./pages/admin/SitePage.tsx";
