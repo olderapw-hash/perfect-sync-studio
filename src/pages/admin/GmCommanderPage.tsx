@@ -1159,8 +1159,8 @@ function ModerationTab({
     {
       id: "kick",
       action: "kickRole",
-      title: "Kick",
-      subtitle: "Desconecta o personagem online (não bane).",
+      title: "Kick Personagem",
+      subtitle: "Desconecta o personagem online (roleid). Não bane a conta.",
       icon: LogOut,
       tone: "warning",
       render: () => <KickRoleCard caps={caps} onActed={onActed} />,
@@ -1168,8 +1168,8 @@ function ModerationTab({
     {
       id: "ban",
       action: "banAccount",
-      title: "Ban",
-      subtitle: "Bane uma conta — temporário ou permanente.",
+      title: "Banir Conta",
+      subtitle: "Bane a conta inteira (userid). Afeta todos os personagens.",
       icon: Ban,
       tone: "danger",
       render: () => <BanAccountCard caps={caps} onActed={onActed} />,
@@ -1177,16 +1177,16 @@ function ModerationTab({
     {
       id: "unban",
       action: "unbanAccount",
-      title: "Unban",
-      subtitle: "Remove o ban de uma conta.",
+      title: "Desbanir Conta",
+      subtitle: "Remove o ban de uma conta (userid).",
       icon: ShieldOff,
       render: () => <UnbanAccountCard caps={caps} onActed={onActed} />,
     },
     {
       id: "mute-account",
       action: "muteAccount",
-      title: "Mute Account",
-      subtitle: "Silencia uma conta inteira no chat global.",
+      title: "Mutar Conta",
+      subtitle: "Silencia a conta (userid) — afeta todos os personagens dela.",
       icon: VolumeX,
       tone: "warning",
       render: () => (
@@ -1195,16 +1195,16 @@ function ModerationTab({
           onActed={onActed}
           variant="account"
           action="muteAccount"
-          title="Mute Account"
-          subtitle="Silencia uma conta inteira no chat global."
+          title="Mutar Conta"
+          subtitle="Silencia a conta (userid). Afeta todos os personagens dessa conta."
         />
       ),
     },
     {
       id: "mute-role",
       action: "muteRole",
-      title: "Mute Role",
-      subtitle: "Silencia apenas um personagem específico.",
+      title: "Mutar Personagem",
+      subtitle: "Silencia apenas um personagem específico (roleid).",
       icon: VolumeX,
       tone: "warning",
       render: () => (
@@ -1213,8 +1213,8 @@ function ModerationTab({
           onActed={onActed}
           variant="role"
           action="muteRole"
-          title="Mute Role"
-          subtitle="Silencia apenas um personagem específico."
+          title="Mutar Personagem"
+          subtitle="Silencia apenas um personagem específico (roleid)."
         />
       ),
     },
