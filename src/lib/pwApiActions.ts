@@ -620,7 +620,196 @@ export const pwApi = {
   runWatchdogCheckNow(body: { dry_run?: boolean } = {}) {
     return callAction<WatchdogCheckResponse>("runWatchdogCheckNow", { method: "POST", body });
   },
+  /* ─────────── GM Commander v1 ─────────── */
+  /** Catálogo de comandos GM disponíveis na VPS (capability flags). */
+  getGmCommandCatalog() {
+    return callAction<GmCommandCatalogResponse>("getGmCommandCatalog", { method: "GET" });
+  },
+  /** Histórico unificado de ações GM (mail/grant/mod/sysmsg). */
+  getGmActionHistory(params: { limit?: number } = {}) {
+    const query: Record<string, string | number> = {};
+    if (params.limit != null) query.limit = params.limit;
+    return callAction<GmActionHistoryResponse>("getGmActionHistory", { method: "GET", query });
+  },
+  /** Saldo de cash/gold da Mall (loja) por roleid. */
+  getMallCashBalance(roleid: number) {
+    return callAction<MallCashBalanceResponse>("getMallCashBalance", {
+      method: "GET",
+      query: { roleid },
+    });
+  },
+  /** Crédito de gold/cash da loja na conta. NÃO confundir com sendMailGold. */
+  grantMallCash(body: GrantMallCashPayload) {
+    return callAction<GrantMallCashResponse>("grantMallCash", { method: "POST", body });
+  },
+  /** Silencia uma conta (chat global). */
+  muteAccount(body: MuteAccountPayload) {
+    return callAction<SecurityActionResponse>("muteAccount", { method: "POST", body });
+  },
+  /** Silencia um personagem específico. */
+  muteRole(body: MuteRolePayload) {
+    return callAction<SecurityActionResponse>("muteRole", { method: "POST", body });
+  },
 };
+
+/* ─────────── GM Commander v1 — tipos ─────────── */
+
+/** Estado de suporte de cada action no catálogo. */
+export type GmCapabilityState =
+  | "supported"
+  | "version_gated"
+  | "contract_only"
+  | "unsupported"
+  | string;
+
+export interface GmCommandCapability {
+  /** Nome canônico da action (ex.: "grantMallCash", "teleportRole"). */
+  action: string;
+  /** Rótulo amigável quando o backend devolver. */
+  label?: string;
+  /** Categoria sugerida pela VPS (compensation/moderation/communication/...). */
+  category?: string;
+  state: GmCapabilityState;
+  /** Suporta dry_run nativo. */
+  supports_dry_run?: boolean;
+  /** Mensagem livre (motivo do gate). */
+  message?: string;
+  [k: string]: unknown;
+}
+
+export interface GmCommandCatalogResponse {
+  success: boolean;
+  count?: number;
+  capabilities?: GmCommandCapability[];
+  /** Algumas versões devolvem como mapa action→capability. */
+  commands?: Record<string, GmCommandCapability>;
+  collected_at?: string | number;
+  error?: string;
+}
+
+export interface GmActionHistoryEntry {
+  id?: string;
+  ts: number | string;
+  action: string;
+  /** Categoria operacional (compensation/moderation/communication). */
+  category?: string;
+  target?: string | number | null;
+  roleid?: number | null;
+  account?: string | null;
+  status: "ok" | "error" | "pending" | string;
+  dry_run?: boolean;
+  by?: string | null;
+  message?: string | null;
+  error?: string | null;
+  [k: string]: unknown;
+}
+
+export interface GmActionHistoryResponse {
+  success: boolean;
+  count?: number;
+  entries: GmActionHistoryEntry[];
+  warning?: string;
+  error?: string;
+}
+
+/**
+ * Saldo da carteira da Mall (loja). PW separa em `cash` (gold pago) e
+ * `cash_add` (gold de bônus/grant). O total operacional é `cash_total`.
+ *
+ * Importante: na maioria dos servidores validados, `grantMallCash` reflete
+ * em `cash_add` — por isso a UI deve sempre conferir `cash_total_gold`,
+ * não `cash_gold` isolado.
+ */
+export interface MallCashWallet {
+  /** Gold pago (1 gold = 100 units no PW). */
+  cash_gold?: number;
+  cash_units?: number;
+  /** Gold bônus/grant. */
+  cash_add_gold?: number;
+  cash_add_units?: number;
+  /** Soma das duas carteiras (canônico para conferência). */
+  cash_total_gold?: number;
+  cash_total_units?: number;
+  [k: string]: unknown;
+}
+
+export interface MallCashBalanceResponse {
+  success: boolean;
+  roleid?: number;
+  userid?: number | null;
+  account?: string | null;
+  wallet: MallCashWallet;
+  /** Saída bruta do gacd quando disponível (debug). */
+  raw?: unknown;
+  collected_at?: string | number;
+  error?: string;
+}
+
+export interface GrantMallCashPayload {
+  /** Identificadores de alvo (pelo menos um). */
+  roleid?: number;
+  userid?: number;
+  /** Inteiro > 0 em gold (não em units). */
+  amount: number;
+  reason: string;
+  /** Texto fixo "GRANT_MALL_CASH" exigido para execução real. */
+  confirm?: "GRANT_MALL_CASH";
+  dry_run?: boolean;
+}
+
+export interface GrantMallCashResult {
+  /** Código retornado pelo gacd. -8 pode indicar warning não-fatal. */
+  error_code?: number;
+  raw?: unknown;
+  message?: string;
+  [k: string]: unknown;
+}
+
+export interface BalanceChange {
+  cash_gold?: number;
+  cash_units?: number;
+  cash_add_gold?: number;
+  cash_add_units?: number;
+  cash_total_gold?: number;
+  cash_total_units?: number;
+}
+
+export interface GrantMallCashResponse {
+  success: boolean;
+  dry_run?: boolean;
+  roleid?: number;
+  userid?: number | null;
+  amount?: number;
+  reason?: string;
+  grant_result?: GrantMallCashResult;
+  wallet_before?: MallCashWallet;
+  wallet_after?: MallCashWallet;
+  balance_change?: BalanceChange;
+  verification_attempts?: number;
+  warning?: string;
+  log_file?: string;
+  error?: string;
+}
+
+/* ─────────── Mute (extensão da Segurança v1) ─────────── */
+
+export interface MuteAccountPayload {
+  account?: string;
+  userid?: number;
+  roleid?: number;
+  duration_seconds?: number;
+  permanent?: boolean;
+  reason: string;
+  dry_run?: boolean;
+}
+
+export interface MuteRolePayload {
+  roleid: number;
+  duration_seconds?: number;
+  permanent?: boolean;
+  reason: string;
+  dry_run?: boolean;
+}
 
 /* ─────────── Server Ops — histórico de operações ─────────── */
 
