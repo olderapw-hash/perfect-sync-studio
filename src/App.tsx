@@ -104,8 +104,10 @@ const App = () => (
                     <Route path="roles/historico" element={<RolesHistoryPage />} />
                     <Route path="roles/backups" element={<RolesBackupsPage />} />
 
-                    {/* Correio & Recompensas (Fase 2) */}
-                    <Route path="mail" element={<MailPage />} />
+                    {/* Correio & Recompensas — formulário de envio consolidado em GM Commander.
+                        /admin/mail vira atalho. Templates e histórico continuam disponíveis
+                        como recursos auxiliares (presets e log de envios). */}
+                    <Route path="mail" element={<Navigate to="/admin/gm?tab=compensation" replace />} />
                     <Route path="mail/templates" element={<MailTemplatesPage />} />
                     <Route path="mail/history" element={<MailHistoryPage />} />
 
