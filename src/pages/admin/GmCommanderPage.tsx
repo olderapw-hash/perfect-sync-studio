@@ -1839,7 +1839,13 @@ function HistoryTab({ tick }: { tick: number }) {
                       {e.action}
                     </TableCell>
                     <TableCell className="font-mono text-[11px]">
-                      {e.target ?? e.roleid ?? e.account ?? "—"}
+                      {(() => {
+                        const v = e.target ?? e.roleid ?? e.account;
+                        if (v == null) return "—";
+                        if (typeof v === "object")
+                          return (v as any).roleid ?? (v as any).userid ?? (v as any).role_name ?? JSON.stringify(v);
+                        return String(v);
+                      })()}
                     </TableCell>
                     <TableCell>
                       <StatusBadge status={e.status} />
