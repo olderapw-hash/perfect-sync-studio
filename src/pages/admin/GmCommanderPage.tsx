@@ -1159,8 +1159,8 @@ function ModerationTab({
     {
       id: "kick",
       action: "kickRole",
-      title: "Kick",
-      subtitle: "Desconecta o personagem online (não bane).",
+      title: "Kick Personagem",
+      subtitle: "Desconecta o personagem online (roleid). Não bane a conta.",
       icon: LogOut,
       tone: "warning",
       render: () => <KickRoleCard caps={caps} onActed={onActed} />,
@@ -1168,8 +1168,8 @@ function ModerationTab({
     {
       id: "ban",
       action: "banAccount",
-      title: "Ban",
-      subtitle: "Bane uma conta — temporário ou permanente.",
+      title: "Banir Conta",
+      subtitle: "Bane a conta inteira (userid). Afeta todos os personagens.",
       icon: Ban,
       tone: "danger",
       render: () => <BanAccountCard caps={caps} onActed={onActed} />,
@@ -1177,16 +1177,16 @@ function ModerationTab({
     {
       id: "unban",
       action: "unbanAccount",
-      title: "Unban",
-      subtitle: "Remove o ban de uma conta.",
+      title: "Desbanir Conta",
+      subtitle: "Remove o ban de uma conta (userid).",
       icon: ShieldOff,
       render: () => <UnbanAccountCard caps={caps} onActed={onActed} />,
     },
     {
       id: "mute-account",
       action: "muteAccount",
-      title: "Mute Account",
-      subtitle: "Silencia uma conta inteira no chat global.",
+      title: "Mutar Conta",
+      subtitle: "Silencia a conta (userid) — afeta todos os personagens dela.",
       icon: VolumeX,
       tone: "warning",
       render: () => (
@@ -1195,16 +1195,16 @@ function ModerationTab({
           onActed={onActed}
           variant="account"
           action="muteAccount"
-          title="Mute Account"
-          subtitle="Silencia uma conta inteira no chat global."
+          title="Mutar Conta"
+          subtitle="Silencia a conta (userid). Afeta todos os personagens dessa conta."
         />
       ),
     },
     {
       id: "mute-role",
       action: "muteRole",
-      title: "Mute Role",
-      subtitle: "Silencia apenas um personagem específico.",
+      title: "Mutar Personagem",
+      subtitle: "Silencia apenas um personagem específico (roleid).",
       icon: VolumeX,
       tone: "warning",
       render: () => (
@@ -1213,8 +1213,8 @@ function ModerationTab({
           onActed={onActed}
           variant="role"
           action="muteRole"
-          title="Mute Role"
-          subtitle="Silencia apenas um personagem específico."
+          title="Mutar Personagem"
+          subtitle="Silencia apenas um personagem específico (roleid)."
         />
       ),
     },
@@ -1288,51 +1288,57 @@ function KickRoleCard({
   const [reason, setReason] = useState("");
   const [confirmOpen, setConfirmOpen] = useState(false);
 
+  const roleidNum = Number(roleid);
+  const roleidValid = Number.isFinite(roleidNum) && roleidNum > 0;
+
   return (
     <GmCard
       icon={LogOut}
-      title="Kick"
-      subtitle="Desconecta o personagem online (não bane)."
+      title="Kick Personagem"
+      subtitle="Desconecta o personagem online (não bane). Exige roleid — não confundir com userid da conta."
       action="kickRole"
       caps={caps}
       tone="warning"
     >
-      <FieldRow label="Roleid">
-        <Input value={roleid} onChange={(e) => setRoleid(e.target.value)} placeholder="1024" />
+      <FieldRow label="Roleid (personagem)">
+        <Input
+          value={roleid}
+          onChange={(e) => setRoleid(e.target.value)}
+          placeholder="Ex.: 1024"
+          inputMode="numeric"
+        />
       </FieldRow>
+      {!roleidValid && roleid.length > 0 && (
+        <p className="text-[10px] text-destructive">
+          roleid deve ser numérico (id do personagem, não da conta).
+        </p>
+      )}
       <FieldRow label="Motivo">
         <Input value={reason} onChange={(e) => setReason(e.target.value)} />
       </FieldRow>
       <Button
         variant="outline"
         className="w-full border-amber-500/50 text-amber-500"
-        onClick={() => {
-          if (!Number(roleid) || !reason.trim()) {
-            toast.error("Roleid e motivo são obrigatórios");
-            return;
-          }
-          setConfirmOpen(true);
-        }}
+        disabled={!roleidValid || !reason.trim()}
+        onClick={() => setConfirmOpen(true)}
       >
         <LogOut className="h-3.5 w-3.5" />
-        Kickar
+        Kickar Personagem #{roleidValid ? roleidNum : "—"}
       </Button>
       <ConfirmActionDialog
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
         skipDryRun
-        title="Kick Role"
-        description={`Desconectar roleid ${roleid}? Esta operação é imediata.`}
-        exec={async () =>
-          pwApi.kickRole({ roleid: Number(roleid), reason })
-        }
+        title={`Kick Personagem #${roleidNum}`}
+        description={`Desconectar Personagem #${roleidNum}? Esta operação é imediata. Não afeta a conta.`}
+        exec={async () => pwApi.kickRole({ roleid: roleidNum, reason })}
         onSuccess={(res) => {
           if (res.success) {
-            toast.success("Personagem desconectado");
+            toast.success(`Personagem #${roleidNum} desconectado`);
             void logAuditEvent({
               action: "gm.kickRole",
               tenantId: active?.id ?? null,
-              target: String(roleid),
+              target: `roleid:${roleidNum}`,
               status: "ok",
             });
             onActed();
@@ -1354,24 +1360,39 @@ function BanAccountCard({
   onActed: () => void;
 }) {
   const { active } = useServers();
-  const [account, setAccount] = useState("");
+  const [userid, setUserid] = useState("");
   const [reason, setReason] = useState("");
   const [duration, setDuration] = useState("3600");
   const [permanent, setPermanent] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
+  const useridNum = Number(userid);
+  const useridValid = Number.isFinite(useridNum) && useridNum > 0;
+  const durationNum = Number(duration);
+  const durationValid = permanent || (Number.isFinite(durationNum) && durationNum > 0);
+
   return (
     <GmCard
       icon={Ban}
-      title="Ban"
-      subtitle="Bane uma conta — temporário ou permanente."
+      title="Banir Conta"
+      subtitle="Bane a CONTA (afeta todos os personagens). Exige userid — não confundir com roleid do personagem."
       action="banAccount"
       caps={caps}
       tone="danger"
     >
-      <FieldRow label="Conta (login ou userid)">
-        <Input value={account} onChange={(e) => setAccount(e.target.value)} />
+      <FieldRow label="Userid (conta)">
+        <Input
+          value={userid}
+          onChange={(e) => setUserid(e.target.value)}
+          placeholder="Ex.: 1234"
+          inputMode="numeric"
+        />
       </FieldRow>
+      {!useridValid && userid.length > 0 && (
+        <p className="text-[10px] text-destructive">
+          userid deve ser numérico (id da conta, não do personagem).
+        </p>
+      )}
       <FieldRow label="Motivo">
         <Input value={reason} onChange={(e) => setReason(e.target.value)} />
       </FieldRow>
@@ -1392,42 +1413,37 @@ function BanAccountCard({
       <Button
         variant="destructive"
         className="w-full"
-        onClick={() => {
-          if (!account.trim() || !reason.trim()) {
-            toast.error("Conta e motivo são obrigatórios");
-            return;
-          }
-          setConfirmOpen(true);
-        }}
+        disabled={!useridValid || !reason.trim() || !durationValid}
+        onClick={() => setConfirmOpen(true)}
       >
         <Ban className="h-3.5 w-3.5" />
-        Banir
+        Banir Conta #{useridValid ? useridNum : "—"}
       </Button>
       <ConfirmActionDialog
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
-        title="Ban Account"
-        description={`Banir conta "${account}" ${
-          permanent ? "PERMANENTEMENTE" : `por ${duration}s`
-        }?`}
+        title={`Banir Conta #${useridNum}`}
+        description={`Banir Conta #${useridNum} ${
+          permanent ? "PERMANENTEMENTE" : `por ${durationNum}s`
+        }? Afeta todos os personagens dessa conta.`}
         exec={async (dryRun) =>
           pwApi.banAccount({
-            account,
+            userid: useridNum,
             reason,
             permanent,
-            duration_seconds: permanent ? undefined : Number(duration),
+            duration_seconds: permanent ? undefined : durationNum,
             dry_run: dryRun,
           })
         }
         onSuccess={(res) => {
           if (res.success) {
-            toast.success("Conta banida");
+            toast.success(`Conta #${useridNum} banida`);
             void logAuditEvent({
               action: "gm.banAccount",
               tenantId: active?.id ?? null,
-              target: account,
+              target: `userid:${useridNum}`,
               status: "ok",
-              metadata: { permanent, duration_seconds: Number(duration) },
+              metadata: { permanent, duration_seconds: durationNum },
             });
             onActed();
           } else {
@@ -1454,24 +1470,27 @@ function UnbanAccountCard({
   onActed: () => void;
 }) {
   const { active } = useServers();
-  const [account, setAccount] = useState("");
+  const [userid, setUserid] = useState("");
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
 
+  const useridNum = Number(userid);
+  const useridValid = Number.isFinite(useridNum) && useridNum > 0;
+
   const submit = async () => {
-    if (!account.trim()) {
-      toast.error("Conta obrigatória");
+    if (!useridValid) {
+      toast.error("Userid da conta obrigatório");
       return;
     }
     setBusy(true);
     try {
-      const res = await pwApi.unbanAccount({ account, reason });
+      const res = await pwApi.unbanAccount({ userid: useridNum, reason });
       if (res.success) {
-        toast.success("Ban removido");
+        toast.success(`Ban removido da Conta #${useridNum}`);
         void logAuditEvent({
           action: "gm.unbanAccount",
           tenantId: active?.id ?? null,
-          target: account,
+          target: `userid:${useridNum}`,
           status: "ok",
         });
         onActed();
@@ -1488,20 +1507,35 @@ function UnbanAccountCard({
   return (
     <GmCard
       icon={ShieldOff}
-      title="Unban"
-      subtitle="Remove o ban de uma conta."
+      title="Desbanir Conta"
+      subtitle="Remove o ban de uma CONTA. Exige userid — não confundir com roleid."
       action="unbanAccount"
       caps={caps}
     >
-      <FieldRow label="Conta">
-        <Input value={account} onChange={(e) => setAccount(e.target.value)} />
+      <FieldRow label="Userid (conta)">
+        <Input
+          value={userid}
+          onChange={(e) => setUserid(e.target.value)}
+          placeholder="Ex.: 1234"
+          inputMode="numeric"
+        />
       </FieldRow>
+      {!useridValid && userid.length > 0 && (
+        <p className="text-[10px] text-destructive">
+          userid deve ser numérico (id da conta).
+        </p>
+      )}
       <FieldRow label="Motivo (opcional)">
         <Input value={reason} onChange={(e) => setReason(e.target.value)} />
       </FieldRow>
-      <Button onClick={submit} disabled={busy} className="w-full" variant="outline">
+      <Button
+        onClick={submit}
+        disabled={busy || !useridValid}
+        className="w-full"
+        variant="outline"
+      >
         {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ShieldOff className="h-3.5 w-3.5" />}
-        Remover ban
+        Desbanir Conta #{useridValid ? useridNum : "—"}
       </Button>
     </GmCard>
   );
@@ -1529,6 +1563,16 @@ function MuteCard({
   const [permanent, setPermanent] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
+  const isAccount = variant === "account";
+  const idLabel = isAccount ? "Userid (conta)" : "Roleid (personagem)";
+  const entityLabel = isAccount ? "Conta" : "Personagem";
+  const fieldKey = isAccount ? "userid" : "roleid";
+  const targetNum = Number(target);
+  const targetValid = Number.isFinite(targetNum) && targetNum > 0;
+  const durationNum = Number(duration);
+  const durationValid = permanent || (Number.isFinite(durationNum) && durationNum > 0);
+  const composedTitle = `Mutar ${entityLabel} #${targetValid ? targetNum : "—"}`;
+
   return (
     <GmCard
       icon={VolumeX}
@@ -1538,9 +1582,28 @@ function MuteCard({
       caps={caps}
       tone="warning"
     >
-      <FieldRow label={variant === "account" ? "Conta" : "Roleid"}>
-        <Input value={target} onChange={(e) => setTarget(e.target.value)} />
+      <FieldRow label={idLabel}>
+        <Input
+          value={target}
+          onChange={(e) => setTarget(e.target.value)}
+          placeholder={isAccount ? "Ex.: 1234" : "Ex.: 1024"}
+          inputMode="numeric"
+        />
       </FieldRow>
+      {!targetValid && target.length > 0 && (
+        <p className="text-[10px] text-destructive">
+          {isAccount
+            ? "userid deve ser numérico (id da conta, não do personagem)."
+            : "roleid deve ser numérico (id do personagem, não da conta)."}
+        </p>
+      )}
+      {!targetValid && target.length === 0 && (
+        <p className="text-[10px] text-muted-foreground">
+          {isAccount
+            ? "Ação de conta — informe o userid (não use roleid)."
+            : "Ação de personagem — informe o roleid (não use userid)."}
+        </p>
+      )}
       <FieldRow label="Motivo">
         <Input value={reason} onChange={(e) => setReason(e.target.value)} />
       </FieldRow>
@@ -1561,51 +1624,44 @@ function MuteCard({
       <Button
         variant="outline"
         className="w-full border-amber-500/50 text-amber-500"
-        onClick={() => {
-          if (!target.trim() || !reason.trim()) {
-            toast.error("Alvo e motivo são obrigatórios");
-            return;
-          }
-          setConfirmOpen(true);
-        }}
+        disabled={!targetValid || !reason.trim() || !durationValid}
+        onClick={() => setConfirmOpen(true)}
       >
         <VolumeX className="h-3.5 w-3.5" />
-        Silenciar
+        {composedTitle}
       </Button>
       <ConfirmActionDialog
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
-        title={title}
-        description={`Silenciar "${target}" ${
-          permanent ? "PERMANENTEMENTE" : `por ${duration}s`
-        }?`}
+        title={composedTitle}
+        description={`Silenciar ${entityLabel} #${targetNum} ${
+          permanent ? "PERMANENTEMENTE" : `por ${durationNum}s`
+        }? ${
+          isAccount
+            ? "A ação afeta a conta inteira (todos os personagens)."
+            : "A ação afeta apenas este personagem."
+        }`}
         exec={async (dryRun) => {
-          if (variant === "account") {
-            return pwApi.muteAccount({
-              account: target,
-              reason,
-              permanent,
-              duration_seconds: permanent ? undefined : Number(duration),
-              dry_run: dryRun,
-            });
-          }
-          return pwApi.muteRole({
-            roleid: Number(target),
+          const base = {
             reason,
             permanent,
-            duration_seconds: permanent ? undefined : Number(duration),
+            duration_seconds: permanent ? undefined : durationNum,
             dry_run: dryRun,
-          });
+          };
+          if (isAccount) {
+            return pwApi.muteAccount({ userid: targetNum, ...base });
+          }
+          return pwApi.muteRole({ roleid: targetNum, ...base });
         }}
         onSuccess={(res) => {
           if (res.success) {
-            toast.success("Silenciado");
+            toast.success(`${entityLabel} #${targetNum} silenciado`);
             void logAuditEvent({
               action: `gm.${action}`,
               tenantId: active?.id ?? null,
-              target,
+              target: `${fieldKey}:${targetNum}`,
               status: "ok",
-              metadata: { permanent, duration_seconds: Number(duration) },
+              metadata: { permanent, duration_seconds: durationNum },
             });
             onActed();
           } else {
