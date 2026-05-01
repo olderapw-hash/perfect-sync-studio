@@ -573,7 +573,7 @@ Deno.serve(async (req: Request) => {
       console.log("[clsconfig-proxy] action →", action, "method:", req.method);
       const upstream = await fetch(target, init);
       console.log("[clsconfig-proxy] action status:", upstream.status);
-      const out = await relay(upstream, action);
+      const out = await relay(upstream, action, { softFail: true, context: action });
       void logAction(action, target, out.status === 200, upstream.status);
       return out;
     }
