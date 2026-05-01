@@ -205,7 +205,7 @@ export const AdminLayout = () => {
     <SidebarProvider defaultOpen>
       <div
         className={cn(
-          "flex h-screen w-full",
+          "admin-cursor flex h-screen w-full",
           !settings.background_url && "bg-hero",
           // Quando há background customizado, deixa as superfícies das páginas
           // semi-transparentes para que ele apareça através de bg-background / bg-card.

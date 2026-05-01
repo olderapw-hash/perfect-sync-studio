@@ -362,3 +362,14 @@
 .admin-bg-transparent main > * { background-color: transparent !important; }
 .admin-bg-transparent main .bg-background { background-color: hsl(var(--background) / 0.55) !important; backdrop-filter: blur(8px); }
 .admin-bg-transparent main .bg-card { background-color: hsl(var(--card) / 0.65) !important; backdrop-filter: blur(8px); }
+
+/* ==========================================================================
+   Admin custom cursor
+   .ani é formato Windows e só funciona em IE/Edge legado. Em browsers
+   modernos o navegador ignora o .ani e cai no fallback "auto" — sem erro.
+   Aplicado em toda a árvore /admin via classe .admin-cursor.
+   ========================================================================== */
+.admin-cursor,
+.admin-cursor * {
+  cursor: url("/cursors/normal.ani"), auto;
+}
