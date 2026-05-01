@@ -83,6 +83,13 @@ const ALLOWED_ACTIONS = new Set([
   "enableWatchdog",
   "disableWatchdog",
   "runWatchdogCheckNow",
+  // GM Commander v1 — catálogo + histórico + mall cash + mutes.
+  "getGmCommandCatalog",
+  "getGmActionHistory",
+  "getMallCashBalance",
+  "grantMallCash",
+  "muteAccount",
+  "muteRole",
 ]);
 
 // Mapa Action → permissão exigida (deve refletir src/lib/serverPermissions.ts).
@@ -144,6 +151,13 @@ const ACTION_PERMISSION: Record<string, string> = {
   enableWatchdog: "manage_servers",
   disableWatchdog: "manage_servers",
   runWatchdogCheckNow: "manage_servers",
+  // GM Commander v1 — leitura "view"; ações sensíveis exigem manage_security.
+  getGmCommandCatalog: "view",
+  getGmActionHistory: "view_audit",
+  getMallCashBalance: "view",
+  grantMallCash: "manage_security",
+  muteAccount: "manage_security",
+  muteRole: "manage_security",
 };
 
 function jsonError(message: string, status: number): Response {

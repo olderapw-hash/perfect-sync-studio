@@ -27,11 +27,11 @@ import {
   Globe,
   LogOut,
   Mail,
-  
   Shield,
   ShieldCheck,
   UserCog,
   Users as UsersIcon,
+  Wand2,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useAppSettings } from "@/hooks/useAppSettings";
@@ -149,6 +149,16 @@ const SECTIONS: NavSection[] = [
     children: [
       { to: "/admin/events", label: "Visão geral", end: true },
       { to: "/admin/events/ingame", label: "Eventos ingame" },
+    ],
+  },
+  {
+    id: "gm",
+    label: "GM Commander",
+    icon: Wand2,
+    basePath: "/admin/gm",
+    proInTrial: true,
+    children: [
+      { to: "/admin/gm", label: "Painel operacional", end: true },
     ],
   },
   {
