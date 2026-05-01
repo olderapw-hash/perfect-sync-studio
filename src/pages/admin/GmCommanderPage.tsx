@@ -1840,11 +1840,15 @@ function HistoryTab({ tick }: { tick: number }) {
                     </TableCell>
                     <TableCell className="font-mono text-[11px]">
                       {(() => {
-                        const v = e.target ?? e.roleid ?? e.account;
-                        if (v == null) return "—";
-                        if (typeof v === "object")
-                          return (v as any).roleid ?? (v as any).userid ?? (v as any).role_name ?? JSON.stringify(v);
-                        return String(v);
+                        const toStr = (v: any): string => {
+                          if (v == null) return "";
+                          if (typeof v === "object")
+                            return String(
+                              v.roleid ?? v.userid ?? v.role_name ?? v.account ?? JSON.stringify(v),
+                            );
+                          return String(v);
+                        };
+                        return toStr(e.target) || toStr(e.roleid) || toStr(e.account) || "—";
                       })()}
                     </TableCell>
                     <TableCell>
@@ -1858,7 +1862,11 @@ function HistoryTab({ tick }: { tick: number }) {
                       ) : null}
                     </TableCell>
                     <TableCell className="max-w-[280px] truncate text-[11px] text-muted-foreground">
-                      {e.error ?? e.message ?? "—"}
+                      {(() => {
+                        const v = e.error ?? e.message;
+                        if (v == null) return "—";
+                        return typeof v === "object" ? JSON.stringify(v) : String(v);
+                      })()}
                     </TableCell>
                   </TableRow>
                 ))}
