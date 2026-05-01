@@ -127,19 +127,10 @@ const SECTIONS: NavSection[] = [
       { to: "/admin/roles/backups", label: "Backups & restore" },
     ],
   },
-  {
-    id: "mail",
-    label: "Correio & Recompensas",
-    icon: Mail,
-    basePath: "/admin/mail",
-    comingSoon: true,
-    proInTrial: true,
-    children: [
-      { to: "/admin/mail", label: "Visão geral", end: true },
-      { to: "/admin/mail/templates", label: "Templates" },
-      { to: "/admin/mail/history", label: "Histórico de envios" },
-    ],
-  },
+  // ⚠️ Correio & Recompensas removido: envio de item/gold agora vive
+  // exclusivamente em GM Commander → Compensação. Templates e histórico
+  // continuam acessíveis pelas rotas /admin/mail/templates e /admin/mail/history
+  // (atalhos dentro do GM Commander), mas sem entrada paralela na sidebar.
   {
     id: "events",
     label: "Eventos",
