@@ -365,11 +365,23 @@
 
 /* ==========================================================================
    Admin custom cursor
-   .ani é formato Windows e só funciona em IE/Edge legado. Em browsers
-   modernos o navegador ignora o .ani e cai no fallback "auto" — sem erro.
+   PNG 32×32 funciona em todos os navegadores modernos. Mantemos o .ani como
+   segundo fallback (Edge legado / IE) e "auto" como fallback final.
+   Hotspot 4,4 = ponta da seta no canto superior esquerdo do ícone.
    Aplicado em toda a árvore /admin via classe .admin-cursor.
    ========================================================================== */
 .admin-cursor,
 .admin-cursor * {
-  cursor: url("/cursors/normal.ani"), auto;
+  cursor: url("/cursors/normal.png") 4 4, url("/cursors/normal.ani"), auto;
 }
+/* Mantém o pointer visual em elementos clicáveis dentro do admin. */
+.admin-cursor a,
+.admin-cursor button,
+.admin-cursor [role="button"],
+.admin-cursor [role="tab"],
+.admin-cursor [role="menuitem"],
+.admin-cursor label[for],
+.admin-cursor summary {
+  cursor: url("/cursors/normal.png") 4 4, url("/cursors/normal.ani"), pointer;
+}
+
