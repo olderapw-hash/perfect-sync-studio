@@ -213,7 +213,13 @@ export const AdminLayout = () => {
   return (
     <SidebarProvider defaultOpen>
       <div
-        className={cn("flex h-screen w-full", !settings.background_url && "bg-hero")}
+        className={cn(
+          "flex h-screen w-full",
+          !settings.background_url && "bg-hero",
+          // Quando há background customizado, deixa as superfícies das páginas
+          // semi-transparentes para que ele apareça através de bg-background / bg-card.
+          settings.background_url && "admin-bg-transparent",
+        )}
         style={bgStyle}
       >
         <AdminNavSidebar />

@@ -350,3 +350,15 @@
   }
 }
 
+
+/* ==========================================================================
+   Admin background passthrough
+   Quando o superadmin define um background customizado, queremos que ele
+   apareça através das páginas internas. As páginas usam bg-background /
+   bg-card como superfícies opacas — aqui transformamos esses tokens em
+   variantes semi-transparentes APENAS dentro do AdminLayout marcado.
+   ========================================================================== */
+.admin-bg-transparent main { background-color: transparent !important; }
+.admin-bg-transparent main > * { background-color: transparent !important; }
+.admin-bg-transparent main .bg-background { background-color: hsl(var(--background) / 0.55) !important; backdrop-filter: blur(8px); }
+.admin-bg-transparent main .bg-card { background-color: hsl(var(--card) / 0.65) !important; backdrop-filter: blur(8px); }
