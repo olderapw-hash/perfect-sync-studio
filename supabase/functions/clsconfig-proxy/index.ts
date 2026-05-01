@@ -90,6 +90,11 @@ const ALLOWED_ACTIONS = new Set([
   "grantMallCash",
   "muteAccount",
   "muteRole",
+  // GM Commander v2 — permissões GM granulares (espelha pwadmin).
+  "getGmPermissionCatalog",
+  "getGmPermissionState",
+  "grantGmPermission",
+  "revokeGmPermission",
 ]);
 
 // Mapa Action → permissão exigida (deve refletir src/lib/serverPermissions.ts).
@@ -158,6 +163,11 @@ const ACTION_PERMISSION: Record<string, string> = {
   grantMallCash: "manage_security",
   muteAccount: "manage_security",
   muteRole: "manage_security",
+  // GM Permissions: leitura "view"; grant/revoke exigem manage_security.
+  getGmPermissionCatalog: "view",
+  getGmPermissionState: "view",
+  grantGmPermission: "manage_security",
+  revokeGmPermission: "manage_security",
 };
 
 function jsonError(message: string, status: number): Response {
