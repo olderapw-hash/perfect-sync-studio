@@ -34,7 +34,7 @@ import TemplatesBackupsPage from "./pages/admin/TemplatesBackupsPage.tsx";
 import RolesPage from "./pages/admin/RolesPage.tsx";
 import RolesHistoryPage from "./pages/admin/RolesHistoryPage.tsx";
 import RolesBackupsPage from "./pages/admin/RolesBackupsPage.tsx";
-import MailPage from "./pages/admin/MailPage.tsx";
+// MailPage removido da sidebar — envio consolidado em GM Commander.
 import MailTemplatesPage from "./pages/admin/MailTemplatesPage.tsx";
 import MailHistoryPage from "./pages/admin/MailHistoryPage.tsx";
 import EventsPage from "./pages/admin/EventsPage.tsx";
