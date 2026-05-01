@@ -26,7 +26,7 @@ import {
   Gauge,
   Globe,
   LogOut,
-  Mail,
+  
   Shield,
   ShieldCheck,
   UserCog,
@@ -127,19 +127,10 @@ const SECTIONS: NavSection[] = [
       { to: "/admin/roles/backups", label: "Backups & restore" },
     ],
   },
-  {
-    id: "mail",
-    label: "Correio & Recompensas",
-    icon: Mail,
-    basePath: "/admin/mail",
-    comingSoon: true,
-    proInTrial: true,
-    children: [
-      { to: "/admin/mail", label: "Visão geral", end: true },
-      { to: "/admin/mail/templates", label: "Templates" },
-      { to: "/admin/mail/history", label: "Histórico de envios" },
-    ],
-  },
+  // ⚠️ Correio & Recompensas removido: envio de item/gold agora vive
+  // exclusivamente em GM Commander → Compensação. Templates e histórico
+  // continuam acessíveis pelas rotas /admin/mail/templates e /admin/mail/history
+  // (atalhos dentro do GM Commander), mas sem entrada paralela na sidebar.
   {
     id: "events",
     label: "Eventos",
@@ -169,7 +160,7 @@ const SECTIONS: NavSection[] = [
     proInTrial: true,
     children: [
       { to: "/admin/security", label: "Visão geral", end: true },
-      { to: "/admin/security/moderation", label: "Moderação" },
+      // ⚠️ "Moderação" removida: kick/ban/unban/mute estão em GM Commander → Moderação.
       { to: "/admin/security/history", label: "Histórico" },
       { to: "/admin/members", label: "Membros & permissões" },
       { to: "/admin/audit", label: "Auditoria" },

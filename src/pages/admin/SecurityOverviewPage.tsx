@@ -31,7 +31,7 @@ import { cn } from "@/lib/utils";
 
 const TABS = [
   { value: "overview", label: "Visão geral", path: "/admin/security", icon: Shield, end: true },
-  { value: "moderation", label: "Moderação", path: "/admin/security/moderation", icon: ShieldAlert },
+  // "Moderação" foi consolidada em GM Commander → Moderação.
   { value: "history", label: "Histórico", path: "/admin/security/history", icon: History },
   { value: "members", label: "Membros", path: "/admin/members", icon: UsersIcon },
   { value: "audit", label: "Auditoria", path: "/admin/audit", icon: ShieldCheck },
@@ -114,10 +114,10 @@ function SecurityOverview() {
 
   const cards = [
     {
-      to: "/admin/security/moderation",
+      to: "/admin/gm?tab=moderation",
       icon: ShieldAlert,
-      title: "Moderação",
-      desc: "Kick em jogadores online, ban temporário ou permanente, desbanir contas.",
+      title: "Moderação (GM Commander)",
+      desc: "Kick, ban temporário/permanente, unban e mute — agora consolidados em GM Commander.",
       enabled: isSuperadmin || can("manage_security"),
       tone: "destructive" as const,
     },

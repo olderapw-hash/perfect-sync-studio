@@ -227,7 +227,7 @@ const MailHistoryPage = () => {
               ) : (
                 <>Apenas seus envios (sem permissão view_audit)</>
               )}{" "}
-              · <Link to="/admin/mail" className="text-primary hover:underline">Enviar nova recompensa</Link>
+              · <Link to="/admin/gm?tab=compensation" className="text-primary hover:underline">Enviar nova recompensa</Link>
             </p>
           </div>
           <button

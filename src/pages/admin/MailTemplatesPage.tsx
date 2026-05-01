@@ -148,8 +148,8 @@ const MailTemplatesPage = () => {
             </h1>
             <p className="text-xs text-muted-foreground">
               Modelos reutilizáveis para envio rápido em{" "}
-              <Link to="/admin/mail" className="text-primary hover:underline">
-                Enviar recompensa
+              <Link to="/admin/gm?tab=compensation" className="text-primary hover:underline">
+                GM Commander → Compensação
               </Link>
             </p>
           </div>
@@ -265,12 +265,9 @@ const MailTemplatesPage = () => {
 
                 <div className="mt-auto flex items-center gap-1 border-t border-border pt-3">
                   <Link
-                    to={`/admin/mail?tab=${tpl.kind}`}
-                    onClick={() => {
-                      // Aplica template via state local — roteamos para a tela e o usuário re-aplica do sidebar.
-                    }}
+                    to={`/admin/gm?tab=compensation&kind=${tpl.kind}`}
                     className="inline-flex items-center gap-1 rounded-md border border-border bg-background/40 px-2 py-1 text-[11px] transition-smooth hover:border-primary/50 hover:text-primary"
-                    title="Abrir 'Enviar recompensa' filtrado por este tipo"
+                    title="Abrir 'GM Commander → Compensação'"
                   >
                     <Send className="h-3 w-3" />
                     Usar

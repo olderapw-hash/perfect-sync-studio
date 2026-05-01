@@ -34,7 +34,7 @@ import TemplatesBackupsPage from "./pages/admin/TemplatesBackupsPage.tsx";
 import RolesPage from "./pages/admin/RolesPage.tsx";
 import RolesHistoryPage from "./pages/admin/RolesHistoryPage.tsx";
 import RolesBackupsPage from "./pages/admin/RolesBackupsPage.tsx";
-import MailPage from "./pages/admin/MailPage.tsx";
+// MailPage removido da sidebar — envio consolidado em GM Commander.
 import MailTemplatesPage from "./pages/admin/MailTemplatesPage.tsx";
 import MailHistoryPage from "./pages/admin/MailHistoryPage.tsx";
 import EventsPage from "./pages/admin/EventsPage.tsx";
@@ -47,7 +47,7 @@ import ServerMessagesPage from "./pages/admin/ServerMessagesPage.tsx";
 import ServerHistoryPage from "./pages/admin/ServerHistoryPage.tsx";
 import InstancesPage from "./pages/admin/InstancesPage.tsx";
 import SecurityOverviewPage from "./pages/admin/SecurityOverviewPage.tsx";
-import SecurityModerationPage from "./pages/admin/SecurityModerationPage.tsx";
+// SecurityModerationPage removida — kick/ban/mute consolidados em GM Commander.
 import SecurityHistoryPage from "./pages/admin/SecurityHistoryPage.tsx";
 import SecuritySettingsPage from "./pages/admin/SecuritySettingsPage.tsx";
 import SitePage from "./pages/admin/SitePage.tsx";
@@ -104,8 +104,10 @@ const App = () => (
                     <Route path="roles/historico" element={<RolesHistoryPage />} />
                     <Route path="roles/backups" element={<RolesBackupsPage />} />
 
-                    {/* Correio & Recompensas (Fase 2) */}
-                    <Route path="mail" element={<MailPage />} />
+                    {/* Correio & Recompensas — formulário de envio consolidado em GM Commander.
+                        /admin/mail vira atalho. Templates e histórico continuam disponíveis
+                        como recursos auxiliares (presets e log de envios). */}
+                    <Route path="mail" element={<Navigate to="/admin/gm?tab=compensation" replace />} />
                     <Route path="mail/templates" element={<MailTemplatesPage />} />
                     <Route path="mail/history" element={<MailHistoryPage />} />
 
@@ -128,9 +130,12 @@ const App = () => (
                     {/* GM Commander — compensação, moderação e comunicação. */}
                     <Route path="gm" element={<GmCommanderPage />} />
 
-                    {/* Segurança v1 — layout com tabs e Outlet. */}
+                    {/* Segurança v1 — moderação operacional (kick/ban/mute) consolidada em GM Commander. */}
                     <Route path="security" element={<SecurityOverviewPage />}>
-                      <Route path="moderation" element={<SecurityModerationPage />} />
+                      <Route
+                        path="moderation"
+                        element={<Navigate to="/admin/gm?tab=moderation" replace />}
+                      />
                       <Route path="history" element={<SecurityHistoryPage />} />
                       <Route path="settings" element={<SecuritySettingsPage />} />
                     </Route>
