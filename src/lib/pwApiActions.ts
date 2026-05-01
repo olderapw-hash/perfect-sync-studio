@@ -650,6 +650,35 @@ export const pwApi = {
   muteRole(body: MuteRolePayload) {
     return callAction<SecurityActionResponse>("muteRole", { method: "POST", body });
   },
+  /* ─────────── GM Permissions v2 ─────────── */
+  /** Catálogo estático das regras GM (id → label). */
+  getGmPermissionCatalog() {
+    return callAction<GmPermissionCatalogResponse>("getGmPermissionCatalog", { method: "GET" });
+  },
+  /** Estado atual de permissões GM de uma conta (por userid OU roleid). */
+  getGmPermissionState(target: { userid?: number; roleid?: number }) {
+    const query: Record<string, string> = {};
+    if (target.userid != null) query.userid = String(target.userid);
+    if (target.roleid != null) query.roleid = String(target.roleid);
+    return callAction<GmPermissionStateResponse>("getGmPermissionState", {
+      method: "GET",
+      query,
+    });
+  },
+  /** Concede permissões GM (template completo OU subset via rule_ids). */
+  grantGmPermission(body: GmPermissionMutationPayload) {
+    return callAction<GmPermissionMutationResponse>("grantGmPermission", {
+      method: "POST",
+      body: { ...body, confirm: "GRANT_GM_PERMISSION" as const },
+    });
+  },
+  /** Revoga permissões GM (template completo OU subset via rule_ids). */
+  revokeGmPermission(body: GmPermissionMutationPayload) {
+    return callAction<GmPermissionMutationResponse>("revokeGmPermission", {
+      method: "POST",
+      body: { ...body, confirm: "REVOKE_GM_PERMISSION" as const },
+    });
+  },
 };
 
 /* ─────────── GM Commander v1 — tipos ─────────── */
