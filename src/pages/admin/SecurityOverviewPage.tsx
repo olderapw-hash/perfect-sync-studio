@@ -114,10 +114,10 @@ function SecurityOverview() {
 
   const cards = [
     {
-      to: "/admin/security/moderation",
+      to: "/admin/gm?tab=moderation",
       icon: ShieldAlert,
-      title: "Moderação",
-      desc: "Kick em jogadores online, ban temporário ou permanente, desbanir contas.",
+      title: "Moderação (GM Commander)",
+      desc: "Kick, ban temporário/permanente, unban e mute — agora consolidados em GM Commander.",
       enabled: isSuperadmin || can("manage_security"),
       tone: "destructive" as const,
     },
