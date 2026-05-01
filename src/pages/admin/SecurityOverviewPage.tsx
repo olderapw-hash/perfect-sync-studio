@@ -31,7 +31,7 @@ import { cn } from "@/lib/utils";
 
 const TABS = [
   { value: "overview", label: "Visão geral", path: "/admin/security", icon: Shield, end: true },
-  { value: "moderation", label: "Moderação", path: "/admin/security/moderation", icon: ShieldAlert },
+  // "Moderação" foi consolidada em GM Commander → Moderação.
   { value: "history", label: "Histórico", path: "/admin/security/history", icon: History },
   { value: "members", label: "Membros", path: "/admin/members", icon: UsersIcon },
   { value: "audit", label: "Auditoria", path: "/admin/audit", icon: ShieldCheck },
