@@ -328,20 +328,24 @@ function GmCommanderPageInner() {
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-background">
-      <header className="border-b border-border bg-gradient-to-r from-card/80 via-card/60 to-card/80 px-6 py-4 backdrop-blur-md">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-purple-500/40 bg-purple-500/10 text-purple-400">
-            <Wand2 className="h-5 w-5" />
+      <header className="relative overflow-hidden border-b border-border/50 bg-gradient-to-r from-card/90 via-card/60 to-card/40 px-6 py-5 backdrop-blur-xl">
+        {/* Subtle ambient glow */}
+        <div className="pointer-events-none absolute -right-20 -top-20 h-60 w-60 rounded-full bg-purple-500/5 blur-3xl" />
+        <div className="pointer-events-none absolute -left-10 bottom-0 h-40 w-40 rounded-full bg-primary/5 blur-3xl" />
+        
+        <div className="relative flex flex-wrap items-center gap-4">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-purple-500/30 bg-purple-500/10 text-purple-400 ring-1 ring-purple-500/10 transition-transform hover:scale-105">
+            <Wand2 className="h-6 w-6" />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="mb-1 inline-flex items-center gap-1.5 rounded-full border border-purple-500/40 bg-purple-500/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest text-purple-400">
+            <div className="mb-1.5 inline-flex items-center gap-1.5 rounded-full border border-purple-500/30 bg-purple-500/10 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-purple-400 shadow-[0_0_12px_-3px_hsl(270_60%_55%/0.3)]">
               <Zap className="h-3 w-3" />
               GM · v1
             </div>
             <h1 className="truncate text-xl font-extrabold tracking-tight text-foreground">
               GM Commander
             </h1>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs leading-relaxed text-muted-foreground">
               Compensação, moderação e comunicação operacional. Toda ação
               destrutiva passa por preview (dry_run) antes da execução real.
             </p>
@@ -351,6 +355,7 @@ function GmCommanderPageInner() {
             variant="outline"
             onClick={() => void loadCatalog()}
             disabled={catalogLoading}
+            className="border-border/60 bg-card/60 backdrop-blur-sm transition-all hover:border-primary/40 hover:bg-primary/5"
           >
             <RefreshCw className={cn("h-3.5 w-3.5", catalogLoading && "animate-spin")} />
             Capacidades
@@ -358,7 +363,7 @@ function GmCommanderPageInner() {
         </div>
 
         {catalogMissing && (
-          <div className="mt-3 flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-500">
+          <div className="relative mt-4 flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/5 px-4 py-2.5 text-[11px] text-amber-400 backdrop-blur-sm">
             <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
             <span>
               <strong>getGmCommandCatalog</strong> não existe nesta VPS — usando
@@ -370,25 +375,25 @@ function GmCommanderPageInner() {
       </header>
 
       <main className="flex-1 overflow-y-auto px-4 py-4">
-        <Tabs defaultValue="compensation" className="space-y-4">
-          <TabsList className="bg-card/40">
-            <TabsTrigger value="compensation" className="gap-2">
+        <Tabs defaultValue="compensation" className="space-y-5">
+          <TabsList className="h-auto gap-1 rounded-xl border border-border/40 bg-card/30 p-1 backdrop-blur-sm">
+            <TabsTrigger value="compensation" className="gap-2 rounded-lg px-4 py-2 text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-[0_0_12px_-3px_hsl(210_85%_60%/0.3)]">
               <Gift className="h-3.5 w-3.5" />
               Compensação
             </TabsTrigger>
-            <TabsTrigger value="moderation" className="gap-2">
+            <TabsTrigger value="moderation" className="gap-2 rounded-lg px-4 py-2 text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-[0_0_12px_-3px_hsl(210_85%_60%/0.3)]">
               <Hammer className="h-3.5 w-3.5" />
               Moderação
             </TabsTrigger>
-            <TabsTrigger value="communication" className="gap-2">
+            <TabsTrigger value="communication" className="gap-2 rounded-lg px-4 py-2 text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-[0_0_12px_-3px_hsl(210_85%_60%/0.3)]">
               <MessageSquare className="h-3.5 w-3.5" />
               Comunicação
             </TabsTrigger>
-            <TabsTrigger value="permissions" className="gap-2">
+            <TabsTrigger value="permissions" className="gap-2 rounded-lg px-4 py-2 text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-[0_0_12px_-3px_hsl(210_85%_60%/0.3)]">
               <Shield className="h-3.5 w-3.5" />
               Permissões GM
             </TabsTrigger>
-            <TabsTrigger value="history" className="gap-2">
+            <TabsTrigger value="history" className="gap-2 rounded-lg px-4 py-2 text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-[0_0_12px_-3px_hsl(210_85%_60%/0.3)]">
               <HistoryIcon className="h-3.5 w-3.5" />
               Histórico
             </TabsTrigger>
@@ -430,25 +435,25 @@ function CapBadge({
   const state = c?.state ?? (FALLBACK_SUPPORTED.has(action) ? "supported" : "unsupported");
   if (state === "supported") {
     return (
-      <Badge variant="outline" className="border-success/50 text-success">
-        <CheckCircle2 className="mr-1 h-3 w-3" />
+      <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-400">
+        <CheckCircle2 className="h-3 w-3" />
         suportado
-      </Badge>
+      </span>
     );
   }
   if (state === "version_gated" || state === "contract_only") {
     return (
-      <Badge variant="outline" className="border-amber-500/60 text-amber-500">
-        <Clock className="mr-1 h-3 w-3" />
+      <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-400">
+        <Clock className="h-3 w-3" />
         em breve
-      </Badge>
+      </span>
     );
   }
   return (
-    <Badge variant="outline" className="border-muted-foreground/30 text-muted-foreground">
-      <XCircle className="mr-1 h-3 w-3" />
+    <span className="inline-flex items-center gap-1 rounded-full border border-muted-foreground/20 bg-muted/30 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+      <XCircle className="h-3 w-3" />
       indisponível
-    </Badge>
+    </span>
   );
 }
 
@@ -470,57 +475,113 @@ function GmCard({
   tone?: "default" | "danger" | "warning" | "premium";
 }) {
   const supported = isSupported(action, caps);
-  const ring =
-    tone === "danger"
-      ? "border-destructive/40"
-      : tone === "warning"
-        ? "border-amber-500/40"
-        : tone === "premium"
-          ? "border-purple-500/40"
-          : "border-border";
-  const iconRing =
-    tone === "danger"
-      ? "bg-destructive/10 text-destructive"
-      : tone === "warning"
-        ? "bg-amber-500/10 text-amber-500"
-        : tone === "premium"
-          ? "bg-purple-500/10 text-purple-400"
-          : "bg-primary/10 text-primary";
+
+  /* ── Tone-aware styling ── */
+  const toneStyles = {
+    default: {
+      border: "border-border/60 hover:border-primary/40",
+      glow: "hover:shadow-[0_0_30px_-8px_hsl(210_85%_60%/0.25)]",
+      iconBg: "bg-primary/10 text-primary ring-1 ring-primary/20",
+      accent: "from-primary/5 via-transparent to-transparent",
+      line: "from-primary/50 via-primary/15 to-transparent",
+    },
+    danger: {
+      border: "border-destructive/30 hover:border-destructive/50",
+      glow: "hover:shadow-[0_0_30px_-8px_hsl(1_71%_64%/0.25)]",
+      iconBg: "bg-destructive/10 text-destructive ring-1 ring-destructive/20",
+      accent: "from-destructive/5 via-transparent to-transparent",
+      line: "from-destructive/50 via-destructive/15 to-transparent",
+    },
+    warning: {
+      border: "border-amber-500/30 hover:border-amber-500/50",
+      glow: "hover:shadow-[0_0_30px_-8px_hsl(38_80%_58%/0.25)]",
+      iconBg: "bg-amber-500/10 text-amber-500 ring-1 ring-amber-500/20",
+      accent: "from-amber-500/5 via-transparent to-transparent",
+      line: "from-amber-500/50 via-amber-500/15 to-transparent",
+    },
+    premium: {
+      border: "border-purple-500/30 hover:border-purple-500/50",
+      glow: "hover:shadow-[0_0_30px_-8px_hsl(270_60%_55%/0.3)]",
+      iconBg: "bg-purple-500/10 text-purple-400 ring-1 ring-purple-500/20",
+      accent: "from-purple-500/5 via-transparent to-transparent",
+      line: "from-purple-500/50 via-purple-500/15 to-transparent",
+    },
+  };
+  const s = toneStyles[tone];
+
   return (
-    <Card className={cn("bg-card/40", ring)}>
-      <CardHeader className="pb-3">
-        <div className="flex items-start gap-3">
-          <div className={cn("flex h-9 w-9 items-center justify-center rounded-lg", iconRing)}>
-            <Icon className="h-4 w-4" />
+    <div
+      className={cn(
+        "group relative overflow-hidden rounded-2xl border backdrop-blur-md transition-all duration-300",
+        "bg-gradient-to-br from-card/80 via-card/50 to-card/30",
+        s.border,
+        s.glow,
+      )}
+    >
+      {/* Accent glow — top-left radial */}
+      <div
+        className={cn(
+          "pointer-events-none absolute -left-10 -top-10 h-40 w-40 rounded-full opacity-0 blur-2xl transition-opacity duration-500 group-hover:opacity-100",
+          tone === "danger" ? "bg-destructive/20" : tone === "warning" ? "bg-amber-500/20" : tone === "premium" ? "bg-purple-500/20" : "bg-primary/20",
+        )}
+      />
+      {/* Top accent line */}
+      <div
+        className={cn(
+          "pointer-events-none absolute left-6 right-6 top-0 h-px bg-gradient-to-r",
+          s.line,
+        )}
+      />
+
+      <div className="relative px-5 pb-5 pt-5">
+        {/* Header */}
+        <div className="mb-4 flex items-start gap-3.5">
+          <div
+            className={cn(
+              "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-105",
+              s.iconBg,
+            )}
+          >
+            <Icon className="h-[18px] w-[18px]" />
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <CardTitle className="text-sm font-extrabold uppercase tracking-wider">
+              <h3 className="text-[13px] font-extrabold uppercase tracking-wider text-foreground">
                 {title}
-              </CardTitle>
+              </h3>
               <CapBadge action={action} caps={caps} />
             </div>
-            <p className="mt-0.5 text-[11px] text-muted-foreground">{subtitle}</p>
-            <code className="mt-1 inline-block font-mono text-[10px] text-muted-foreground/70">
+            <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">
+              {subtitle}
+            </p>
+            <code className="mt-1.5 inline-flex items-center rounded-md border border-border/50 bg-muted/40 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground/70">
               ?action={action}
             </code>
           </div>
         </div>
-      </CardHeader>
-      <CardContent
-        className={cn(
-          "space-y-3",
-          !supported && "pointer-events-none opacity-50 grayscale",
-        )}
-      >
-        {children}
-        {!supported && (
-          <p className="text-[11px] italic text-muted-foreground">
-            Endpoint não suportado nesta VPS.
-          </p>
-        )}
-      </CardContent>
-    </Card>
+
+        {/* Divider */}
+        <div className="mb-4 h-px bg-gradient-to-r from-border/60 via-border/30 to-transparent" />
+
+        {/* Content */}
+        <div
+          className={cn(
+            "space-y-3",
+            !supported && "pointer-events-none opacity-40 grayscale",
+          )}
+        >
+          {children}
+          {!supported && (
+            <div className="flex items-center gap-2 rounded-lg border border-muted/50 bg-muted/20 px-3 py-2">
+              <XCircle className="h-3.5 w-3.5 text-muted-foreground" />
+              <p className="text-[11px] italic text-muted-foreground">
+                Endpoint não suportado nesta VPS.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
