@@ -1635,17 +1635,42 @@ function BanAccountCard({
             toast.error(res.error ?? "Falhou");
           }
         }}
-        renderPreview={(res) => (
-          <div className="space-y-1 text-xs">
-            <Row label="state" value={res.state ?? "—"} />
-            <Row label="ban_until" value={res.ban_until ?? "—"} />
-            <Row label="seconds" value={res.seconds ?? "—"} />
-            {roleidValid && kickAfterBan && (
-              <Row label="kick_online" value={`roleid:${roleidNum} (${kickSecondsNum}s)`} />
-            )}
-            <DeliveryDetails gm={res.gm_action} variant="ban" />
-          </div>
-        )}
+        renderPreview={(res) => {
+          const gm = res.gm_action;
+          const ab = gm?.account_ban;
+          const sk = gm?.session_kick;
+          const forbidUntil = ab?.forbid_until ?? (gm?.delivery as any)?.forbid_until;
+          const forbidUntilUnix = ab?.forbid_until_unix ?? (gm?.delivery as any)?.forbid_until_unix;
+          const banDuration = ab?.duration_seconds;
+          return (
+            <div className="space-y-1 text-xs">
+              <Row label="state" value={res.state ?? "—"} />
+              {ab?.permanent && <Row label="ban" value="PERMANENTE" />}
+              {banDuration != null && !ab?.permanent && (
+                <Row label="duração do ban" value={`${banDuration}s`} />
+              )}
+              {(forbidUntil || forbidUntilUnix) && (
+                <Row
+                  label="ban até"
+                  value={forbidUntil ?? (forbidUntilUnix ? fmtDate(forbidUntilUnix) : "—")}
+                />
+              )}
+              {!ab && res.ban_until != null && (
+                <Row label="ban_until (legacy)" value={fmtDate(res.ban_until)} />
+              )}
+              {sk && (
+                <div className="mt-1 border-t border-border/50 pt-1">
+                  <Row label="session_kick" value={`roleid:${sk.roleid ?? roleidNum} (${sk.seconds ?? kickSecondsNum}s)`} />
+                  {sk.message && <Row label="kick msg" value={sk.message} />}
+                </div>
+              )}
+              {!sk && roleidValid && kickAfterBan && (
+                <Row label="kick_online (pendente)" value={`roleid:${roleidNum} (${kickSecondsNum}s)`} />
+              )}
+              <DeliveryDetails gm={gm} variant="ban" />
+            </div>
+          );
+        }}
       />
     </GmCard>
   );

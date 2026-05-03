@@ -1430,6 +1430,20 @@ export interface GmActionBlock {
   account_forbid_backend?: "forbid_table" | "gamedbd" | string;
   message?: string;
   delivery?: ForbidDelivery | { account?: ForbidDelivery };
+  /** Ban details from the backend */
+  account_ban?: {
+    duration_seconds?: number;
+    forbid_until?: string;
+    forbid_until_unix?: number;
+    permanent?: boolean;
+  };
+  /** Session kick details (separate from ban) */
+  session_kick?: {
+    roleid?: number;
+    seconds?: number;
+    success?: boolean;
+    message?: string;
+  };
 }
 
 export interface SecurityActionResponse {
