@@ -1408,6 +1408,8 @@ export interface UnbanAccountPayload {
   roleid?: number;
   /** Recomendado mas não obrigatório (auditoria). */
   reason?: string;
+  /** Serviços a reiniciar para forçar limpeza de cache de login. */
+  refresh_services?: string[];
   dry_run?: boolean;
 }
 
@@ -1456,6 +1458,12 @@ export interface GmActionBlock {
     cleared?: boolean;
     roleid?: number;
     message?: string;
+    [key: string]: unknown;
+  };
+  /** Login cache refresh results (when refresh_services is used) */
+  login_cache_refresh?: {
+    requested?: string[];
+    results?: Record<string, { success?: boolean; message?: string; [key: string]: unknown }>;
     [key: string]: unknown;
   };
 }

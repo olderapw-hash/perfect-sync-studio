@@ -1726,6 +1726,7 @@ function UnbanAccountCard({
   const [userid, setUserid] = useState("");
   const [roleid, setRoleid] = useState("");
   const [reason, setReason] = useState("");
+  const [refreshLogin, setRefreshLogin] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   const useridNum = Number(userid);
@@ -1775,6 +1776,14 @@ function UnbanAccountCard({
       <FieldRow label="Motivo (opcional)">
         <Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Ex.: cleanup" />
       </FieldRow>
+      <FieldRow label="Refresh de login (authd + gdeliveryd)">
+        <Switch checked={refreshLogin} onCheckedChange={setRefreshLogin} />
+      </FieldRow>
+      {refreshLogin && (
+        <p className="text-[10px] text-amber-500">
+          ⚠ Reiniciar authd e gdeliveryd pode afetar autenticação e fluxos online de outros jogadores. Use apenas quando a conta continuar bloqueada após o unban lógico.
+        </p>
+      )}
       <Button
         onClick={() => setConfirmOpen(true)}
         disabled={!useridValid}
