@@ -95,6 +95,8 @@ const ALLOWED_ACTIONS = new Set([
   "getGmPermissionState",
   "grantGmPermission",
   "revokeGmPermission",
+  // GM Commander — moderação extra.
+  "clearRolePk",
 ]);
 
 // Mapa Action → permissão exigida (deve refletir src/lib/serverPermissions.ts).
@@ -168,6 +170,8 @@ const ACTION_PERMISSION: Record<string, string> = {
   getGmPermissionState: "view",
   grantGmPermission: "manage_security",
   revokeGmPermission: "manage_security",
+  // GM Commander — moderação extra.
+  clearRolePk: "manage_security",
 };
 
 function jsonError(message: string, status: number): Response {
