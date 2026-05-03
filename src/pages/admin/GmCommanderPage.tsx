@@ -1816,6 +1816,10 @@ function UnbanAccountCard({
             const delivery = extractDelivery(gm);
             const afterEmpty = !delivery?.after_type_ids?.length;
             const roleCleared = gm?.role_clear?.cleared === true;
+            const lcr = gm?.login_cache_refresh;
+            const refreshResults = lcr?.results;
+            const authOk = refreshResults?.authd?.success === true;
+            const gdeliverydOk = refreshResults?.gdeliveryd?.success === true;
 
             const lines: string[] = ["✅ Conta liberada com sucesso"];
             if (afterEmpty) {
@@ -1823,6 +1827,20 @@ function UnbanAccountCard({
             }
             if (roleCleared) {
               lines.push("✅ Bloqueio residual do personagem removido");
+            }
+            if (refreshResults) {
+              if (authOk && gdeliverydOk) {
+                lines.push("✅ Cache de login atualizado");
+                lines.push("✅ Serviços reiniciados: authd, gdeliveryd");
+              } else {
+                const ok: string[] = [];
+                const fail: string[] = [];
+                for (const [svc, r] of Object.entries(refreshResults)) {
+                  (r?.success ? ok : fail).push(svc);
+                }
+                if (ok.length) lines.push(`✅ Refresh OK: ${ok.join(", ")}`);
+                if (fail.length) lines.push(`⚠ Refresh falhou: ${fail.join(", ")}`);
+              }
             }
 
             toast.success(lines.join("\n"));
@@ -1835,6 +1853,9 @@ function UnbanAccountCard({
                 account_forbid_backend: gm?.account_forbid_backend ?? null,
                 after_type_ids_empty: afterEmpty,
                 role_cleared: roleCleared,
+                refresh_services: refreshLogin ? ["authd", "gdeliveryd"] : null,
+                refresh_authd_ok: authOk || null,
+                refresh_gdeliveryd_ok: gdeliverydOk || null,
               },
             });
             onActed();
