@@ -1490,37 +1490,10 @@ function UnbanAccountCard({
   const { active } = useServers();
   const [userid, setUserid] = useState("");
   const [reason, setReason] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const useridNum = Number(userid);
   const useridValid = Number.isFinite(useridNum) && useridNum > 0;
-
-  const submit = async () => {
-    if (!useridValid) {
-      toast.error("Userid da conta obrigatório");
-      return;
-    }
-    setBusy(true);
-    try {
-      const res = await pwApi.unbanAccount({ userid: useridNum, reason });
-      if (res.success) {
-        toast.success(`Ban removido da Conta #${useridNum}`);
-        void logAuditEvent({
-          action: "gm.unbanAccount",
-          tenantId: active?.id ?? null,
-          target: `userid:${useridNum}`,
-          status: "ok",
-        });
-        onActed();
-      } else {
-        toast.error(res.error ?? "Falhou");
-      }
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : String(e));
-    } finally {
-      setBusy(false);
-    }
-  };
 
   return (
     <GmCard
@@ -1547,14 +1520,60 @@ function UnbanAccountCard({
         <Input value={reason} onChange={(e) => setReason(e.target.value)} />
       </FieldRow>
       <Button
-        onClick={submit}
-        disabled={busy || !useridValid}
+        onClick={() => setConfirmOpen(true)}
+        disabled={!useridValid}
         className="w-full"
         variant="outline"
       >
-        {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ShieldOff className="h-3.5 w-3.5" />}
+        <ShieldOff className="h-3.5 w-3.5" />
         Desbanir Conta #{useridValid ? useridNum : "—"}
       </Button>
+      <ConfirmActionDialog<SecurityActionResponse>
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={`Desbanir Conta #${useridNum}`}
+        description={`Remover ban da Conta #${useridNum}?`}
+        exec={async (dryRun) =>
+          pwApi.unbanAccount({
+            userid: useridNum,
+            reason: reason || undefined,
+            dry_run: dryRun,
+          })
+        }
+        onSuccess={(res) => {
+          if (res.success) {
+            const gm = res.gm_action;
+            const backendLabel =
+              gm?.account_forbid_backend === "forbid_table"
+                ? "Backend: tabela forbid"
+                : gm?.account_forbid_backend === "gamedbd"
+                  ? "Backend: gamedbd"
+                  : undefined;
+            toast.success(
+              gm?.message ?? `Ban removido da Conta #${useridNum}`,
+              backendLabel ? { description: backendLabel } : undefined,
+            );
+            void logAuditEvent({
+              action: "gm.unbanAccount",
+              tenantId: active?.id ?? null,
+              target: `userid:${useridNum}`,
+              status: "ok",
+              metadata: {
+                account_forbid_backend: gm?.account_forbid_backend ?? null,
+              },
+            });
+            onActed();
+          } else {
+            toast.error(res.error ?? "Falhou");
+          }
+        }}
+        renderPreview={(res) => (
+          <div className="space-y-1 text-xs">
+            <Row label="state" value={res.state ?? "—"} />
+            <DeliveryDetails gm={res.gm_action} variant="unban" />
+          </div>
+        )}
+      />
     </GmCard>
   );
 }
