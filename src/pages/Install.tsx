@@ -143,6 +143,7 @@ const Install = () => {
   const [secretLoading, setSecretLoading] = useState(false);
   const [showSecret, setShowSecret] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [storageFiles, setStorageFiles] = useState<Set<string>>(new Set());
   const [showRealValues, setShowRealValues] = useState(false);
 
   useEffect(() => {
