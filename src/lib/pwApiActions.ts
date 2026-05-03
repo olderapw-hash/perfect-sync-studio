@@ -650,6 +650,14 @@ export const pwApi = {
   muteRole(body: MuteRolePayload) {
     return callAction<SecurityActionResponse>("muteRole", { method: "POST", body });
   },
+  /* ─────────── Moderação: Clear PK ─────────── */
+  /**
+   * Limpa o estado PK (player kill) de um personagem.
+   * Suporta dry_run para preview antes da execução real.
+   */
+  clearRolePk(body: ClearRolePkPayload) {
+    return callAction<ClearRolePkResponse>("clearRolePk", { method: "POST", body });
+  },
   /* ─────────── GM Permissions v2 ─────────── */
   /** Catálogo estático das regras GM (id → label). */
   getGmPermissionCatalog() {
@@ -1403,29 +1411,42 @@ export interface BanAccountPayload {
 }
 
 export interface UnbanAccountPayload {
-  account?: string;
-  userid?: number;
+  userid: number;
   roleid?: number;
-  /** Recomendado mas não obrigatório (auditoria). */
   reason?: string;
-  /** Serviços a reiniciar para forçar limpeza de cache de login. */
   refresh_services?: string[];
   dry_run?: boolean;
 }
 
-/** Detalhes de delivery retornados pelo backend para ban/unban. */
-export interface ForbidDelivery {
-  success?: boolean;
-  action?: string;
-  forbid_table?: string;
-  before_type_ids?: number[];
-  applied_type_ids?: number[];
-  after_type_ids?: number[];
-  inserted_type_ids?: number[];
-  deleted_type_ids?: number[];
+export interface ClearRolePkPayload {
+  roleid: number;
+  reason?: string;
+  dry_run?: boolean;
 }
 
-/** Bloco gm_action retornado pelo backend em ban/unban. */
+export interface ClearRolePkPkState {
+  pk_count?: number;
+  invader_state?: number;
+  invader_time?: number;
+  pariah_time?: number;
+}
+
+export interface ClearRolePkResponse {
+  success: boolean;
+  dry_run?: boolean;
+  roleid?: number;
+  error?: string;
+  gm_action?: {
+    pk_clear?: {
+      before?: ClearRolePkPkState;
+      after?: ClearRolePkPkState;
+      cleared?: boolean;
+      changed?: boolean;
+    };
+    [key: string]: unknown;
+  };
+}
+
 export interface GmActionBlock {
   action?: string;
   userid?: number;
