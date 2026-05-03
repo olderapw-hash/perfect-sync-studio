@@ -170,6 +170,8 @@ const ACTION_PERMISSION: Record<string, string> = {
   getGmPermissionState: "view",
   grantGmPermission: "manage_security",
   revokeGmPermission: "manage_security",
+  // GM Commander — moderação extra.
+  clearRolePk: "manage_security",
 };
 
 function jsonError(message: string, status: number): Response {
