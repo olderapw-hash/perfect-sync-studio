@@ -470,57 +470,113 @@ function GmCard({
   tone?: "default" | "danger" | "warning" | "premium";
 }) {
   const supported = isSupported(action, caps);
-  const ring =
-    tone === "danger"
-      ? "border-destructive/40"
-      : tone === "warning"
-        ? "border-amber-500/40"
-        : tone === "premium"
-          ? "border-purple-500/40"
-          : "border-border";
-  const iconRing =
-    tone === "danger"
-      ? "bg-destructive/10 text-destructive"
-      : tone === "warning"
-        ? "bg-amber-500/10 text-amber-500"
-        : tone === "premium"
-          ? "bg-purple-500/10 text-purple-400"
-          : "bg-primary/10 text-primary";
+
+  /* ── Tone-aware styling ── */
+  const toneStyles = {
+    default: {
+      border: "border-border/60 hover:border-primary/40",
+      glow: "hover:shadow-[0_0_30px_-8px_hsl(210_85%_60%/0.25)]",
+      iconBg: "bg-primary/10 text-primary ring-1 ring-primary/20",
+      accent: "from-primary/5 via-transparent to-transparent",
+      line: "from-primary/50 via-primary/15 to-transparent",
+    },
+    danger: {
+      border: "border-destructive/30 hover:border-destructive/50",
+      glow: "hover:shadow-[0_0_30px_-8px_hsl(1_71%_64%/0.25)]",
+      iconBg: "bg-destructive/10 text-destructive ring-1 ring-destructive/20",
+      accent: "from-destructive/5 via-transparent to-transparent",
+      line: "from-destructive/50 via-destructive/15 to-transparent",
+    },
+    warning: {
+      border: "border-amber-500/30 hover:border-amber-500/50",
+      glow: "hover:shadow-[0_0_30px_-8px_hsl(38_80%_58%/0.25)]",
+      iconBg: "bg-amber-500/10 text-amber-500 ring-1 ring-amber-500/20",
+      accent: "from-amber-500/5 via-transparent to-transparent",
+      line: "from-amber-500/50 via-amber-500/15 to-transparent",
+    },
+    premium: {
+      border: "border-purple-500/30 hover:border-purple-500/50",
+      glow: "hover:shadow-[0_0_30px_-8px_hsl(270_60%_55%/0.3)]",
+      iconBg: "bg-purple-500/10 text-purple-400 ring-1 ring-purple-500/20",
+      accent: "from-purple-500/5 via-transparent to-transparent",
+      line: "from-purple-500/50 via-purple-500/15 to-transparent",
+    },
+  };
+  const s = toneStyles[tone];
+
   return (
-    <Card className={cn("bg-card/40", ring)}>
-      <CardHeader className="pb-3">
-        <div className="flex items-start gap-3">
-          <div className={cn("flex h-9 w-9 items-center justify-center rounded-lg", iconRing)}>
-            <Icon className="h-4 w-4" />
+    <div
+      className={cn(
+        "group relative overflow-hidden rounded-2xl border backdrop-blur-md transition-all duration-300",
+        "bg-gradient-to-br from-card/80 via-card/50 to-card/30",
+        s.border,
+        s.glow,
+      )}
+    >
+      {/* Accent glow — top-left radial */}
+      <div
+        className={cn(
+          "pointer-events-none absolute -left-10 -top-10 h-40 w-40 rounded-full bg-gradient-radial opacity-0 blur-2xl transition-opacity duration-500 group-hover:opacity-100",
+          s.accent,
+        )}
+      />
+      {/* Top accent line */}
+      <div
+        className={cn(
+          "pointer-events-none absolute left-6 right-6 top-0 h-px bg-gradient-to-r",
+          s.line,
+        )}
+      />
+
+      <div className="relative px-5 pb-5 pt-5">
+        {/* Header */}
+        <div className="mb-4 flex items-start gap-3.5">
+          <div
+            className={cn(
+              "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-105",
+              s.iconBg,
+            )}
+          >
+            <Icon className="h-[18px] w-[18px]" />
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <CardTitle className="text-sm font-extrabold uppercase tracking-wider">
+              <h3 className="text-[13px] font-extrabold uppercase tracking-wider text-foreground">
                 {title}
-              </CardTitle>
+              </h3>
               <CapBadge action={action} caps={caps} />
             </div>
-            <p className="mt-0.5 text-[11px] text-muted-foreground">{subtitle}</p>
-            <code className="mt-1 inline-block font-mono text-[10px] text-muted-foreground/70">
+            <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">
+              {subtitle}
+            </p>
+            <code className="mt-1.5 inline-flex items-center rounded-md border border-border/50 bg-muted/40 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground/70">
               ?action={action}
             </code>
           </div>
         </div>
-      </CardHeader>
-      <CardContent
-        className={cn(
-          "space-y-3",
-          !supported && "pointer-events-none opacity-50 grayscale",
-        )}
-      >
-        {children}
-        {!supported && (
-          <p className="text-[11px] italic text-muted-foreground">
-            Endpoint não suportado nesta VPS.
-          </p>
-        )}
-      </CardContent>
-    </Card>
+
+        {/* Divider */}
+        <div className="mb-4 h-px bg-gradient-to-r from-border/60 via-border/30 to-transparent" />
+
+        {/* Content */}
+        <div
+          className={cn(
+            "space-y-3",
+            !supported && "pointer-events-none opacity-40 grayscale",
+          )}
+        >
+          {children}
+          {!supported && (
+            <div className="flex items-center gap-2 rounded-lg border border-muted/50 bg-muted/20 px-3 py-2">
+              <XCircle className="h-3.5 w-3.5 text-muted-foreground" />
+              <p className="text-[11px] italic text-muted-foreground">
+                Endpoint não suportado nesta VPS.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
