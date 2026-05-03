@@ -1451,6 +1451,13 @@ export interface GmActionBlock {
     message?: string;
     [key: string]: unknown;
   };
+  /** Role-level forbid clear (unban with roleid) */
+  role_clear?: {
+    cleared?: boolean;
+    roleid?: number;
+    message?: string;
+    [key: string]: unknown;
+  };
 }
 
 export interface SecurityActionResponse {
