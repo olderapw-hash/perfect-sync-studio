@@ -1351,9 +1351,10 @@ function ModerationTab({
       id: "clearpk",
       action: "clearRolePk",
       title: "Clear PK",
-      subtitle: "Aguardando suporte na VPS.",
-      icon: ShieldOff,
-      render: () => <UnsupportedCard caps={caps} action="clearRolePk" icon={ShieldOff} title="Clear PK" />,
+      subtitle: "Remove estado PK persistido de um personagem (roleid).",
+      icon: ShieldCheck,
+      tone: "warning",
+      render: () => <ClearRolePkCard caps={caps} onActed={onActed} />,
     },
     {
       id: "revive",
