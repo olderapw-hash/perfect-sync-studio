@@ -1565,7 +1565,7 @@ function BanAccountCard({
           <strong>Nota:</strong> Em servidores legados, o ban da conta pode valer apenas no próximo login.
           {roleidValid
             ? " Use o kick automático para remover a sessão atual."
-            : " Informe o roleid acima para derrubar o personagem online após o ban."}
+            : " A conta será bloqueada, mas a sessão online atual pode continuar sem kick. Informe o roleid para derrubar o personagem."}
         </p>
       </div>
       <Button
@@ -1642,31 +1642,69 @@ function BanAccountCard({
           const forbidUntil = ab?.forbid_until ?? (gm?.delivery as any)?.forbid_until;
           const forbidUntilUnix = ab?.forbid_until_unix ?? (gm?.delivery as any)?.forbid_until_unix;
           const banDuration = ab?.duration_seconds;
+          const backendLabel =
+            gm?.account_forbid_backend === "forbid_table"
+              ? "tabela forbid"
+              : gm?.account_forbid_backend === "gamedbd"
+                ? "gamedbd"
+                : gm?.account_forbid_backend ?? "—";
           return (
-            <div className="space-y-1 text-xs">
-              <Row label="state" value={res.state ?? "—"} />
-              {ab?.permanent && <Row label="ban" value="PERMANENTE" />}
-              {banDuration != null && !ab?.permanent && (
-                <Row label="duração do ban" value={`${banDuration}s`} />
-              )}
-              {(forbidUntil || forbidUntilUnix) && (
-                <Row
-                  label="ban até"
-                  value={forbidUntil ?? (forbidUntilUnix ? fmtDate(forbidUntilUnix) : "—")}
-                />
-              )}
-              {!ab && res.ban_until != null && (
-                <Row label="ban_until (legacy)" value={fmtDate(res.ban_until)} />
-              )}
-              {sk && (
-                <div className="mt-1 border-t border-border/50 pt-1">
-                  <Row label="session_kick" value={`roleid:${sk.roleid ?? roleidNum} (${sk.seconds ?? kickSecondsNum}s)`} />
-                  {sk.message && <Row label="kick msg" value={sk.message} />}
+            <div className="space-y-2 text-xs">
+              {/* ── Bloqueio de login (account_ban) ── */}
+              <div className="rounded-md border border-border/50 bg-card/30 p-2 space-y-1">
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Bloqueio de Login</p>
+                {ab?.blocks_login != null && (
+                  <Row label="login bloqueado" value={ab.blocks_login ? "sim" : "não"} />
+                )}
+                {ab?.permanent && <Row label="ban" value="PERMANENTE" />}
+                {banDuration != null && !ab?.permanent && (
+                  <Row label="duração do ban" value={`${banDuration}s`} />
+                )}
+                {(forbidUntil || forbidUntilUnix) && (
+                  <Row
+                    label="conta bloqueada até"
+                    value={forbidUntil ?? (forbidUntilUnix ? fmtDate(forbidUntilUnix) : "—")}
+                  />
+                )}
+                {!ab && res.ban_until != null && (
+                  <Row label="ban_until (legacy)" value={fmtDate(res.ban_until)} />
+                )}
+                <Row label="backend" value={backendLabel} />
+                <Row label="state" value={res.state ?? "—"} />
+              </div>
+
+              {/* ── Sessão online (session_kick) ── */}
+              {(sk || (roleidValid && kickAfterBan)) && (
+                <div className="rounded-md border border-border/50 bg-card/30 p-2 space-y-1">
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Sessão Online</p>
+                  {sk ? (
+                    <>
+                      <Row label="kick" value={sk.success ? "sessão derrubada ✓" : `roleid:${sk.roleid ?? roleidNum}`} />
+                      {sk.seconds != null && <Row label="aviso" value={`${sk.seconds}s`} />}
+                      {sk.message && <Row label="msg" value={sk.message} />}
+                    </>
+                  ) : (
+                    <Row label="kick (pendente)" value={`roleid:${roleidNum} (${kickSecondsNum}s)`} />
+                  )}
                 </div>
               )}
-              {!sk && roleidValid && kickAfterBan && (
-                <Row label="kick_online (pendente)" value={`roleid:${roleidNum} (${kickSecondsNum}s)`} />
+
+              {/* ── Aviso sem roleid ── */}
+              {!roleidValid && !sk && (
+                <p className="text-[10px] text-amber-400">
+                  ⚠ Sem roleid — a conta será bloqueada, mas a sessão online atual pode continuar sem kick.
+                </p>
               )}
+
+              {/* ── deliveryd_forbid ── */}
+              {gm?.deliveryd_forbid && (
+                <div className="rounded-md border border-border/50 bg-card/30 p-2 space-y-1">
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Delivery Forbid</p>
+                  <Row label="notificação" value={gm.deliveryd_forbid.success ? "entregue ✓" : "falhou ✗"} />
+                  {gm.deliveryd_forbid.message && <Row label="msg" value={String(gm.deliveryd_forbid.message)} />}
+                </div>
+              )}
+
               <DeliveryDetails gm={gm} variant="ban" />
             </div>
           );

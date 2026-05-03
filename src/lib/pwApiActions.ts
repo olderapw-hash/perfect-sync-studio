@@ -1432,6 +1432,7 @@ export interface GmActionBlock {
   delivery?: ForbidDelivery | { account?: ForbidDelivery };
   /** Ban details from the backend */
   account_ban?: {
+    blocks_login?: boolean;
     duration_seconds?: number;
     forbid_until?: string;
     forbid_until_unix?: number;
@@ -1443,6 +1444,12 @@ export interface GmActionBlock {
     seconds?: number;
     success?: boolean;
     message?: string;
+  };
+  /** Delivery daemon forbid notification evidence */
+  deliveryd_forbid?: {
+    success?: boolean;
+    message?: string;
+    [key: string]: unknown;
   };
 }
 
