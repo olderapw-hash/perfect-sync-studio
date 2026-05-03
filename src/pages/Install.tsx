@@ -146,6 +146,18 @@ const Install = () => {
   const [storageFiles, setStorageFiles] = useState<Set<string>>(new Set());
   const [showRealValues, setShowRealValues] = useState(false);
 
+  // Check which files exist in storage (from extracted releases)
+  useEffect(() => {
+    supabase.storage
+      .from("installer-releases")
+      .list("current", { limit: 50 })
+      .then(({ data }) => {
+        if (data && data.length > 0) {
+          setStorageFiles(new Set(data.map((f) => f.name)));
+        }
+      });
+  }, []);
+
   useEffect(() => {
     if (!selectedId) {
       const fallback = active?.id ?? servers[0]?.id ?? "";
