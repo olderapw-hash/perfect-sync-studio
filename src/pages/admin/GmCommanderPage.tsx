@@ -430,25 +430,25 @@ function CapBadge({
   const state = c?.state ?? (FALLBACK_SUPPORTED.has(action) ? "supported" : "unsupported");
   if (state === "supported") {
     return (
-      <Badge variant="outline" className="border-success/50 text-success">
-        <CheckCircle2 className="mr-1 h-3 w-3" />
+      <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-400">
+        <CheckCircle2 className="h-3 w-3" />
         suportado
-      </Badge>
+      </span>
     );
   }
   if (state === "version_gated" || state === "contract_only") {
     return (
-      <Badge variant="outline" className="border-amber-500/60 text-amber-500">
-        <Clock className="mr-1 h-3 w-3" />
+      <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-400">
+        <Clock className="h-3 w-3" />
         em breve
-      </Badge>
+      </span>
     );
   }
   return (
-    <Badge variant="outline" className="border-muted-foreground/30 text-muted-foreground">
-      <XCircle className="mr-1 h-3 w-3" />
+    <span className="inline-flex items-center gap-1 rounded-full border border-muted-foreground/20 bg-muted/30 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+      <XCircle className="h-3 w-3" />
       indisponível
-    </Badge>
+    </span>
   );
 }
 
