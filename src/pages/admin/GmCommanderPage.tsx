@@ -1542,6 +1542,17 @@ function BanAccountCard({
           <Switch checked={kickAfterBan} onCheckedChange={setKickAfterBan} />
         </div>
       )}
+      {roleidValid && kickAfterBan && (
+        <FieldRow label="Tempo de aviso antes do kick (s)">
+          <Input
+            type="number"
+            min={0}
+            value={kickSeconds}
+            onChange={(e) => setKickSeconds(e.target.value)}
+            placeholder="10"
+          />
+        </FieldRow>
+      )}
       <FieldRow label="Motivo">
         <Input value={reason} onChange={(e) => setReason(e.target.value)} />
       </FieldRow>
