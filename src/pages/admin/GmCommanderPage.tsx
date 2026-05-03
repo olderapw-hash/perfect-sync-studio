@@ -1485,7 +1485,7 @@ function BanAccountCard({
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [kickAfterBan, setKickAfterBan] = useState(true);
   const [kickSeconds, setKickSeconds] = useState("10");
-  const [kicking, setKicking] = useState(false);
+  const [kicking] = useState(false);
 
   const useridNum = Number(userid);
   const useridValid = Number.isFinite(useridNum) && useridNum > 0;
@@ -1493,30 +1493,8 @@ function BanAccountCard({
   const roleidValid = Number.isFinite(roleidNum) && roleidNum > 0;
   const durationNum = Number(duration);
   const durationValid = permanent || (Number.isFinite(durationNum) && durationNum > 0);
-
-  const handleKick = async () => {
-    setKicking(true);
-    try {
-      const res = await pwApi.kickRole({ roleid: roleidNum, reason: `Kick pós-ban: ${reason}` });
-      if (res.success) {
-        toast.success(`Personagem #${roleidNum} desconectado após ban`);
-        void logAuditEvent({
-          action: "gm.kickRole",
-          tenantId: active?.id ?? null,
-          target: `roleid:${roleidNum}`,
-          status: "ok",
-          metadata: { triggered_by: "post_ban" },
-        });
-      } else {
-        toast.error(res.error ?? "Kick falhou — personagem pode já estar offline");
-      }
-    } catch {
-      toast.error("Erro ao executar kick");
-    } finally {
-      setKicking(false);
-      setKickConfirmOpen(false);
-    }
-  };
+  const kickSecondsNum = Number(kickSeconds);
+  const kickSecondsValid = Number.isFinite(kickSecondsNum) && kickSecondsNum >= 0;
 
   return (
     <GmCard
