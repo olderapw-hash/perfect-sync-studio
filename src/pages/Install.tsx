@@ -48,7 +48,8 @@ import { cn } from "@/lib/utils";
 interface InstallerFile {
   name: string;
   description: string;
-  path: string;
+  /** Static fallback path in public/ */
+  staticPath: string;
   icon: typeof FileCode;
   language: "php" | "bash" | "markdown";
   primary?: boolean;
@@ -59,7 +60,7 @@ const FILES: InstallerFile[] = [
     name: "api_cls.php",
     description:
       "Bridge HTTP completa: gamedbd, templates CLS, backups, restore, item catalog e correio (sendMailItem/sendMailGold).",
-    path: "/installer/api_cls.php",
+    staticPath: "/installer/api_cls.php",
     icon: FileCode,
     language: "php",
     primary: true,
@@ -68,7 +69,7 @@ const FILES: InstallerFile[] = [
     name: "install-apicls-centos7.sh",
     description:
       "Instalador automático para CentOS 7. Configura Apache, sudoers, scripts de correio/backup e testa o ambiente.",
-    path: "/installer/install-apicls-centos7.sh",
+    staticPath: "/installer/install-apicls-centos7.sh",
     icon: Terminal,
     language: "bash",
     primary: true,
@@ -77,7 +78,7 @@ const FILES: InstallerFile[] = [
     name: "pw_send_mail.php",
     description:
       "Handler do correio real (item/gold). Conversa com o gdeliveryd via send_mail.lua. Sem ele o correio fica em modo queue-only.",
-    path: "/installer/pw_send_mail.php",
+    staticPath: "/installer/pw_send_mail.php",
     icon: FileCode,
     language: "php",
     primary: true,
@@ -86,18 +87,32 @@ const FILES: InstallerFile[] = [
     name: "sendreward-api.sh",
     description:
       "Wrapper sudo chamado pelo Apache para executar o pw_send_mail.php como root (acesso ao console do gdeliveryd).",
-    path: "/installer/sendreward-api.sh",
+    staticPath: "/installer/sendreward-api.sh",
     icon: Terminal,
     language: "bash",
   },
   {
     name: "README.md",
     description: "Tutorial completo: instalação, testes, dry_run do correio, troubleshooting.",
-    path: "/installer/README.md",
+    staticPath: "/installer/README.md",
     icon: FileText,
     language: "markdown",
   },
 ];
+
+/** Build a storage URL for a file in the installer-releases/current/ folder */
+function storageFileUrl(fileName: string): string {
+  const projUrl = import.meta.env.VITE_SUPABASE_URL;
+  return `${projUrl}/storage/v1/object/public/installer-releases/current/${encodeURIComponent(fileName)}`;
+}
+
+/** Returns the best available URL for a file: storage (latest release) or static fallback */
+function getFileUrl(file: InstallerFile, storageAvailable: Set<string>): string {
+  if (storageAvailable.has(file.name)) {
+    return storageFileUrl(file.name);
+  }
+  return file.staticPath;
+}
 
 /** Features que a versão atual da API já suporta. Aparece na UI como
  *  "o que você ganha instalando este pacote". */
@@ -128,7 +143,20 @@ const Install = () => {
   const [secretLoading, setSecretLoading] = useState(false);
   const [showSecret, setShowSecret] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [storageFiles, setStorageFiles] = useState<Set<string>>(new Set());
   const [showRealValues, setShowRealValues] = useState(false);
+
+  // Check which files exist in storage (from extracted releases)
+  useEffect(() => {
+    supabase.storage
+      .from("installer-releases")
+      .list("current", { limit: 50 })
+      .then(({ data }) => {
+        if (data && data.length > 0) {
+          setStorageFiles(new Set(data.map((f) => f.name)));
+        }
+      });
+  }, []);
 
   useEffect(() => {
     if (!selectedId) {
@@ -198,7 +226,7 @@ const Install = () => {
 
   const handleCopy = async (file: InstallerFile) => {
     try {
-      const res = await fetch(file.path);
+      const res = await fetch(getFileUrl(file, storageFiles));
       if (!res.ok) throw new Error("Arquivo ainda não disponível");
       const text = await res.text();
       await navigator.clipboard.writeText(text);
@@ -571,7 +599,7 @@ const Install = () => {
                       {copied === f.name ? "Copiado" : "Copiar"}
                     </Button>
                     <Button asChild size="sm" onClick={() => handleDownload(f)}>
-                      <a href={f.path} download={f.name}>
+                      <a href={getFileUrl(f, storageFiles)} download={f.name}>
                         <Download className="mr-2 h-3.5 w-3.5" /> Baixar
                       </a>
                     </Button>
