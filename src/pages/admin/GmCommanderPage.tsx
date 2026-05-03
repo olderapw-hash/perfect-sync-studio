@@ -1604,19 +1604,20 @@ function BanAccountCard({
         onSuccess={(res) => {
           if (res.success) {
             const gm = res.gm_action;
-            const backendLabel =
-              gm?.account_forbid_backend === "forbid_table"
-                ? "Backend: tabela forbid"
-                : gm?.account_forbid_backend === "gamedbd"
-                  ? "Backend: gamedbd"
-                  : undefined;
-            const kickLabel = roleidValid && kickAfterBan
-              ? ` + kick #${roleidNum}`
-              : "";
-            toast.success(
-              (gm?.message ?? `Conta #${useridNum} banida`) + kickLabel,
-              backendLabel ? { description: backendLabel } : undefined,
-            );
+            const ab = gm?.account_ban;
+            const sk = gm?.session_kick;
+
+            const lines: string[] = ["✅ Conta bloqueada para login"];
+            if (ab?.forbid_until) {
+              lines.push(`Bloqueio até: ${ab.forbid_until}`);
+            } else if (ab?.forbid_until_unix) {
+              lines.push(`Bloqueio até: ${fmtDate(ab.forbid_until_unix)}`);
+            }
+            if (sk?.success) {
+              lines.push("✅ Sessão online derrubada com sucesso");
+            }
+
+            toast.success(lines.join("\n"));
             void logAuditEvent({
               action: "gm.banAccount",
               tenantId: active?.id ?? null,
