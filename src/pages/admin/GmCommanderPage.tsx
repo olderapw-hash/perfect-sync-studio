@@ -95,6 +95,8 @@ import { cn } from "@/lib/utils";
 import {
   EndpointMissingError,
   pwApi,
+  type ForbidDelivery,
+  type GmActionBlock,
   type GmActionHistoryEntry,
   type GmCommandCapability,
   type GmCommandCatalogResponse,
@@ -105,6 +107,7 @@ import {
   type GrantMallCashResponse,
   type MallCashBalanceResponse,
   type MallCashWallet,
+  type SecurityActionResponse,
 } from "@/lib/pwApiActions";
 
 /* -------------------------------------------------------------------------- */
