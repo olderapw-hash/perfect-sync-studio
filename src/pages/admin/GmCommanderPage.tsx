@@ -95,6 +95,7 @@ import { cn } from "@/lib/utils";
 import {
   EndpointMissingError,
   pwApi,
+  type ClearRolePkResponse,
   type ForbidDelivery,
   type GmActionBlock,
   type GmActionHistoryEntry,
@@ -214,6 +215,7 @@ const FALLBACK_SUPPORTED = new Set([
   "muteAccount",
   "muteRole",
   "sendSystemMessage",
+  "clearRolePk",
   // GM Permissions v2 — backend confirmado.
   "getGmPermissionCatalog",
   "getGmPermissionState",
@@ -225,7 +227,6 @@ const FALLBACK_UNSUPPORTED = new Set([
   "teleportRole",
   "summonRole",
   "prisonRole",
-  "clearRolePk",
   "reviveRole",
   "resetRoleQuest",
 ]);
@@ -1351,9 +1352,10 @@ function ModerationTab({
       id: "clearpk",
       action: "clearRolePk",
       title: "Clear PK",
-      subtitle: "Aguardando suporte na VPS.",
-      icon: ShieldOff,
-      render: () => <UnsupportedCard caps={caps} action="clearRolePk" icon={ShieldOff} title="Clear PK" />,
+      subtitle: "Remove estado PK persistido de um personagem (roleid).",
+      icon: ShieldCheck,
+      tone: "warning",
+      render: () => <ClearRolePkCard caps={caps} onActed={onActed} />,
     },
     {
       id: "revive",
@@ -2074,6 +2076,116 @@ function MuteCard({
             <Row label="seconds" value={res.seconds ?? "—"} />
           </div>
         )}
+      />
+    </GmCard>
+  );
+}
+
+function ClearRolePkCard({
+  caps,
+  onActed,
+}: {
+  caps: Map<string, GmCommandCapability>;
+  onActed: () => void;
+}) {
+  const toast = useFeedback();
+  const { active } = useServers();
+  const [roleid, setRoleid] = useState("");
+  const [reason, setReason] = useState("pk-clear");
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const roleidNum = Number(roleid);
+  const roleidValid = Number.isFinite(roleidNum) && roleidNum > 0;
+
+  return (
+    <GmCard
+      icon={ShieldCheck}
+      title="Clear PK"
+      subtitle="Remove o estado PK persistido do personagem (pk_count, invader_state, invader_time, pariah_time)."
+      action="clearRolePk"
+      caps={caps}
+      tone="warning"
+    >
+      <FieldRow label="Roleid (personagem)">
+        <Input
+          value={roleid}
+          onChange={(e) => setRoleid(e.target.value)}
+          placeholder="Ex.: 1024"
+          inputMode="numeric"
+        />
+      </FieldRow>
+      {!roleidValid && roleid.length > 0 && (
+        <p className="text-[10px] text-destructive">
+          roleid deve ser numérico (id do personagem).
+        </p>
+      )}
+      <FieldRow label="Motivo">
+        <Input value={reason} onChange={(e) => setReason(e.target.value)} />
+      </FieldRow>
+      <Button
+        variant="outline"
+        className="w-full border-amber-500/50 text-amber-500"
+        disabled={!roleidValid}
+        onClick={() => setConfirmOpen(true)}
+      >
+        <ShieldCheck className="h-3.5 w-3.5" />
+        Limpar PK do Personagem #{roleidValid ? roleidNum : "—"}
+      </Button>
+      <ConfirmActionDialog<ClearRolePkResponse>
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={`Clear PK — Personagem #${roleidNum}`}
+        description={`Remover estado PK persistido do Personagem #${roleidNum}? O dry_run vai mostrar o estado atual antes de executar.`}
+        exec={async (dryRun) =>
+          pwApi.clearRolePk({
+            roleid: roleidNum,
+            reason,
+            dry_run: dryRun,
+          })
+        }
+        onSuccess={(res) => {
+          const pk = res.gm_action?.pk_clear;
+          if (res.success && pk) {
+            if (pk.changed) {
+              toast.success("Estado PK limpo com sucesso", {
+                description: `Personagem #${roleidNum} — pk_count: ${pk.before?.pk_count ?? "?"} → ${pk.after?.pk_count ?? 0}`,
+              });
+            } else if (pk.cleared) {
+              toast.info("O personagem já estava sem estado PK persistido");
+            } else {
+              toast.success("Operação concluída");
+            }
+          } else {
+            toast.error(res.error ?? "Falhou");
+          }
+          void logAuditEvent({
+            action: "gm.clearRolePk",
+            tenantId: active?.id ?? null,
+            target: `roleid:${roleidNum}`,
+            status: res.success ? "ok" : "error",
+            metadata: { gm_action: res.gm_action },
+          });
+          onActed();
+        }}
+        renderPreview={(preview) => {
+          const pk = preview.gm_action?.pk_clear;
+          if (!pk?.before) return <p className="text-xs">Sem dados de preview.</p>;
+          return (
+            <div className="space-y-1 text-xs">
+              <p className="font-semibold">Estado PK atual:</p>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 font-mono text-[11px]">
+                <span className="text-muted-foreground">pk_count</span>
+                <span>{pk.before.pk_count ?? 0}</span>
+                <span className="text-muted-foreground">invader_state</span>
+                <span>{pk.before.invader_state ?? 0}</span>
+                <span className="text-muted-foreground">invader_time</span>
+                <span>{pk.before.invader_time ?? 0}</span>
+                <span className="text-muted-foreground">pariah_time</span>
+                <span>{pk.before.pariah_time ?? 0}</span>
+              </div>
+            </div>
+          );
+        }}
       />
     </GmCard>
   );

@@ -54,6 +54,7 @@ export const ACTION_PERMISSION: Record<string, ServerPermissionKey> = {
   kickRole: "manage_security",
   banAccount: "manage_security",
   unbanAccount: "manage_security",
+  clearRolePk: "manage_security",
   listSecurityHistory: "view_audit",
 };
 
