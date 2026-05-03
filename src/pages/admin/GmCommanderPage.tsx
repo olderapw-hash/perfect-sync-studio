@@ -18,7 +18,7 @@
 //      A UI mantém os dois em cards separados com tooltip explicando.
 //   4. grantMallCash valida o sucesso operacional via balance_change e
 //      wallet_after.cash_total — NÃO assume cash_gold isolado.
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
   ArrowLeft,
