@@ -86,6 +86,16 @@ import {
 
 import { NoActiveServerState } from "@/components/admin/NoActiveServerState";
 import { EndpointMissingNotice } from "@/components/admin/EndpointMissingNotice";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 import { useAuth } from "@/hooks/useAuth";
 import { useServers } from "@/hooks/useServers";
@@ -1364,15 +1374,45 @@ function BanAccountCard({
 }) {
   const { active } = useServers();
   const [userid, setUserid] = useState("");
+  const [roleid, setRoleid] = useState("");
   const [reason, setReason] = useState("");
   const [duration, setDuration] = useState("3600");
   const [permanent, setPermanent] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [kickAfterBan, setKickAfterBan] = useState(true);
+  const [kickConfirmOpen, setKickConfirmOpen] = useState(false);
+  const [kicking, setKicking] = useState(false);
 
   const useridNum = Number(userid);
   const useridValid = Number.isFinite(useridNum) && useridNum > 0;
+  const roleidNum = Number(roleid);
+  const roleidValid = Number.isFinite(roleidNum) && roleidNum > 0;
   const durationNum = Number(duration);
   const durationValid = permanent || (Number.isFinite(durationNum) && durationNum > 0);
+
+  const handleKick = async () => {
+    setKicking(true);
+    try {
+      const res = await pwApi.kickRole({ roleid: roleidNum, reason: `Kick pós-ban: ${reason}` });
+      if (res.success) {
+        toast.success(`Personagem #${roleidNum} desconectado após ban`);
+        void logAuditEvent({
+          action: "gm.kickRole",
+          tenantId: active?.id ?? null,
+          target: `roleid:${roleidNum}`,
+          status: "ok",
+          metadata: { triggered_by: "post_ban" },
+        });
+      } else {
+        toast.error(res.error ?? "Kick falhou — personagem pode já estar offline");
+      }
+    } catch {
+      toast.error("Erro ao executar kick");
+    } finally {
+      setKicking(false);
+      setKickConfirmOpen(false);
+    }
+  };
 
   return (
     <GmCard
@@ -1396,6 +1436,30 @@ function BanAccountCard({
           userid deve ser numérico (id da conta, não do personagem).
         </p>
       )}
+      <FieldRow label="Roleid (personagem online — opcional)">
+        <Input
+          value={roleid}
+          onChange={(e) => setRoleid(e.target.value)}
+          placeholder="Ex.: 1024"
+          inputMode="numeric"
+        />
+      </FieldRow>
+      {!roleidValid && roleid.length > 0 && (
+        <p className="text-[10px] text-destructive">
+          roleid deve ser numérico (id do personagem).
+        </p>
+      )}
+      {roleidValid && (
+        <div className="flex items-center justify-between rounded-md border border-border bg-card/40 px-2 py-1.5">
+          <div className="flex-1">
+            <Label className="text-[11px]">Kick após ban</Label>
+            <p className="text-[10px] text-muted-foreground">
+              Derrubar personagem #{roleidNum} após o ban
+            </p>
+          </div>
+          <Switch checked={kickAfterBan} onCheckedChange={setKickAfterBan} />
+        </div>
+      )}
       <FieldRow label="Motivo">
         <Input value={reason} onChange={(e) => setReason(e.target.value)} />
       </FieldRow>
@@ -1413,6 +1477,14 @@ function BanAccountCard({
           />
         </FieldRow>
       )}
+      <div className="rounded-md border border-amber-500/30 bg-amber-500/5 px-3 py-2">
+        <p className="text-[10px] text-amber-400">
+          <strong>Nota:</strong> Em servidores legados, o ban da conta pode valer apenas no próximo login.
+          {roleidValid
+            ? " Use o kick automático para remover a sessão atual."
+            : " Informe o roleid acima para derrubar o personagem online após o ban."}
+        </p>
+      </div>
       <Button
         variant="destructive"
         className="w-full"
@@ -1421,6 +1493,7 @@ function BanAccountCard({
       >
         <Ban className="h-3.5 w-3.5" />
         Banir Conta #{useridValid ? useridNum : "—"}
+        {roleidValid && kickAfterBan && " + Kick"}
       </Button>
       <ConfirmActionDialog
         open={confirmOpen}
@@ -1428,7 +1501,11 @@ function BanAccountCard({
         title={`Banir Conta #${useridNum}`}
         description={`Banir Conta #${useridNum} ${
           permanent ? "PERMANENTEMENTE" : `por ${durationNum}s`
-        }? Afeta todos os personagens dessa conta.`}
+        }? Afeta todos os personagens dessa conta.${
+          roleidValid && kickAfterBan
+            ? ` Após o ban, o personagem #${roleidNum} será desconectado automaticamente.`
+            : ""
+        }`}
         exec={async (dryRun) =>
           pwApi.banAccount({
             userid: useridNum,
@@ -1463,6 +1540,12 @@ function BanAccountCard({
               },
             });
             onActed();
+            // Auto-kick or prompt kick after successful ban
+            if (roleidValid && kickAfterBan) {
+              handleKick();
+            } else if (roleidValid && !kickAfterBan) {
+              setKickConfirmOpen(true);
+            }
           } else {
             toast.error(res.error ?? "Falhou");
           }
@@ -1476,6 +1559,31 @@ function BanAccountCard({
           </div>
         )}
       />
+      {/* Post-ban kick offer dialog (when kickAfterBan is off but roleid provided) */}
+      <AlertDialog open={kickConfirmOpen} onOpenChange={setKickConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Derrubar personagem online?</AlertDialogTitle>
+            <AlertDialogDescription>
+              A conta #{useridNum} foi banida com sucesso. Deseja derrubar o personagem #{roleidNum} agora?
+              Em servidores legados, o ban pode valer apenas no próximo login — o kick remove a sessão atual.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={kicking}>Não, manter online</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleKick();
+              }}
+              disabled={kicking}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {kicking ? "Kickando…" : `Kick #${roleidNum}`}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </GmCard>
   );
 }
