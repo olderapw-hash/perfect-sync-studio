@@ -2191,6 +2191,7 @@ function ClearRolePkCard({
   );
 }
 
+function UnsupportedCard({
   caps,
   action,
   icon,
