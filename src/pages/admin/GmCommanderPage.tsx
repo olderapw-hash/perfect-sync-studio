@@ -214,6 +214,7 @@ const FALLBACK_SUPPORTED = new Set([
   "muteAccount",
   "muteRole",
   "sendSystemMessage",
+  "clearRolePk",
   // GM Permissions v2 — backend confirmado.
   "getGmPermissionCatalog",
   "getGmPermissionState",
@@ -225,7 +226,6 @@ const FALLBACK_UNSUPPORTED = new Set([
   "teleportRole",
   "summonRole",
   "prisonRole",
-  "clearRolePk",
   "reviveRole",
   "resetRoleQuest",
 ]);
