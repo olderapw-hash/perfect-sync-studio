@@ -1724,17 +1724,20 @@ function UnbanAccountCard({
   const toast = useFeedback();
   const { active } = useServers();
   const [userid, setUserid] = useState("");
+  const [roleid, setRoleid] = useState("");
   const [reason, setReason] = useState("");
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   const useridNum = Number(userid);
   const useridValid = Number.isFinite(useridNum) && useridNum > 0;
+  const roleidNum = Number(roleid);
+  const roleidValid = Number.isFinite(roleidNum) && roleidNum > 0;
 
   return (
     <GmCard
       icon={ShieldOff}
       title="Desbanir Conta"
-      subtitle="Remove o ban de uma CONTA. Exige userid — não confundir com roleid."
+      subtitle="Remove o ban de uma CONTA. Envie userid obrigatório e roleid para limpar bloqueio residual do personagem."
       action="unbanAccount"
       caps={caps}
     >
@@ -1742,7 +1745,7 @@ function UnbanAccountCard({
         <Input
           value={userid}
           onChange={(e) => setUserid(e.target.value)}
-          placeholder="Ex.: 1234"
+          placeholder="Ex.: 1024"
           inputMode="numeric"
         />
       </FieldRow>
@@ -1751,8 +1754,26 @@ function UnbanAccountCard({
           userid deve ser numérico (id da conta).
         </p>
       )}
+      <FieldRow label="Roleid (personagem, opcional)">
+        <Input
+          value={roleid}
+          onChange={(e) => setRoleid(e.target.value)}
+          placeholder="Ex.: 1024"
+          inputMode="numeric"
+        />
+      </FieldRow>
+      {!roleidValid && roleid.length > 0 && (
+        <p className="text-[10px] text-destructive">
+          roleid deve ser numérico.
+        </p>
+      )}
+      {!roleidValid && useridValid && (
+        <p className="text-[10px] text-amber-500">
+          ⚠ Sem roleid — o bloqueio residual do personagem não será removido.
+        </p>
+      )}
       <FieldRow label="Motivo (opcional)">
-        <Input value={reason} onChange={(e) => setReason(e.target.value)} />
+        <Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Ex.: cleanup" />
       </FieldRow>
       <Button
         onClick={() => setConfirmOpen(true)}
@@ -1762,15 +1783,17 @@ function UnbanAccountCard({
       >
         <ShieldOff className="h-3.5 w-3.5" />
         Desbanir Conta #{useridValid ? useridNum : "—"}
+        {roleidValid ? ` + Role #${roleidNum}` : ""}
       </Button>
       <ConfirmActionDialog<SecurityActionResponse>
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
-        title={`Desbanir Conta #${useridNum}`}
-        description={`Remover ban da Conta #${useridNum}?`}
+        title={`Desbanir Conta #${useridNum}${roleidValid ? ` + Role #${roleidNum}` : ""}`}
+        description={`Remover ban da Conta #${useridNum}${roleidValid ? ` e bloqueio residual do personagem #${roleidNum}` : ""}?`}
         exec={async (dryRun) =>
           pwApi.unbanAccount({
             userid: useridNum,
+            roleid: roleidValid ? roleidNum : undefined,
             reason: reason || undefined,
             dry_run: dryRun,
           })
@@ -1778,23 +1801,28 @@ function UnbanAccountCard({
         onSuccess={(res) => {
           if (res.success) {
             const gm = res.gm_action;
-            const backendLabel =
-              gm?.account_forbid_backend === "forbid_table"
-                ? "Backend: tabela forbid"
-                : gm?.account_forbid_backend === "gamedbd"
-                  ? "Backend: gamedbd"
-                  : undefined;
-            toast.success(
-              gm?.message ?? `Ban removido da Conta #${useridNum}`,
-              backendLabel ? { description: backendLabel } : undefined,
-            );
+            const delivery = extractDelivery(gm);
+            const afterEmpty = !delivery?.after_type_ids?.length;
+            const roleCleared = gm?.role_clear?.cleared === true;
+
+            const lines: string[] = ["✅ Conta liberada com sucesso"];
+            if (afterEmpty) {
+              lines.push("✅ Bloqueio da conta removido");
+            }
+            if (roleCleared) {
+              lines.push("✅ Bloqueio residual do personagem removido");
+            }
+
+            toast.success(lines.join("\n"));
             void logAuditEvent({
               action: "gm.unbanAccount",
               tenantId: active?.id ?? null,
-              target: `userid:${useridNum}`,
+              target: `userid:${useridNum}${roleidValid ? ` roleid:${roleidNum}` : ""}`,
               status: "ok",
               metadata: {
                 account_forbid_backend: gm?.account_forbid_backend ?? null,
+                after_type_ids_empty: afterEmpty,
+                role_cleared: roleCleared,
               },
             });
             onActed();
@@ -1802,12 +1830,51 @@ function UnbanAccountCard({
             toast.error(res.error ?? "Falhou");
           }
         }}
-        renderPreview={(res) => (
-          <div className="space-y-1 text-xs">
-            <Row label="state" value={res.state ?? "—"} />
-            <DeliveryDetails gm={res.gm_action} variant="unban" />
-          </div>
-        )}
+        renderPreview={(res) => {
+          const gm = res.gm_action;
+          const delivery = extractDelivery(gm);
+          const afterEmpty = !delivery?.after_type_ids?.length;
+          const roleCleared = gm?.role_clear?.cleared === true;
+
+          return (
+            <div className="space-y-2 text-xs">
+              <Row label="state" value={res.state ?? "—"} />
+
+              {/* Account unban section */}
+              <div className="rounded-md border border-border/40 p-2 space-y-1">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Bloqueio da Conta
+                </p>
+                {afterEmpty ? (
+                  <p className="text-success font-medium">✅ Bloqueio da conta removido</p>
+                ) : (
+                  <p className="text-amber-500 font-medium">⚠ after_type_ids não vazio — verificar</p>
+                )}
+                <DeliveryDetails gm={gm} variant="unban" />
+              </div>
+
+              {/* Role clear section */}
+              {gm?.role_clear && (
+                <div className="rounded-md border border-border/40 p-2 space-y-1">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                    Bloqueio do Personagem
+                  </p>
+                  {roleCleared ? (
+                    <p className="text-success font-medium">✅ Bloqueio residual do personagem removido</p>
+                  ) : (
+                    <p className="text-amber-500 font-medium">⚠ role_clear não confirmado</p>
+                  )}
+                  {gm.role_clear.roleid != null && (
+                    <Row label="roleid" value={String(gm.role_clear.roleid)} />
+                  )}
+                  {gm.role_clear.message && (
+                    <Row label="mensagem" value={gm.role_clear.message} />
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        }}
       />
     </GmCard>
   );
