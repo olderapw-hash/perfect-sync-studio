@@ -1602,10 +1602,13 @@ function BanAccountCard({
         exec={async (dryRun) =>
           pwApi.banAccount({
             userid: useridNum,
+            roleid: roleidValid ? roleidNum : undefined,
             reason,
             permanent,
             duration_seconds: permanent ? undefined : durationNum,
             dry_run: dryRun,
+            kick_online: roleidValid && kickAfterBan ? true : undefined,
+            kick_seconds: roleidValid && kickAfterBan && kickSecondsValid ? kickSecondsNum : undefined,
           })
         }
         onSuccess={(res) => {
@@ -1617,8 +1620,11 @@ function BanAccountCard({
                 : gm?.account_forbid_backend === "gamedbd"
                   ? "Backend: gamedbd"
                   : undefined;
+            const kickLabel = roleidValid && kickAfterBan
+              ? ` + kick #${roleidNum}`
+              : "";
             toast.success(
-              gm?.message ?? `Conta #${useridNum} banida`,
+              (gm?.message ?? `Conta #${useridNum} banida`) + kickLabel,
               backendLabel ? { description: backendLabel } : undefined,
             );
             void logAuditEvent({
@@ -1630,15 +1636,11 @@ function BanAccountCard({
                 permanent,
                 duration_seconds: durationNum,
                 account_forbid_backend: gm?.account_forbid_backend ?? null,
+                kick_online: roleidValid && kickAfterBan,
+                roleid: roleidValid ? roleidNum : null,
               },
             });
             onActed();
-            // Auto-kick or prompt kick after successful ban
-            if (roleidValid && kickAfterBan) {
-              handleKick();
-            } else if (roleidValid && !kickAfterBan) {
-              setKickConfirmOpen(true);
-            }
           } else {
             toast.error(res.error ?? "Falhou");
           }
@@ -1648,35 +1650,13 @@ function BanAccountCard({
             <Row label="state" value={res.state ?? "—"} />
             <Row label="ban_until" value={res.ban_until ?? "—"} />
             <Row label="seconds" value={res.seconds ?? "—"} />
+            {roleidValid && kickAfterBan && (
+              <Row label="kick_online" value={`roleid:${roleidNum} (${kickSecondsNum}s)`} />
+            )}
             <DeliveryDetails gm={res.gm_action} variant="ban" />
           </div>
         )}
       />
-      {/* Post-ban kick offer dialog (when kickAfterBan is off but roleid provided) */}
-      <AlertDialog open={kickConfirmOpen} onOpenChange={setKickConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Derrubar personagem online?</AlertDialogTitle>
-            <AlertDialogDescription>
-              A conta #{useridNum} foi banida com sucesso. Deseja derrubar o personagem #{roleidNum} agora?
-              Em servidores legados, o ban pode valer apenas no próximo login — o kick remove a sessão atual.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={kicking}>Não, manter online</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={(e) => {
-                e.preventDefault();
-                handleKick();
-              }}
-              disabled={kicking}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {kicking ? "Kickando…" : `Kick #${roleidNum}`}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </GmCard>
   );
 }
