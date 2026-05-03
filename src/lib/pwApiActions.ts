@@ -1387,7 +1387,7 @@ export interface BanAccountPayload {
   /** Identificador da conta. Pode ser nome de login OU userid. */
   account?: string;
   userid?: number;
-  /** Quando informado, a VPS resolve a conta a partir do roleid. */
+  /** Roleid do personagem online — usado para kick pós-ban. */
   roleid?: number;
   /** Duração em segundos. Obrigatório para ban temporário. */
   duration_seconds?: number;
@@ -1396,6 +1396,10 @@ export interface BanAccountPayload {
   reason: string;
   /** Quando true, a VPS valida sem aplicar. */
   dry_run?: boolean;
+  /** Quando true, a VPS executa kick do roleid após o ban. */
+  kick_online?: boolean;
+  /** Tempo de aviso antes do kick (segundos). Default 10. */
+  kick_seconds?: number;
 }
 
 export interface UnbanAccountPayload {
