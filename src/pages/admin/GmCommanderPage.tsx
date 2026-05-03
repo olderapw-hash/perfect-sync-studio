@@ -121,6 +121,96 @@ import {
 } from "@/lib/pwApiActions";
 
 /* -------------------------------------------------------------------------- */
+/* GmFeedback — centered card overlay instead of corner toasts                */
+/* -------------------------------------------------------------------------- */
+
+type FeedbackType = "success" | "error" | "info" | "warning";
+interface FeedbackItem {
+  id: number;
+  type: FeedbackType;
+  title: string;
+  description?: string;
+}
+
+interface FeedbackAPI {
+  success: (title: string, opts?: { description?: string } | string) => void;
+  error: (title: string, opts?: { description?: string } | string) => void;
+  info: (title: string, opts?: { description?: string } | string) => void;
+  warning: (title: string, opts?: { description?: string } | string) => void;
+}
+
+const FeedbackCtx = createContext<FeedbackAPI | null>(null);
+
+function useFeedback(): FeedbackAPI {
+  const ctx = useContext(FeedbackCtx);
+  if (!ctx) throw new Error("useFeedback must be inside FeedbackProvider");
+  return ctx;
+}
+
+function FeedbackProvider({ children }: { children: React.ReactNode }) {
+  const [items, setItems] = useState<FeedbackItem[]>([]);
+  const nextId = useRef(0);
+
+  const push = useCallback((type: FeedbackType, title: string, opts?: { description?: string } | string) => {
+    const id = nextId.current++;
+    const description = typeof opts === "string" ? opts : opts?.description;
+    setItems((prev) => [...prev, { id, type, title, description }]);
+    setTimeout(() => setItems((prev) => prev.filter((i) => i.id !== id)), 3500);
+  }, []);
+
+  const api = useMemo<FeedbackAPI>(
+    () => ({
+      success: (t, o?) => push("success", t, o),
+      error: (t, o?) => push("error", t, o),
+      info: (t, o?) => push("info", t, o),
+      warning: (t, o?) => push("warning", t, o),
+    }),
+    [push],
+  );
+
+  const iconMap: Record<FeedbackType, React.ReactNode> = {
+    success: <CheckCircle2 className="h-6 w-6 text-emerald-400" />,
+    error: <XCircle className="h-6 w-6 text-red-400" />,
+    info: <AlertTriangle className="h-6 w-6 text-blue-400" />,
+    warning: <AlertTriangle className="h-6 w-6 text-amber-400" />,
+  };
+
+  const bgMap: Record<FeedbackType, string> = {
+    success: "border-emerald-500/50 bg-emerald-950/90",
+    error: "border-red-500/50 bg-red-950/90",
+    info: "border-blue-500/50 bg-blue-950/90",
+    warning: "border-amber-500/50 bg-amber-950/90",
+  };
+
+  return (
+    <FeedbackCtx.Provider value={api}>
+      {children}
+      <div className="pointer-events-none fixed inset-0 z-[200] flex flex-col items-center justify-center gap-3">
+        {items.map((item) => (
+          <div
+            key={item.id}
+            className={cn(
+              "pointer-events-auto animate-in fade-in zoom-in-95 slide-in-from-bottom-4 duration-300",
+              "rounded-xl border px-6 py-4 shadow-2xl backdrop-blur-md",
+              "flex items-start gap-3 max-w-md w-full",
+              bgMap[item.type],
+            )}
+          >
+            <div className="mt-0.5">{iconMap[item.type]}</div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-foreground">{item.title}</p>
+              {item.description && (
+                <p className="mt-0.5 text-xs text-muted-foreground">{item.description}</p>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </FeedbackCtx.Provider>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
 /* Capabilities — fonte da verdade do que está suportado de fato              */
 /* -------------------------------------------------------------------------- */
 
