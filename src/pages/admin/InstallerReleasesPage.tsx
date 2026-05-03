@@ -138,6 +138,32 @@ const InstallerReleasesPage = () => {
           ? "Marcado como versão atual — usuários receberão aviso."
           : "Salvo no histórico (não marcado como atual).",
       });
+
+      // Extract individual files from the zip so /install always serves the latest
+      if (ext === "zip") {
+        try {
+          const { data: extractData, error: extractErr } = await supabase.functions.invoke(
+            "extract-installer-release",
+            { body: { file_path: path } },
+          );
+          if (extractErr) {
+            toast.error("Falha ao extrair arquivos do .zip", {
+              description: extractErr.message,
+            });
+          } else if (extractData?.extracted?.length > 0) {
+            toast.success(
+              `${extractData.extracted.length} arquivo(s) extraído(s) e atualizado(s)`,
+              {
+                description: extractData.extracted.join(", "),
+              },
+            );
+          }
+        } catch (exErr) {
+          console.warn("[extract-installer-release]", exErr);
+          toast.error("Falha ao extrair arquivos do .zip");
+        }
+      }
+
       reset();
       void fetchReleases();
     } catch (err) {
