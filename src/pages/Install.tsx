@@ -226,7 +226,7 @@ const Install = () => {
 
   const handleCopy = async (file: InstallerFile) => {
     try {
-      const res = await fetch(file.path);
+      const res = await fetch(getFileUrl(file, storageFiles));
       if (!res.ok) throw new Error("Arquivo ainda não disponível");
       const text = await res.text();
       await navigator.clipboard.writeText(text);
@@ -599,7 +599,7 @@ const Install = () => {
                       {copied === f.name ? "Copiado" : "Copiar"}
                     </Button>
                     <Button asChild size="sm" onClick={() => handleDownload(f)}>
-                      <a href={f.path} download={f.name}>
+                      <a href={getFileUrl(f, storageFiles)} download={f.name}>
                         <Download className="mr-2 h-3.5 w-3.5" /> Baixar
                       </a>
                     </Button>
