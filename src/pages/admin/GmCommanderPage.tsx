@@ -1726,6 +1726,7 @@ function UnbanAccountCard({
   const [userid, setUserid] = useState("");
   const [roleid, setRoleid] = useState("");
   const [reason, setReason] = useState("");
+  const [refreshLogin, setRefreshLogin] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   const useridNum = Number(userid);
