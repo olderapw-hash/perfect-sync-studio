@@ -2564,6 +2564,62 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
+/** Extracts the flat ForbidDelivery from gm_action.delivery (ban has it flat, unban nests under .account) */
+function extractDelivery(gm: GmActionBlock | undefined): ForbidDelivery | undefined {
+  if (!gm?.delivery) return undefined;
+  const d = gm.delivery as Record<string, unknown>;
+  if ("account" in d && typeof d.account === "object" && d.account !== null) {
+    return d.account as ForbidDelivery;
+  }
+  return gm.delivery as ForbidDelivery;
+}
+
+/** Renders backend label + delivery type_ids for ban/unban results */
+function DeliveryDetails({
+  gm,
+  variant,
+}: {
+  gm?: GmActionBlock;
+  variant: "ban" | "unban";
+}) {
+  if (!gm) return null;
+  const backend = gm.account_forbid_backend;
+  const delivery = extractDelivery(gm);
+  const backendLabel =
+    backend === "forbid_table"
+      ? "tabela forbid"
+      : backend === "gamedbd"
+        ? "gamedbd"
+        : backend ?? "—";
+
+  return (
+    <div className="space-y-1">
+      {gm.message && <Row label="mensagem" value={gm.message} />}
+      <Row
+        label="backend"
+        value={
+          <span className="inline-flex items-center gap-1.5 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium">
+            {backendLabel}
+          </span>
+        }
+      />
+      {delivery && (
+        <>
+          <Row label="before_type_ids" value={delivery.before_type_ids?.join(", ") ?? "—"} />
+          <Row label="applied_type_ids" value={delivery.applied_type_ids?.join(", ") ?? "—"} />
+          <Row label="after_type_ids" value={delivery.after_type_ids?.join(", ") ?? "—"} />
+          {variant === "ban" && delivery.inserted_type_ids !== undefined && (
+            <Row label="inserted_type_ids" value={delivery.inserted_type_ids?.join(", ") ?? "—"} />
+          )}
+          {variant === "unban" && delivery.deleted_type_ids !== undefined && (
+            <Row label="deleted_type_ids" value={delivery.deleted_type_ids?.join(", ") ?? "—"} />
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
 function StatusBadge({ status }: { status: string }) {
   if (status === "ok") {
     return (
