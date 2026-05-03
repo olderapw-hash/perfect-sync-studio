@@ -1449,9 +1449,15 @@ export interface ClearRolePkResponse {
 }
 
 export interface ForbidDelivery {
+  before_type_ids?: number[];
+  after_type_ids?: number[];
+  applied_type_ids?: number[];
+  inserted_type_ids?: number[];
+  deleted_type_ids?: number[];
   account?: {
     before_type_ids?: number[];
     after_type_ids?: number[];
+    [key: string]: unknown;
   };
   role_clear?: {
     cleared?: boolean;
