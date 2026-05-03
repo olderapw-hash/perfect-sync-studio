@@ -86,6 +86,16 @@ import {
 
 import { NoActiveServerState } from "@/components/admin/NoActiveServerState";
 import { EndpointMissingNotice } from "@/components/admin/EndpointMissingNotice";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 import { useAuth } from "@/hooks/useAuth";
 import { useServers } from "@/hooks/useServers";
