@@ -272,6 +272,14 @@ function isSupported(
 /* -------------------------------------------------------------------------- */
 
 export default function GmCommanderPage() {
+  return (
+    <FeedbackProvider>
+      <GmCommanderPageInner />
+    </FeedbackProvider>
+  );
+}
+
+function GmCommanderPageInner() {
   const toast = useFeedback();
   const { active } = useServers();
   const { isSuperadmin } = useAuth();
@@ -328,7 +336,7 @@ export default function GmCommanderPage() {
   }
 
   return (
-    <FeedbackProvider><div className="flex h-full flex-col overflow-hidden bg-background">
+    <div className="flex h-full flex-col overflow-hidden bg-background">
       <header className="border-b border-border bg-gradient-to-r from-card/80 via-card/60 to-card/80 px-6 py-4 backdrop-blur-md">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-purple-500/40 bg-purple-500/10 text-purple-400">
@@ -412,7 +420,7 @@ export default function GmCommanderPage() {
           </TabsContent>
         </Tabs>
       </main>
-    </div></FeedbackProvider>
+    </div>
   );
 }
 
