@@ -272,6 +272,14 @@ function isSupported(
 /* -------------------------------------------------------------------------- */
 
 export default function GmCommanderPage() {
+  return (
+    <FeedbackProvider>
+      <GmCommanderPageInner />
+    </FeedbackProvider>
+  );
+}
+
+function GmCommanderPageInner() {
   const toast = useFeedback();
   const { active } = useServers();
   const { isSuperadmin } = useAuth();
