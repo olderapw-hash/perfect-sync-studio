@@ -1792,8 +1792,9 @@ function UnbanAccountCard({
         variant="outline"
       >
         <ShieldOff className="h-3.5 w-3.5" />
-        Desbanir Conta #{useridValid ? useridNum : "—"}
-        {roleidValid ? ` + Role #${roleidNum}` : ""}
+        {refreshLogin ? "Liberar conta e limpar cache de login" : "Liberar conta"}
+        {" #"}{useridValid ? useridNum : "—"}
+        {roleidValid ? ` + Personagem #${roleidNum}` : ""}
       </Button>
       <ConfirmActionDialog<SecurityActionResponse>
         open={confirmOpen}
