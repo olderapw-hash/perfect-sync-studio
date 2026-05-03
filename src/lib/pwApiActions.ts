@@ -1412,6 +1412,7 @@ export interface BanAccountPayload {
 
 export interface UnbanAccountPayload {
   userid: number;
+  account?: string;
   roleid?: number;
   reason?: string;
   refresh_services?: string[];
