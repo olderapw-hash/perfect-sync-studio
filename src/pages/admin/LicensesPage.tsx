@@ -152,11 +152,11 @@ export default function LicensesPage() {
     }
     setSaving(true);
 
-    const payload: Record<string, unknown> = {
+    const payload = {
       client_name: form.client_name.trim(),
       client_email: form.client_email.trim() || null,
       plan: form.plan,
-      status: form.status,
+      status: form.status as License["status"],
       expires_at: form.expires_at ? new Date(form.expires_at + "T23:59:59Z").toISOString() : null,
       vps_ip: form.vps_ip.trim() || null,
       notes: form.notes.trim() || null,
