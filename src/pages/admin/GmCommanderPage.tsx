@@ -492,7 +492,114 @@ function GmCommanderPageInner() {
 }
 
 /* -------------------------------------------------------------------------- */
-/* Helpers visuais                                                             */
+/* Tab Icon Customizer (superadmin only)                                       */
+/* -------------------------------------------------------------------------- */
+
+const TAB_LABELS: Record<TabKey, string> = {
+  compensation: "Compensação",
+  moderation: "Moderação",
+  communication: "Comunicação",
+  permissions: "Permissões GM",
+  history: "Histórico",
+};
+
+function TabIconCustomizer({
+  icons,
+  onChange,
+}: {
+  icons: Record<TabKey, string>;
+  onChange: (next: Record<TabKey, string>) => void;
+}) {
+  const [editingTab, setEditingTab] = useState<TabKey | null>(null);
+
+  const handleSelect = (tab: TabKey, iconName: string) => {
+    onChange({ ...icons, [tab]: iconName });
+    setEditingTab(null);
+  };
+
+  const handleReset = () => {
+    onChange({ ...DEFAULT_TAB_ICONS });
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-sm font-extrabold uppercase tracking-wider text-foreground">
+            Ícones das abas
+          </h3>
+          <p className="text-[11px] text-muted-foreground">
+            Personalize o ícone de cada seção. Visível apenas para superadmin.
+          </p>
+        </div>
+        <Button size="sm" variant="ghost" onClick={handleReset} className="text-xs text-muted-foreground hover:text-foreground">
+          <RefreshCw className="mr-1.5 h-3 w-3" />
+          Resetar
+        </Button>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {(Object.keys(TAB_LABELS) as TabKey[]).map((tab) => {
+          const CurrentIcon = resolveIcon(icons[tab]);
+          return (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => setEditingTab(editingTab === tab ? null : tab)}
+              className={cn(
+                "group flex items-center gap-3 rounded-xl border bg-card/40 px-4 py-3 text-left backdrop-blur-sm transition-all duration-200 hover:bg-card/70",
+                editingTab === tab
+                  ? "border-primary/50 shadow-[0_0_20px_-6px_hsl(210_85%_60%/0.2)]"
+                  : "border-border/50 hover:border-primary/30",
+              )}
+            >
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary transition-transform group-hover:scale-110">
+                <CurrentIcon className="h-5 w-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-bold text-foreground">{TAB_LABELS[tab]}</p>
+                <p className="text-[10px] text-muted-foreground">{icons[tab]}</p>
+              </div>
+              <Paintbrush className="h-3.5 w-3.5 text-muted-foreground/50 transition-colors group-hover:text-primary" />
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Icon picker grid */}
+      {editingTab && (
+        <div className="rounded-xl border border-primary/30 bg-card/60 p-4 backdrop-blur-sm">
+          <p className="mb-3 text-xs font-semibold text-foreground">
+            Selecione o ícone para <span className="text-primary">{TAB_LABELS[editingTab]}</span>
+          </p>
+          <div className="grid grid-cols-8 gap-1.5 sm:grid-cols-10 lg:grid-cols-12">
+            {ICON_NAMES.map((name) => {
+              const Ic = ICON_CATALOG[name];
+              const isActive = icons[editingTab] === name;
+              return (
+                <button
+                  key={name}
+                  type="button"
+                  title={name}
+                  onClick={() => handleSelect(editingTab, name)}
+                  className={cn(
+                    "flex h-9 w-9 items-center justify-center rounded-lg border transition-all duration-150 hover:scale-110",
+                    isActive
+                      ? "border-primary bg-primary/20 text-primary shadow-[0_0_12px_-3px_hsl(210_85%_60%/0.4)]"
+                      : "border-border/40 bg-card/30 text-muted-foreground hover:border-primary/40 hover:bg-primary/5 hover:text-foreground",
+                  )}
+                >
+                  <Ic className="h-4 w-4" />
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* -------------------------------------------------------------------------- */
 
 function CapBadge({
