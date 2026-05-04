@@ -1422,6 +1422,8 @@ export interface UnbanAccountPayload {
 export interface ClearRolePkPayload {
   roleid: number;
   reason?: string;
+  kick_online?: boolean;
+  kick_seconds?: number;
   dry_run?: boolean;
 }
 
@@ -1441,8 +1443,15 @@ export interface ClearRolePkResponse {
     pk_clear?: {
       before?: ClearRolePkPkState;
       after?: ClearRolePkPkState;
+      role_forbid_before?: unknown;
+      role_forbid_after?: unknown;
       cleared?: boolean;
       changed?: boolean;
+    };
+    session_refresh?: {
+      success?: boolean;
+      role_forbid_cleanup?: { cleared?: boolean };
+      post_refresh_role_forbid?: unknown;
     };
     [key: string]: unknown;
   };
