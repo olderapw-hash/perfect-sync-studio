@@ -566,7 +566,6 @@ function TabIconCustomizer({
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {(Object.keys(TAB_LABELS) as TabKey[]).map((tab) => {
-          const CurrentIcon = resolveIcon(icons[tab]);
           return (
             <button
               key={tab}
@@ -580,11 +579,11 @@ function TabIconCustomizer({
               )}
             >
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary transition-transform group-hover:scale-110">
-                <CurrentIcon className="h-5 w-5" />
+                <TabIconRenderer name={icons[tab]} className="h-5 w-5" />
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-bold text-foreground">{TAB_LABELS[tab]}</p>
-                <p className="text-[10px] text-muted-foreground">{icons[tab]}</p>
+                <p className="text-[10px] text-muted-foreground">{icons[tab].replace("pw:", "PW: ")}</p>
               </div>
               <Paintbrush className="h-3.5 w-3.5 text-muted-foreground/50 transition-colors group-hover:text-primary" />
             </button>
@@ -594,31 +593,63 @@ function TabIconCustomizer({
 
       {/* Icon picker grid */}
       {editingTab && (
-        <div className="rounded-xl border border-primary/30 bg-card/60 p-4 backdrop-blur-sm">
-          <p className="mb-3 text-xs font-semibold text-foreground">
+        <div className="space-y-4 rounded-xl border border-primary/30 bg-card/60 p-4 backdrop-blur-sm">
+          <p className="text-xs font-semibold text-foreground">
             Selecione o ícone para <span className="text-primary">{TAB_LABELS[editingTab]}</span>
           </p>
-          <div className="grid grid-cols-8 gap-1.5 sm:grid-cols-10 lg:grid-cols-12">
-            {ICON_NAMES.map((name) => {
-              const Ic = ICON_CATALOG[name];
-              const isActive = icons[editingTab] === name;
-              return (
-                <button
-                  key={name}
-                  type="button"
-                  title={name}
-                  onClick={() => handleSelect(editingTab, name)}
-                  className={cn(
-                    "flex h-9 w-9 items-center justify-center rounded-lg border transition-all duration-150 hover:scale-110",
-                    isActive
-                      ? "border-primary bg-primary/20 text-primary shadow-[0_0_12px_-3px_hsl(210_85%_60%/0.4)]"
-                      : "border-border/40 bg-card/30 text-muted-foreground hover:border-primary/40 hover:bg-primary/5 hover:text-foreground",
-                  )}
-                >
-                  <Ic className="h-4 w-4" />
-                </button>
-              );
-            })}
+
+          {/* PW Game Icons */}
+          <div>
+            <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-purple-400">Perfect World</p>
+            <div className="grid grid-cols-8 gap-1.5 sm:grid-cols-10 lg:grid-cols-12">
+              {PW_ICON_NAMES.map((name) => {
+                const key = `pw:${name}`;
+                const isActive = icons[editingTab] === key;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    title={name}
+                    onClick={() => handleSelect(editingTab, key)}
+                    className={cn(
+                      "flex h-9 w-9 items-center justify-center rounded-lg border transition-all duration-150 hover:scale-110",
+                      isActive
+                        ? "border-purple-500 bg-purple-500/20 shadow-[0_0_12px_-3px_hsl(270_60%_55%/0.4)]"
+                        : "border-border/40 bg-card/30 hover:border-purple-500/40 hover:bg-purple-500/5",
+                    )}
+                  >
+                    <img src={`/gm-icons/${name}.png`} alt={name} className="h-6 w-6 rounded-sm object-contain" />
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Lucide Icons */}
+          <div>
+            <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Sistema</p>
+            <div className="grid grid-cols-8 gap-1.5 sm:grid-cols-10 lg:grid-cols-12">
+              {ICON_NAMES.map((name) => {
+                const Ic = ICON_CATALOG[name];
+                const isActive = icons[editingTab] === name;
+                return (
+                  <button
+                    key={name}
+                    type="button"
+                    title={name}
+                    onClick={() => handleSelect(editingTab, name)}
+                    className={cn(
+                      "flex h-9 w-9 items-center justify-center rounded-lg border transition-all duration-150 hover:scale-110",
+                      isActive
+                        ? "border-primary bg-primary/20 text-primary shadow-[0_0_12px_-3px_hsl(210_85%_60%/0.4)]"
+                        : "border-border/40 bg-card/30 text-muted-foreground hover:border-primary/40 hover:bg-primary/5 hover:text-foreground",
+                    )}
+                  >
+                    <Ic className="h-4 w-4" />
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}
