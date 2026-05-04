@@ -525,16 +525,16 @@ function GmCommanderPageInner() {
           </TabsList>
 
           <TabsContent value="compensation" className="space-y-4">
-            <CompensationTab caps={caps} onActed={refreshHistory} />
+            <CompensationTab caps={caps} onActed={refreshHistory} isSuperadmin={isSuperadmin} cardVisibility={cardVisibility} onToggleVisibility={toggleCardVisibility} />
           </TabsContent>
           <TabsContent value="moderation" className="space-y-4">
-            <ModerationTab caps={caps} onActed={refreshHistory} />
+            <ModerationTab caps={caps} onActed={refreshHistory} isSuperadmin={isSuperadmin} cardVisibility={cardVisibility} onToggleVisibility={toggleCardVisibility} />
           </TabsContent>
           <TabsContent value="communication" className="space-y-4">
-            <CommunicationTab caps={caps} onActed={refreshHistory} />
+            <CommunicationTab caps={caps} onActed={refreshHistory} isSuperadmin={isSuperadmin} cardVisibility={cardVisibility} onToggleVisibility={toggleCardVisibility} />
           </TabsContent>
           <TabsContent value="permissions" className="space-y-4">
-            <GmPermissionsTab caps={caps} onActed={refreshHistory} />
+            <GmPermissionsTab caps={caps} onActed={refreshHistory} isSuperadmin={isSuperadmin} cardVisibility={cardVisibility} onToggleVisibility={toggleCardVisibility} />
           </TabsContent>
           <TabsContent value="history">
             <HistoryTab tick={historyTick} />
