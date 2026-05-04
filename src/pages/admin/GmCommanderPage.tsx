@@ -343,6 +343,7 @@ function GmCommanderPageInner() {
   const [catalogMissing, setCatalogMissing] = useState(false);
   const [catalogLoading, setCatalogLoading] = useState(false);
   const [historyTick, setHistoryTick] = useState(0);
+  const [tabIcons, setTabIcons] = useState<Record<TabKey, string>>(loadTabIcons);
 
   const caps = useMemo(() => normalizeCatalog(catalog), [catalog]);
 
