@@ -476,10 +476,9 @@ function GmCommanderPageInner() {
               { key: "permissions" as TabKey, label: "Permissões GM" },
               { key: "history" as TabKey, label: "Histórico" },
             ] as const).map(({ key, label }) => {
-              const TabIcon = resolveIcon(tabIcons[key]);
               return (
                 <TabsTrigger key={key} value={key} className="gap-2 rounded-lg px-4 py-2 text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-[0_0_12px_-3px_hsl(210_85%_60%/0.3)]">
-                  <TabIcon className="h-3.5 w-3.5" />
+                  <TabIconRenderer name={tabIcons[key]} className="h-3.5 w-3.5" />
                   {label}
                 </TabsTrigger>
               );
