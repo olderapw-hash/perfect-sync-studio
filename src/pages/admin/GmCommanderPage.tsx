@@ -23,29 +23,51 @@ import {
   AlertTriangle,
   ArrowLeft,
   ArrowRight,
+  Award,
   Ban,
+  BookOpen,
   CheckCircle2,
   ChevronRight,
   Clock,
   Coins,
+  Crown,
+  Crosshair,
+  Flame,
+  Gamepad2,
   Gift,
+  Globe,
   Hammer,
+  Heart,
   History as HistoryIcon,
+  Key,
   Loader2,
+  Lock,
   LogOut,
   Mail,
+  Megaphone,
   MessageSquare,
+  Paintbrush,
   RefreshCw,
+  Scroll,
+  Settings,
   Shield,
   ShieldAlert,
   ShieldCheck,
   ShieldOff,
+  Skull,
   Sparkles,
+  Star,
+  Sword,
+  Swords,
+  Target,
+  Trophy,
+  Users,
   VolumeX,
   Wallet,
   Wand2,
   XCircle,
   Zap,
+  type LucideIcon,
 } from "lucide-react";
 // toast replaced by GmFeedback overlay
 
@@ -259,6 +281,48 @@ function isSupported(
 }
 
 /* -------------------------------------------------------------------------- */
+/* Tab icon customization (superadmin only, localStorage)                      */
+/* -------------------------------------------------------------------------- */
+
+const ICON_CATALOG: Record<string, LucideIcon> = {
+  Gift, Hammer, MessageSquare, Shield, History: HistoryIcon, Wand2, Zap, Sparkles,
+  Mail, Coins, Wallet, Ban, ShieldOff, ShieldCheck, VolumeX, LogOut,
+  Sword, Swords, Crown, Star, Trophy, Award, Flame, Skull, Target, Crosshair,
+  Heart, Globe, Key, Lock, Megaphone, Scroll, BookOpen, Gamepad2, Users, Paintbrush,
+  Settings, Clock, RefreshCw, AlertTriangle,
+};
+
+const ICON_NAMES = Object.keys(ICON_CATALOG);
+
+type TabKey = "compensation" | "moderation" | "communication" | "permissions" | "history";
+
+const DEFAULT_TAB_ICONS: Record<TabKey, string> = {
+  compensation: "Gift",
+  moderation: "Hammer",
+  communication: "MessageSquare",
+  permissions: "Shield",
+  history: "History",
+};
+
+const TAB_ICON_STORAGE_KEY = "gm-tab-icons";
+
+function loadTabIcons(): Record<TabKey, string> {
+  try {
+    const raw = localStorage.getItem(TAB_ICON_STORAGE_KEY);
+    if (raw) return { ...DEFAULT_TAB_ICONS, ...JSON.parse(raw) };
+  } catch { /* noop */ }
+  return { ...DEFAULT_TAB_ICONS };
+}
+
+function saveTabIcons(icons: Record<TabKey, string>) {
+  localStorage.setItem(TAB_ICON_STORAGE_KEY, JSON.stringify(icons));
+}
+
+function resolveIcon(name: string): LucideIcon {
+  return ICON_CATALOG[name] ?? Gift;
+}
+
+/* -------------------------------------------------------------------------- */
 /* Página principal                                                            */
 /* -------------------------------------------------------------------------- */
 
@@ -279,6 +343,7 @@ function GmCommanderPageInner() {
   const [catalogMissing, setCatalogMissing] = useState(false);
   const [catalogLoading, setCatalogLoading] = useState(false);
   const [historyTick, setHistoryTick] = useState(0);
+  const [tabIcons, setTabIcons] = useState<Record<TabKey, string>>(loadTabIcons);
 
   const caps = useMemo(() => normalizeCatalog(catalog), [catalog]);
 
@@ -376,27 +441,28 @@ function GmCommanderPageInner() {
 
       <main className="flex-1 overflow-y-auto px-4 py-4">
         <Tabs defaultValue="compensation" className="space-y-5">
-          <TabsList className="h-auto gap-1 rounded-xl border border-border/40 bg-card/30 p-1 backdrop-blur-sm">
-            <TabsTrigger value="compensation" className="gap-2 rounded-lg px-4 py-2 text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-[0_0_12px_-3px_hsl(210_85%_60%/0.3)]">
-              <Gift className="h-3.5 w-3.5" />
-              Compensação
-            </TabsTrigger>
-            <TabsTrigger value="moderation" className="gap-2 rounded-lg px-4 py-2 text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-[0_0_12px_-3px_hsl(210_85%_60%/0.3)]">
-              <Hammer className="h-3.5 w-3.5" />
-              Moderação
-            </TabsTrigger>
-            <TabsTrigger value="communication" className="gap-2 rounded-lg px-4 py-2 text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-[0_0_12px_-3px_hsl(210_85%_60%/0.3)]">
-              <MessageSquare className="h-3.5 w-3.5" />
-              Comunicação
-            </TabsTrigger>
-            <TabsTrigger value="permissions" className="gap-2 rounded-lg px-4 py-2 text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-[0_0_12px_-3px_hsl(210_85%_60%/0.3)]">
-              <Shield className="h-3.5 w-3.5" />
-              Permissões GM
-            </TabsTrigger>
-            <TabsTrigger value="history" className="gap-2 rounded-lg px-4 py-2 text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-[0_0_12px_-3px_hsl(210_85%_60%/0.3)]">
-              <HistoryIcon className="h-3.5 w-3.5" />
-              Histórico
-            </TabsTrigger>
+          <TabsList className="h-auto flex-wrap gap-1 rounded-xl border border-border/40 bg-card/30 p-1 backdrop-blur-sm">
+            {([
+              { key: "compensation" as TabKey, label: "Compensação" },
+              { key: "moderation" as TabKey, label: "Moderação" },
+              { key: "communication" as TabKey, label: "Comunicação" },
+              { key: "permissions" as TabKey, label: "Permissões GM" },
+              { key: "history" as TabKey, label: "Histórico" },
+            ] as const).map(({ key, label }) => {
+              const TabIcon = resolveIcon(tabIcons[key]);
+              return (
+                <TabsTrigger key={key} value={key} className="gap-2 rounded-lg px-4 py-2 text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-[0_0_12px_-3px_hsl(210_85%_60%/0.3)]">
+                  <TabIcon className="h-3.5 w-3.5" />
+                  {label}
+                </TabsTrigger>
+              );
+            })}
+            {isSuperadmin && (
+              <TabsTrigger value="customize" className="gap-2 rounded-lg px-4 py-2 text-xs data-[state=active]:bg-purple-500/10 data-[state=active]:text-purple-400 data-[state=active]:shadow-[0_0_12px_-3px_hsl(270_60%_55%/0.3)]">
+                <Paintbrush className="h-3.5 w-3.5" />
+                Personalizar
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="compensation" className="space-y-4">
@@ -414,6 +480,11 @@ function GmCommanderPageInner() {
           <TabsContent value="history">
             <HistoryTab tick={historyTick} />
           </TabsContent>
+          {isSuperadmin && (
+            <TabsContent value="customize" className="space-y-4">
+              <TabIconCustomizer icons={tabIcons} onChange={(next) => { setTabIcons(next); saveTabIcons(next); }} />
+            </TabsContent>
+          )}
         </Tabs>
       </main>
     </div>
@@ -421,7 +492,114 @@ function GmCommanderPageInner() {
 }
 
 /* -------------------------------------------------------------------------- */
-/* Helpers visuais                                                             */
+/* Tab Icon Customizer (superadmin only)                                       */
+/* -------------------------------------------------------------------------- */
+
+const TAB_LABELS: Record<TabKey, string> = {
+  compensation: "Compensação",
+  moderation: "Moderação",
+  communication: "Comunicação",
+  permissions: "Permissões GM",
+  history: "Histórico",
+};
+
+function TabIconCustomizer({
+  icons,
+  onChange,
+}: {
+  icons: Record<TabKey, string>;
+  onChange: (next: Record<TabKey, string>) => void;
+}) {
+  const [editingTab, setEditingTab] = useState<TabKey | null>(null);
+
+  const handleSelect = (tab: TabKey, iconName: string) => {
+    onChange({ ...icons, [tab]: iconName });
+    setEditingTab(null);
+  };
+
+  const handleReset = () => {
+    onChange({ ...DEFAULT_TAB_ICONS });
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-sm font-extrabold uppercase tracking-wider text-foreground">
+            Ícones das abas
+          </h3>
+          <p className="text-[11px] text-muted-foreground">
+            Personalize o ícone de cada seção. Visível apenas para superadmin.
+          </p>
+        </div>
+        <Button size="sm" variant="ghost" onClick={handleReset} className="text-xs text-muted-foreground hover:text-foreground">
+          <RefreshCw className="mr-1.5 h-3 w-3" />
+          Resetar
+        </Button>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {(Object.keys(TAB_LABELS) as TabKey[]).map((tab) => {
+          const CurrentIcon = resolveIcon(icons[tab]);
+          return (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => setEditingTab(editingTab === tab ? null : tab)}
+              className={cn(
+                "group flex items-center gap-3 rounded-xl border bg-card/40 px-4 py-3 text-left backdrop-blur-sm transition-all duration-200 hover:bg-card/70",
+                editingTab === tab
+                  ? "border-primary/50 shadow-[0_0_20px_-6px_hsl(210_85%_60%/0.2)]"
+                  : "border-border/50 hover:border-primary/30",
+              )}
+            >
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary transition-transform group-hover:scale-110">
+                <CurrentIcon className="h-5 w-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-bold text-foreground">{TAB_LABELS[tab]}</p>
+                <p className="text-[10px] text-muted-foreground">{icons[tab]}</p>
+              </div>
+              <Paintbrush className="h-3.5 w-3.5 text-muted-foreground/50 transition-colors group-hover:text-primary" />
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Icon picker grid */}
+      {editingTab && (
+        <div className="rounded-xl border border-primary/30 bg-card/60 p-4 backdrop-blur-sm">
+          <p className="mb-3 text-xs font-semibold text-foreground">
+            Selecione o ícone para <span className="text-primary">{TAB_LABELS[editingTab]}</span>
+          </p>
+          <div className="grid grid-cols-8 gap-1.5 sm:grid-cols-10 lg:grid-cols-12">
+            {ICON_NAMES.map((name) => {
+              const Ic = ICON_CATALOG[name];
+              const isActive = icons[editingTab] === name;
+              return (
+                <button
+                  key={name}
+                  type="button"
+                  title={name}
+                  onClick={() => handleSelect(editingTab, name)}
+                  className={cn(
+                    "flex h-9 w-9 items-center justify-center rounded-lg border transition-all duration-150 hover:scale-110",
+                    isActive
+                      ? "border-primary bg-primary/20 text-primary shadow-[0_0_12px_-3px_hsl(210_85%_60%/0.4)]"
+                      : "border-border/40 bg-card/30 text-muted-foreground hover:border-primary/40 hover:bg-primary/5 hover:text-foreground",
+                  )}
+                >
+                  <Ic className="h-4 w-4" />
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* -------------------------------------------------------------------------- */
 
 function CapBadge({
