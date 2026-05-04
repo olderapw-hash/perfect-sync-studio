@@ -2153,10 +2153,13 @@ function ClearRolePkCard({
   const { active } = useServers();
   const [roleid, setRoleid] = useState("");
   const [reason, setReason] = useState("pk-clear");
+  const [kickOnline, setKickOnline] = useState(true);
+  const [kickSeconds, setKickSeconds] = useState("10");
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   const roleidNum = Number(roleid);
   const roleidValid = Number.isFinite(roleidNum) && roleidNum > 0;
+  const kickSecondsNum = Number(kickSeconds);
 
   return (
     <GmCard
@@ -2183,6 +2186,21 @@ function ClearRolePkCard({
       <FieldRow label="Motivo">
         <Input value={reason} onChange={(e) => setReason(e.target.value)} />
       </FieldRow>
+      <FieldRow label="Kick se online">
+        <div className="flex items-center gap-2">
+          <Switch checked={kickOnline} onCheckedChange={setKickOnline} />
+          {kickOnline && (
+            <Input
+              value={kickSeconds}
+              onChange={(e) => setKickSeconds(e.target.value)}
+              placeholder="10"
+              inputMode="numeric"
+              className="w-20"
+            />
+          )}
+          {kickOnline && <span className="text-[10px] text-muted-foreground">segundos</span>}
+        </div>
+      </FieldRow>
       <Button
         variant="outline"
         className="w-full border-amber-500/50 text-amber-500"
@@ -2201,20 +2219,29 @@ function ClearRolePkCard({
           pwApi.clearRolePk({
             roleid: roleidNum,
             reason,
+            kick_online: kickOnline,
+            kick_seconds: kickOnline ? kickSecondsNum : undefined,
             dry_run: dryRun,
           })
         }
         onSuccess={(res) => {
           const pk = res.gm_action?.pk_clear;
+          const sr = res.gm_action?.session_refresh;
           if (res.success && pk) {
             if (pk.changed) {
-              toast.success("Estado PK limpo com sucesso", {
+              toast.success("Estado PK persistido removido com sucesso", {
                 description: `Personagem #${roleidNum} — pk_count: ${pk.before?.pk_count ?? "?"} → ${pk.after?.pk_count ?? 0}`,
               });
             } else if (pk.cleared) {
               toast.info("O personagem já estava sem estado PK persistido");
             } else {
               toast.success("Operação concluída");
+            }
+            if (sr?.success) {
+              toast.info("Sessão online recarregada");
+            }
+            if (sr?.role_forbid_cleanup?.cleared) {
+              toast.info("Residual temporário do refresh removido");
             }
           } else {
             toast.error(res.error ?? "Falhou");
@@ -2244,6 +2271,14 @@ function ClearRolePkCard({
                 <span className="text-muted-foreground">pariah_time</span>
                 <span>{pk.before.pariah_time ?? 0}</span>
               </div>
+              {pk.role_forbid_before != null && (
+                <>
+                  <p className="font-semibold mt-2">role_forbid (antes):</p>
+                  <pre className="text-[10px] bg-muted/30 rounded p-1 overflow-x-auto">
+                    {JSON.stringify(pk.role_forbid_before, null, 2)}
+                  </pre>
+                </>
+              )}
             </div>
           );
         }}
