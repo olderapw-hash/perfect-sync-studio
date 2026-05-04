@@ -58,6 +58,9 @@ import LicensesPage from "./pages/admin/LicensesPage.tsx";
 
 const queryClient = new QueryClient();
 
+/** Modo VPS: chave de licença embutida no build → esconde páginas públicas */
+const isVpsMode = !!import.meta.env.VITE_LICENSE_KEY;
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <LicenseGate>
