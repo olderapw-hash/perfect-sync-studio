@@ -1628,10 +1628,13 @@ function WalletStat({
 function ModerationTab({
   caps,
   onActed,
+  isSuperadmin,
+  cardVisibility,
+  onToggleVisibility,
 }: {
   caps: Map<string, GmCommandCapability>;
   onActed: () => void;
-}) {
+} & VisibilityProps) {
   const items: ActionItem[] = [
     {
       id: "kick",
