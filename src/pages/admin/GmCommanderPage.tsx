@@ -2636,10 +2636,13 @@ function UnsupportedCard({
 function CommunicationTab({
   caps,
   onActed,
+  isSuperadmin: isSA,
+  cardVisibility = {},
+  onToggleVisibility,
 }: {
   caps: Map<string, GmCommandCapability>;
   onActed: () => void;
-}) {
+} & VisibilityProps) {
   const toast = useFeedback();
   const { active } = useServers();
   const [message, setMessage] = useState("");
