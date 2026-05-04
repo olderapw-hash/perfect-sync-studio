@@ -87,8 +87,9 @@ export const ProtectedRoute = ({
   // Subscription gate. Superadmin, admins manualmente aprovados E membros convidados
   // de servidores existentes fazem bypass — convidados operam no tenant do dono,
   // não precisam pagar nem fazer onboarding próprio.
+  const isVpsMode = !!import.meta.env.VITE_LICENSE_KEY;
   const isGuestMember = isServerMember === true && !isAdmin && !isSuperadmin;
-  if (requireSubscription && !isSuperadmin && !isAdmin && !isGuestMember) {
+  if (requireSubscription && !isSuperadmin && !isAdmin && !isGuestMember && !isVpsMode) {
     if (!isActive) {
       return <Navigate to="/pricing" replace />;
     }

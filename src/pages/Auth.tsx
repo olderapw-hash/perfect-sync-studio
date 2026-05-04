@@ -33,7 +33,8 @@ const Auth = () => {
 
     const hasServerAccess = servers.length > 0;
     const hasCompletedActiveServer = !!active?.onboarding_completed;
-    const bypassPayment = isSuperadmin || isAdmin;
+    const isVpsMode = !!import.meta.env.VITE_LICENSE_KEY;
+    const bypassPayment = isSuperadmin || isAdmin || isVpsMode;
 
     // Servidor ativo já configurado -> painel.
     if (hasCompletedActiveServer) {
