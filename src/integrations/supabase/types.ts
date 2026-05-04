@@ -737,6 +737,60 @@ export type Database = {
           },
         ]
       }
+      licenses: {
+        Row: {
+          activated_at: string | null
+          client_email: string | null
+          client_name: string
+          created_at: string
+          created_by: string
+          expires_at: string | null
+          id: string
+          license_key: string
+          notes: string | null
+          payment_method: string | null
+          plan: string
+          price_paid: number | null
+          status: Database["public"]["Enums"]["license_status"]
+          updated_at: string
+          vps_ip: string | null
+        }
+        Insert: {
+          activated_at?: string | null
+          client_email?: string | null
+          client_name: string
+          created_at?: string
+          created_by: string
+          expires_at?: string | null
+          id?: string
+          license_key?: string
+          notes?: string | null
+          payment_method?: string | null
+          plan?: string
+          price_paid?: number | null
+          status?: Database["public"]["Enums"]["license_status"]
+          updated_at?: string
+          vps_ip?: string | null
+        }
+        Update: {
+          activated_at?: string | null
+          client_email?: string | null
+          client_name?: string
+          created_at?: string
+          created_by?: string
+          expires_at?: string | null
+          id?: string
+          license_key?: string
+          notes?: string | null
+          payment_method?: string | null
+          plan?: string
+          price_paid?: number | null
+          status?: Database["public"]["Enums"]["license_status"]
+          updated_at?: string
+          vps_ip?: string | null
+        }
+        Relationships: []
+      }
       mail_send_log: {
         Row: {
           body: string | null
@@ -1289,6 +1343,7 @@ export type Database = {
         Returns: undefined
       }
       start_free_trial: { Args: { _environment: string }; Returns: string }
+      validate_license: { Args: { _key: string }; Returns: Json }
     }
     Enums: {
       app_role: "admin" | "user" | "superadmin"
@@ -1303,6 +1358,7 @@ export type Database = {
       ingame_participation_source: "npc" | "manual" | "import"
       ingame_reward_mode: "all_participants" | "raffle_winners"
       invite_status: "pending" | "accepted" | "revoked" | "expired"
+      license_status: "active" | "expired" | "revoked" | "suspended"
       server_role: "owner" | "admin" | "editor" | "readonly"
     }
     CompositeTypes: {
@@ -1444,6 +1500,7 @@ export const Constants = {
       ingame_participation_source: ["npc", "manual", "import"],
       ingame_reward_mode: ["all_participants", "raffle_winners"],
       invite_status: ["pending", "accepted", "revoked", "expired"],
+      license_status: ["active", "expired", "revoked", "suspended"],
       server_role: ["owner", "admin", "editor", "readonly"],
     },
   },

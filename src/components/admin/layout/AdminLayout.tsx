@@ -25,6 +25,7 @@ import {
   ChevronDown,
   Gauge,
   Globe,
+  Key,
   LogOut,
   
   Shield,
@@ -187,6 +188,13 @@ const SUPERADMIN_SECTIONS: NavSection[] = [
     icon: Download,
     basePath: "/admin/installer",
     children: [{ to: "/admin/installer", label: "Publicar versão", end: true }],
+  },
+  {
+    id: "licenses",
+    label: "Licenças",
+    icon: Key,
+    basePath: "/admin/licenses",
+    children: [{ to: "/admin/licenses", label: "Gerenciar licenças", end: true }],
   },
 ];
 
