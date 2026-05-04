@@ -29,6 +29,8 @@ import {
   CheckCircle2,
   ChevronRight,
   Clock,
+  Eye,
+  EyeOff,
   Coins,
   Crown,
   Crosshair,
@@ -350,6 +352,28 @@ function TabIconRenderer({ name, className }: { name: string; className?: string
 }
 
 /* -------------------------------------------------------------------------- */
+/* Card visibility (superadmin controls which cards other users see)            */
+/* -------------------------------------------------------------------------- */
+
+const CARD_VISIBILITY_KEY = "gm-card-visibility";
+
+function loadCardVisibility(): Record<string, boolean> {
+  try {
+    const raw = localStorage.getItem(CARD_VISIBILITY_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch { /* noop */ }
+  return {};
+}
+
+function saveCardVisibility(v: Record<string, boolean>) {
+  localStorage.setItem(CARD_VISIBILITY_KEY, JSON.stringify(v));
+}
+
+function isCardVisible(cardId: string, visibility: Record<string, boolean>): boolean {
+  return visibility[cardId] !== false;
+}
+
+/* -------------------------------------------------------------------------- */
 /* Página principal                                                            */
 /* -------------------------------------------------------------------------- */
 
@@ -371,6 +395,15 @@ function GmCommanderPageInner() {
   const [catalogLoading, setCatalogLoading] = useState(false);
   const [historyTick, setHistoryTick] = useState(0);
   const [tabIcons, setTabIcons] = useState<Record<TabKey, string>>(loadTabIcons);
+  const [cardVisibility, setCardVisibility] = useState<Record<string, boolean>>(loadCardVisibility);
+
+  const toggleCardVisibility = useCallback((cardId: string) => {
+    setCardVisibility((prev) => {
+      const next = { ...prev, [cardId]: prev[cardId] === false ? true : false };
+      saveCardVisibility(next);
+      return next;
+    });
+  }, []);
 
   const caps = useMemo(() => normalizeCatalog(catalog), [catalog]);
 
@@ -492,16 +525,16 @@ function GmCommanderPageInner() {
           </TabsList>
 
           <TabsContent value="compensation" className="space-y-4">
-            <CompensationTab caps={caps} onActed={refreshHistory} />
+            <CompensationTab caps={caps} onActed={refreshHistory} isSuperadmin={isSuperadmin} cardVisibility={cardVisibility} onToggleVisibility={toggleCardVisibility} />
           </TabsContent>
           <TabsContent value="moderation" className="space-y-4">
-            <ModerationTab caps={caps} onActed={refreshHistory} />
+            <ModerationTab caps={caps} onActed={refreshHistory} isSuperadmin={isSuperadmin} cardVisibility={cardVisibility} onToggleVisibility={toggleCardVisibility} />
           </TabsContent>
           <TabsContent value="communication" className="space-y-4">
-            <CommunicationTab caps={caps} onActed={refreshHistory} />
+            <CommunicationTab caps={caps} onActed={refreshHistory} isSuperadmin={isSuperadmin} cardVisibility={cardVisibility} onToggleVisibility={toggleCardVisibility} />
           </TabsContent>
           <TabsContent value="permissions" className="space-y-4">
-            <GmPermissionsTab caps={caps} onActed={refreshHistory} />
+            <GmPermissionsTab caps={caps} onActed={refreshHistory} isSuperadmin={isSuperadmin} cardVisibility={cardVisibility} onToggleVisibility={toggleCardVisibility} />
           </TabsContent>
           <TabsContent value="history">
             <HistoryTab tick={historyTick} />
@@ -976,17 +1009,29 @@ interface ActionItem {
   render: () => React.ReactNode;
 }
 
+interface VisibilityProps {
+  isSuperadmin?: boolean;
+  cardVisibility?: Record<string, boolean>;
+  onToggleVisibility?: (cardId: string) => void;
+}
+
 function ActionPicker({
   items,
   caps,
   emptyHint,
+  isSuperadmin,
+  cardVisibility = {},
+  onToggleVisibility,
 }: {
   items: ActionItem[];
   caps: Map<string, GmCommandCapability>;
   emptyHint?: string;
-}) {
+} & VisibilityProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const active = items.find((i) => i.id === activeId) ?? null;
+
+  // Filter hidden cards for non-superadmin
+  const visibleItems = isSuperadmin ? items : items.filter((i) => isCardVisible(i.id, cardVisibility));
 
   return (
     <div>
@@ -994,8 +1039,9 @@ function ActionPicker({
         <p className="mb-3 text-[11px] text-muted-foreground">{emptyHint}</p>
       )}
       <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-4">
-        {items.map((item) => {
+        {visibleItems.map((item) => {
           const supported = isSupported(item.action, caps);
+          const hidden = !isCardVisible(item.id, cardVisibility);
           const toneRing =
             item.tone === "danger"
               ? "border-destructive/30 hover:border-destructive/60 hover:shadow-[0_0_20px_-6px_hsl(1_71%_64%/0.25)]"
@@ -1014,37 +1060,53 @@ function ActionPicker({
                   : "bg-primary/10 text-primary";
           const Icon = item.icon;
           return (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => supported && setActiveId(item.id)}
-              disabled={!supported}
-              className={cn(
-                "group flex items-center gap-3 rounded-xl border bg-card/40 px-3 py-2.5 text-left backdrop-blur-sm transition-all duration-200 hover:bg-card/70",
-                toneRing,
-                !supported && "cursor-not-allowed opacity-40 grayscale",
-              )}
-            >
-              <div
+            <div key={item.id} className={cn("relative", hidden && isSuperadmin && "opacity-50")}>
+              <button
+                type="button"
+                onClick={() => supported && setActiveId(item.id)}
+                disabled={!supported}
                 className={cn(
-                  "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-transform duration-200 group-hover:scale-110",
-                  iconRing,
+                  "group flex w-full items-center gap-3 rounded-xl border bg-card/40 px-3 py-2.5 text-left backdrop-blur-sm transition-all duration-200 hover:bg-card/70",
+                  toneRing,
+                  !supported && "cursor-not-allowed opacity-40 grayscale",
                 )}
               >
-                <Icon className="h-4 w-4" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <h3 className="truncate text-[11px] font-bold text-foreground">
-                  {item.title}
-                </h3>
-                <p className="truncate text-[10px] text-muted-foreground">
-                  {item.subtitle}
-                </p>
-              </div>
-              {supported && (
-                <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground/40 transition-all group-hover:translate-x-0.5 group-hover:text-primary" />
+                <div
+                  className={cn(
+                    "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-transform duration-200 group-hover:scale-110",
+                    iconRing,
+                  )}
+                >
+                  <Icon className="h-4 w-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="truncate text-[11px] font-bold text-foreground">
+                    {item.title}
+                  </h3>
+                  <p className="truncate text-[10px] text-muted-foreground">
+                    {item.subtitle}
+                  </p>
+                </div>
+                {supported && (
+                  <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground/40 transition-all group-hover:translate-x-0.5 group-hover:text-primary" />
+                )}
+              </button>
+              {isSuperadmin && onToggleVisibility && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); onToggleVisibility(item.id); }}
+                  className={cn(
+                    "absolute -right-1 -top-1 z-10 flex h-6 w-6 items-center justify-center rounded-full border shadow-sm transition-all duration-200",
+                    hidden
+                      ? "border-destructive/50 bg-destructive/20 text-destructive hover:bg-destructive/30"
+                      : "border-emerald-500/50 bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30",
+                  )}
+                  title={hidden ? "Oculto para usuários" : "Visível para usuários"}
+                >
+                  {hidden ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                </button>
               )}
-            </button>
+            </div>
           );
         })}
       </div>
@@ -1099,10 +1161,13 @@ function ActionPicker({
 function CompensationTab({
   caps,
   onActed,
+  isSuperadmin,
+  cardVisibility,
+  onToggleVisibility,
 }: {
   caps: Map<string, GmCommandCapability>;
   onActed: () => void;
-}) {
+} & VisibilityProps) {
   const items: ActionItem[] = [
     {
       id: "mail-item",
@@ -1135,6 +1200,9 @@ function CompensationTab({
       items={items}
       caps={caps}
       emptyHint="Selecione uma ação de compensação para abrir o formulário."
+      isSuperadmin={isSuperadmin}
+      cardVisibility={cardVisibility}
+      onToggleVisibility={onToggleVisibility}
     />
   );
 }
@@ -1560,10 +1628,13 @@ function WalletStat({
 function ModerationTab({
   caps,
   onActed,
+  isSuperadmin,
+  cardVisibility,
+  onToggleVisibility,
 }: {
   caps: Map<string, GmCommandCapability>;
   onActed: () => void;
-}) {
+} & VisibilityProps) {
   const items: ActionItem[] = [
     {
       id: "kick",
@@ -1682,6 +1753,9 @@ function ModerationTab({
       items={items}
       caps={caps}
       emptyHint="Selecione uma ação de moderação para abrir o formulário."
+      isSuperadmin={isSuperadmin}
+      cardVisibility={cardVisibility}
+      onToggleVisibility={onToggleVisibility}
     />
   );
 }
@@ -2562,10 +2636,13 @@ function UnsupportedCard({
 function CommunicationTab({
   caps,
   onActed,
+  isSuperadmin: isSA,
+  cardVisibility = {},
+  onToggleVisibility,
 }: {
   caps: Map<string, GmCommandCapability>;
   onActed: () => void;
-}) {
+} & VisibilityProps) {
   const toast = useFeedback();
   const { active } = useServers();
   const [message, setMessage] = useState("");
@@ -2611,8 +2688,29 @@ function CommunicationTab({
     }
   };
 
+  const commCardId = "system-message";
+  const commHidden = !isCardVisible(commCardId, cardVisibility);
+  if (!isSA && commHidden) return <p className="text-xs text-muted-foreground">Nenhum card disponível nesta seção.</p>;
+
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
+    <div className={cn("grid gap-4 lg:grid-cols-2", commHidden && isSA && "opacity-50")}>
+      {isSA && onToggleVisibility && (
+        <div className="lg:col-span-2 flex justify-end">
+          <button
+            type="button"
+            onClick={() => onToggleVisibility(commCardId)}
+            className={cn(
+              "flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[11px] font-medium transition-all",
+              commHidden
+                ? "border-destructive/50 bg-destructive/10 text-destructive hover:bg-destructive/20"
+                : "border-emerald-500/50 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20",
+            )}
+          >
+            {commHidden ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+            {commHidden ? "Oculto para usuários" : "Visível para usuários"}
+          </button>
+        </div>
+      )}
       <GmCard
         icon={MessageSquare}
         title="Mensagem Global"
@@ -2758,10 +2856,13 @@ function ruleLabel(r: GmPermissionRule): string {
 function GmPermissionsTab({
   caps,
   onActed,
+  isSuperadmin: isSA,
+  cardVisibility = {},
+  onToggleVisibility,
 }: {
   caps: Map<string, GmCommandCapability>;
   onActed: () => void;
-}) {
+} & VisibilityProps) {
   const toast = useFeedback();
   const { active } = useServers();
   const [target, setTarget] = useState<{ kind: "userid" | "roleid"; value: string }>(
@@ -2955,8 +3056,29 @@ function GmPermissionsTab({
     (a, b) => categoryOrder.indexOf(a) - categoryOrder.indexOf(b),
   );
 
+  const permCardId = "gm-permissions";
+  const permHidden = !isCardVisible(permCardId, cardVisibility);
+  if (!isSA && permHidden) return <p className="text-xs text-muted-foreground">Nenhum card disponível nesta seção.</p>;
+
   return (
-    <div className="space-y-4">
+    <div className={cn("space-y-4", permHidden && isSA && "opacity-50")}>
+      {isSA && onToggleVisibility && (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={() => onToggleVisibility(permCardId)}
+            className={cn(
+              "flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[11px] font-medium transition-all",
+              permHidden
+                ? "border-destructive/50 bg-destructive/10 text-destructive hover:bg-destructive/20"
+                : "border-emerald-500/50 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20",
+            )}
+          >
+            {permHidden ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+            {permHidden ? "Oculto para usuários" : "Visível para usuários"}
+          </button>
+        </div>
+      )}
       {/* Alvo + reason */}
       <Card className="bg-card/40">
         <CardHeader className="pb-3">
