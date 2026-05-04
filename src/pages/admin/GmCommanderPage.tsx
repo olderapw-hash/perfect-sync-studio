@@ -281,6 +281,48 @@ function isSupported(
 }
 
 /* -------------------------------------------------------------------------- */
+/* Tab icon customization (superadmin only, localStorage)                      */
+/* -------------------------------------------------------------------------- */
+
+const ICON_CATALOG: Record<string, LucideIcon> = {
+  Gift, Hammer, MessageSquare, Shield, History: HistoryIcon, Wand2, Zap, Sparkles,
+  Mail, Coins, Wallet, Ban, ShieldOff, ShieldCheck, VolumeX, LogOut,
+  Sword, Swords, Crown, Star, Trophy, Award, Flame, Skull, Target, Crosshair,
+  Heart, Globe, Key, Lock, Megaphone, Scroll, BookOpen, Gamepad2, Users, Paintbrush,
+  Settings, Clock, RefreshCw, AlertTriangle,
+};
+
+const ICON_NAMES = Object.keys(ICON_CATALOG);
+
+type TabKey = "compensation" | "moderation" | "communication" | "permissions" | "history";
+
+const DEFAULT_TAB_ICONS: Record<TabKey, string> = {
+  compensation: "Gift",
+  moderation: "Hammer",
+  communication: "MessageSquare",
+  permissions: "Shield",
+  history: "History",
+};
+
+const TAB_ICON_STORAGE_KEY = "gm-tab-icons";
+
+function loadTabIcons(): Record<TabKey, string> {
+  try {
+    const raw = localStorage.getItem(TAB_ICON_STORAGE_KEY);
+    if (raw) return { ...DEFAULT_TAB_ICONS, ...JSON.parse(raw) };
+  } catch { /* noop */ }
+  return { ...DEFAULT_TAB_ICONS };
+}
+
+function saveTabIcons(icons: Record<TabKey, string>) {
+  localStorage.setItem(TAB_ICON_STORAGE_KEY, JSON.stringify(icons));
+}
+
+function resolveIcon(name: string): LucideIcon {
+  return ICON_CATALOG[name] ?? Gift;
+}
+
+/* -------------------------------------------------------------------------- */
 /* Página principal                                                            */
 /* -------------------------------------------------------------------------- */
 
