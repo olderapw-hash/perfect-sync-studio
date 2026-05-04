@@ -60,6 +60,7 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
+    <LicenseGate>
     <TooltipProvider>
       <BrowserRouter>
         <AuthProvider>
