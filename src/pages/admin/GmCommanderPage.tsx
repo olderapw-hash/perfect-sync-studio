@@ -1699,30 +1699,6 @@ function ModerationTab({
       ),
     },
     {
-      id: "teleport",
-      action: "teleportRole",
-      title: "Teleport",
-      subtitle: "Aguardando suporte na VPS.",
-      icon: Zap,
-      render: () => <UnsupportedCard caps={caps} action="teleportRole" icon={Zap} title="Teleport" />,
-    },
-    {
-      id: "summon",
-      action: "summonRole",
-      title: "Summon",
-      subtitle: "Aguardando suporte na VPS.",
-      icon: Zap,
-      render: () => <UnsupportedCard caps={caps} action="summonRole" icon={Zap} title="Summon" />,
-    },
-    {
-      id: "prison",
-      action: "prisonRole",
-      title: "Prison",
-      subtitle: "Aguardando suporte na VPS.",
-      icon: ShieldOff,
-      render: () => <UnsupportedCard caps={caps} action="prisonRole" icon={ShieldOff} title="Prison" />,
-    },
-    {
       id: "clearpk",
       action: "clearRolePk",
       title: "Clear PK",
@@ -1730,22 +1706,6 @@ function ModerationTab({
       icon: ShieldCheck,
       tone: "warning",
       render: () => <ClearRolePkCard caps={caps} onActed={onActed} />,
-    },
-    {
-      id: "revive",
-      action: "reviveRole",
-      title: "Revive",
-      subtitle: "Aguardando suporte na VPS.",
-      icon: Sparkles,
-      render: () => <UnsupportedCard caps={caps} action="reviveRole" icon={Sparkles} title="Revive" />,
-    },
-    {
-      id: "reset-quest",
-      action: "resetRoleQuest",
-      title: "Reset Quest",
-      subtitle: "Aguardando suporte na VPS.",
-      icon: Sparkles,
-      render: () => <UnsupportedCard caps={caps} action="resetRoleQuest" icon={Sparkles} title="Reset Quest" />,
     },
   ];
   return (
