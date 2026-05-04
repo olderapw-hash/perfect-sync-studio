@@ -294,6 +294,15 @@ const ICON_CATALOG: Record<string, LucideIcon> = {
 
 const ICON_NAMES = Object.keys(ICON_CATALOG);
 
+/** Game icons from PW sprite sheet — stored in public/gm-icons/ */
+const PW_ICON_NAMES = [
+  "crystal", "phoenix", "crown", "shield", "coin", "lotus", "rose", "star",
+  "hourglass", "dragon", "dragon2", "chest", "firebird", "sword", "orb",
+  "fire", "flower", "gem", "diamond", "scroll", "book", "scroll2", "feather",
+  "sparkle", "jade", "coinbronze", "globe", "hammer", "gift", "moon", "pet",
+  "bag", "potion", "gold", "sun", "crystal2", "mail", "quill", "heart", "wand",
+];
+
 type TabKey = "compensation" | "moderation" | "communication" | "permissions" | "history";
 
 const DEFAULT_TAB_ICONS: Record<TabKey, string> = {
@@ -318,8 +327,26 @@ function saveTabIcons(icons: Record<TabKey, string>) {
   localStorage.setItem(TAB_ICON_STORAGE_KEY, JSON.stringify(icons));
 }
 
-function resolveIcon(name: string): LucideIcon {
-  return ICON_CATALOG[name] ?? Gift;
+/** Returns true if the icon key refers to a PW game icon (prefixed with "pw:") */
+function isPwIcon(name: string): boolean {
+  return name.startsWith("pw:");
+}
+
+/** Render a tab icon — either Lucide component or PW game image */
+function TabIconRenderer({ name, className }: { name: string; className?: string }) {
+  if (isPwIcon(name)) {
+    const pwName = name.slice(3);
+    return (
+      <img
+        src={`/gm-icons/${pwName}.png`}
+        alt={pwName}
+        className={cn("inline-block rounded-sm object-contain", className)}
+        style={{ width: "1em", height: "1em" }}
+      />
+    );
+  }
+  const LucideComp = ICON_CATALOG[name] ?? Gift;
+  return <LucideComp className={className} />;
 }
 
 /* -------------------------------------------------------------------------- */
