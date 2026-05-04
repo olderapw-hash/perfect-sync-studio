@@ -441,27 +441,28 @@ function GmCommanderPageInner() {
 
       <main className="flex-1 overflow-y-auto px-4 py-4">
         <Tabs defaultValue="compensation" className="space-y-5">
-          <TabsList className="h-auto gap-1 rounded-xl border border-border/40 bg-card/30 p-1 backdrop-blur-sm">
-            <TabsTrigger value="compensation" className="gap-2 rounded-lg px-4 py-2 text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-[0_0_12px_-3px_hsl(210_85%_60%/0.3)]">
-              <Gift className="h-3.5 w-3.5" />
-              Compensação
-            </TabsTrigger>
-            <TabsTrigger value="moderation" className="gap-2 rounded-lg px-4 py-2 text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-[0_0_12px_-3px_hsl(210_85%_60%/0.3)]">
-              <Hammer className="h-3.5 w-3.5" />
-              Moderação
-            </TabsTrigger>
-            <TabsTrigger value="communication" className="gap-2 rounded-lg px-4 py-2 text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-[0_0_12px_-3px_hsl(210_85%_60%/0.3)]">
-              <MessageSquare className="h-3.5 w-3.5" />
-              Comunicação
-            </TabsTrigger>
-            <TabsTrigger value="permissions" className="gap-2 rounded-lg px-4 py-2 text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-[0_0_12px_-3px_hsl(210_85%_60%/0.3)]">
-              <Shield className="h-3.5 w-3.5" />
-              Permissões GM
-            </TabsTrigger>
-            <TabsTrigger value="history" className="gap-2 rounded-lg px-4 py-2 text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-[0_0_12px_-3px_hsl(210_85%_60%/0.3)]">
-              <HistoryIcon className="h-3.5 w-3.5" />
-              Histórico
-            </TabsTrigger>
+          <TabsList className="h-auto flex-wrap gap-1 rounded-xl border border-border/40 bg-card/30 p-1 backdrop-blur-sm">
+            {([
+              { key: "compensation" as TabKey, label: "Compensação" },
+              { key: "moderation" as TabKey, label: "Moderação" },
+              { key: "communication" as TabKey, label: "Comunicação" },
+              { key: "permissions" as TabKey, label: "Permissões GM" },
+              { key: "history" as TabKey, label: "Histórico" },
+            ] as const).map(({ key, label }) => {
+              const TabIcon = resolveIcon(tabIcons[key]);
+              return (
+                <TabsTrigger key={key} value={key} className="gap-2 rounded-lg px-4 py-2 text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-[0_0_12px_-3px_hsl(210_85%_60%/0.3)]">
+                  <TabIcon className="h-3.5 w-3.5" />
+                  {label}
+                </TabsTrigger>
+              );
+            })}
+            {isSuperadmin && (
+              <TabsTrigger value="customize" className="gap-2 rounded-lg px-4 py-2 text-xs data-[state=active]:bg-purple-500/10 data-[state=active]:text-purple-400 data-[state=active]:shadow-[0_0_12px_-3px_hsl(270_60%_55%/0.3)]">
+                <Paintbrush className="h-3.5 w-3.5" />
+                Personalizar
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="compensation" className="space-y-4">
@@ -479,6 +480,11 @@ function GmCommanderPageInner() {
           <TabsContent value="history">
             <HistoryTab tick={historyTick} />
           </TabsContent>
+          {isSuperadmin && (
+            <TabsContent value="customize" className="space-y-4">
+              <TabIconCustomizer icons={tabIcons} onChange={(next) => { setTabIcons(next); saveTabIcons(next); }} />
+            </TabsContent>
+          )}
         </Tabs>
       </main>
     </div>
