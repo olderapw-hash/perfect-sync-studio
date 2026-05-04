@@ -395,6 +395,15 @@ function GmCommanderPageInner() {
   const [catalogLoading, setCatalogLoading] = useState(false);
   const [historyTick, setHistoryTick] = useState(0);
   const [tabIcons, setTabIcons] = useState<Record<TabKey, string>>(loadTabIcons);
+  const [cardVisibility, setCardVisibility] = useState<Record<string, boolean>>(loadCardVisibility);
+
+  const toggleCardVisibility = useCallback((cardId: string) => {
+    setCardVisibility((prev) => {
+      const next = { ...prev, [cardId]: prev[cardId] === false ? true : false };
+      saveCardVisibility(next);
+      return next;
+    });
+  }, []);
 
   const caps = useMemo(() => normalizeCatalog(catalog), [catalog]);
 
