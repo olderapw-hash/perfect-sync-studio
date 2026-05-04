@@ -244,6 +244,7 @@ const App = () => (
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
+    </LicenseGate>
   </QueryClientProvider>
 );
 
