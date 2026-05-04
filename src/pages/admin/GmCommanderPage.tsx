@@ -352,6 +352,28 @@ function TabIconRenderer({ name, className }: { name: string; className?: string
 }
 
 /* -------------------------------------------------------------------------- */
+/* Card visibility (superadmin controls which cards other users see)            */
+/* -------------------------------------------------------------------------- */
+
+const CARD_VISIBILITY_KEY = "gm-card-visibility";
+
+function loadCardVisibility(): Record<string, boolean> {
+  try {
+    const raw = localStorage.getItem(CARD_VISIBILITY_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch { /* noop */ }
+  return {};
+}
+
+function saveCardVisibility(v: Record<string, boolean>) {
+  localStorage.setItem(CARD_VISIBILITY_KEY, JSON.stringify(v));
+}
+
+function isCardVisible(cardId: string, visibility: Record<string, boolean>): boolean {
+  return visibility[cardId] !== false;
+}
+
+/* -------------------------------------------------------------------------- */
 /* Página principal                                                            */
 /* -------------------------------------------------------------------------- */
 
