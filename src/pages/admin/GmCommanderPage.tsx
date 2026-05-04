@@ -1753,6 +1753,9 @@ function ModerationTab({
       items={items}
       caps={caps}
       emptyHint="Selecione uma ação de moderação para abrir o formulário."
+      isSuperadmin={isSuperadmin}
+      cardVisibility={cardVisibility}
+      onToggleVisibility={onToggleVisibility}
     />
   );
 }
