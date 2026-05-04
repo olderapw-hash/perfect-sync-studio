@@ -2688,8 +2688,29 @@ function CommunicationTab({
     }
   };
 
+  const commCardId = "system-message";
+  const commHidden = !isCardVisible(commCardId, cardVisibility);
+  if (!isSA && commHidden) return <p className="text-xs text-muted-foreground">Nenhum card disponível nesta seção.</p>;
+
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
+    <div className={cn("grid gap-4 lg:grid-cols-2", commHidden && isSA && "opacity-50")}>
+      {isSA && onToggleVisibility && (
+        <div className="lg:col-span-2 flex justify-end">
+          <button
+            type="button"
+            onClick={() => onToggleVisibility(commCardId)}
+            className={cn(
+              "flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[11px] font-medium transition-all",
+              commHidden
+                ? "border-destructive/50 bg-destructive/10 text-destructive hover:bg-destructive/20"
+                : "border-emerald-500/50 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20",
+            )}
+          >
+            {commHidden ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+            {commHidden ? "Oculto para usuários" : "Visível para usuários"}
+          </button>
+        </div>
+      )}
       <GmCard
         icon={MessageSquare}
         title="Mensagem Global"
