@@ -1161,10 +1161,13 @@ function ActionPicker({
 function CompensationTab({
   caps,
   onActed,
+  isSuperadmin,
+  cardVisibility,
+  onToggleVisibility,
 }: {
   caps: Map<string, GmCommandCapability>;
   onActed: () => void;
-}) {
+} & VisibilityProps) {
   const items: ActionItem[] = [
     {
       id: "mail-item",
@@ -1197,6 +1200,9 @@ function CompensationTab({
       items={items}
       caps={caps}
       emptyHint="Selecione uma ação de compensação para abrir o formulário."
+      isSuperadmin={isSuperadmin}
+      cardVisibility={cardVisibility}
+      onToggleVisibility={onToggleVisibility}
     />
   );
 }
