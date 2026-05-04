@@ -1039,8 +1039,9 @@ function ActionPicker({
         <p className="mb-3 text-[11px] text-muted-foreground">{emptyHint}</p>
       )}
       <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-4">
-        {items.map((item) => {
+        {visibleItems.map((item) => {
           const supported = isSupported(item.action, caps);
+          const hidden = !isCardVisible(item.id, cardVisibility);
           const toneRing =
             item.tone === "danger"
               ? "border-destructive/30 hover:border-destructive/60 hover:shadow-[0_0_20px_-6px_hsl(1_71%_64%/0.25)]"
@@ -1059,37 +1060,53 @@ function ActionPicker({
                   : "bg-primary/10 text-primary";
           const Icon = item.icon;
           return (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => supported && setActiveId(item.id)}
-              disabled={!supported}
-              className={cn(
-                "group flex items-center gap-3 rounded-xl border bg-card/40 px-3 py-2.5 text-left backdrop-blur-sm transition-all duration-200 hover:bg-card/70",
-                toneRing,
-                !supported && "cursor-not-allowed opacity-40 grayscale",
-              )}
-            >
-              <div
+            <div key={item.id} className={cn("relative", hidden && isSuperadmin && "opacity-50")}>
+              <button
+                type="button"
+                onClick={() => supported && setActiveId(item.id)}
+                disabled={!supported}
                 className={cn(
-                  "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-transform duration-200 group-hover:scale-110",
-                  iconRing,
+                  "group flex w-full items-center gap-3 rounded-xl border bg-card/40 px-3 py-2.5 text-left backdrop-blur-sm transition-all duration-200 hover:bg-card/70",
+                  toneRing,
+                  !supported && "cursor-not-allowed opacity-40 grayscale",
                 )}
               >
-                <Icon className="h-4 w-4" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <h3 className="truncate text-[11px] font-bold text-foreground">
-                  {item.title}
-                </h3>
-                <p className="truncate text-[10px] text-muted-foreground">
-                  {item.subtitle}
-                </p>
-              </div>
-              {supported && (
-                <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground/40 transition-all group-hover:translate-x-0.5 group-hover:text-primary" />
+                <div
+                  className={cn(
+                    "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-transform duration-200 group-hover:scale-110",
+                    iconRing,
+                  )}
+                >
+                  <Icon className="h-4 w-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="truncate text-[11px] font-bold text-foreground">
+                    {item.title}
+                  </h3>
+                  <p className="truncate text-[10px] text-muted-foreground">
+                    {item.subtitle}
+                  </p>
+                </div>
+                {supported && (
+                  <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground/40 transition-all group-hover:translate-x-0.5 group-hover:text-primary" />
+                )}
+              </button>
+              {isSuperadmin && onToggleVisibility && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); onToggleVisibility(item.id); }}
+                  className={cn(
+                    "absolute -right-1 -top-1 z-10 flex h-6 w-6 items-center justify-center rounded-full border shadow-sm transition-all duration-200",
+                    hidden
+                      ? "border-destructive/50 bg-destructive/20 text-destructive hover:bg-destructive/30"
+                      : "border-emerald-500/50 bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30",
+                  )}
+                  title={hidden ? "Oculto para usuários" : "Visível para usuários"}
+                >
+                  {hidden ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                </button>
               )}
-            </button>
+            </div>
           );
         })}
       </div>
