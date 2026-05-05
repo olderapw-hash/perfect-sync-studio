@@ -30,6 +30,7 @@ export type Database = {
           server_name: string
           updated_at: string
           updated_by: string | null
+          whatsapp_vps_link: string | null
         }
         Insert: {
           background_url?: string | null
@@ -46,6 +47,7 @@ export type Database = {
           server_name?: string
           updated_at?: string
           updated_by?: string | null
+          whatsapp_vps_link?: string | null
         }
         Update: {
           background_url?: string | null
@@ -62,6 +64,7 @@ export type Database = {
           server_name?: string
           updated_at?: string
           updated_by?: string | null
+          whatsapp_vps_link?: string | null
         }
         Relationships: []
       }

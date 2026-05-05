@@ -18,6 +18,7 @@ interface SettingsForm {
   footer_text: string;
   footer_link_label: string;
   footer_link_url: string;
+  whatsapp_vps_link: string;
 }
 
 const EMPTY: SettingsForm = {
@@ -29,6 +30,7 @@ const EMPTY: SettingsForm = {
   footer_text: "",
   footer_link_label: "",
   footer_link_url: "",
+  whatsapp_vps_link: "",
 };
 
 /**
@@ -57,7 +59,7 @@ export const SettingsTab = () => {
       if (isSuperadmin) {
         const { data, error } = await supabase
           .from("app_settings")
-          .select("server_name, logo_url, primary_color, background_url, favicon_url, footer_text, footer_link_label, footer_link_url")
+          .select("server_name, logo_url, primary_color, background_url, favicon_url, footer_text, footer_link_label, footer_link_url, whatsapp_vps_link")
           .eq("id", 1)
           .maybeSingle();
         if (error) {
@@ -75,6 +77,7 @@ export const SettingsTab = () => {
             footer_text: data.footer_text ?? "",
             footer_link_label: data.footer_link_label ?? "",
             footer_link_url: data.footer_link_url ?? "",
+            whatsapp_vps_link: (data as any).whatsapp_vps_link ?? "",
           });
         }
         setLoading(false);
@@ -94,6 +97,7 @@ export const SettingsTab = () => {
         footer_text: "",
         footer_link_label: "",
         footer_link_url: "",
+        whatsapp_vps_link: "",
       });
       setLoading(false);
     })();
@@ -135,7 +139,7 @@ export const SettingsTab = () => {
     }
 
     // Superadmin → app_settings (branding global + assets)
-    const payload = {
+    const payload: Record<string, any> = {
       id: 1,
       server_name: form.server_name.trim() || "Orphea Core",
       logo_url: form.logo_url.trim() || null,
@@ -145,10 +149,11 @@ export const SettingsTab = () => {
       footer_text: form.footer_text.trim() || null,
       footer_link_label: form.footer_link_label.trim() || null,
       footer_link_url: form.footer_link_url.trim() || null,
+      whatsapp_vps_link: form.whatsapp_vps_link.trim() || null,
       updated_by: user?.id ?? null,
       updated_at: new Date().toISOString(),
     };
-    const { error } = await supabase.from("app_settings").upsert(payload, { onConflict: "id" });
+    const { error } = await supabase.from("app_settings").upsert(payload as any, { onConflict: "id" });
     setSaving(false);
     if (error) {
       toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
@@ -336,6 +341,28 @@ export const SettingsTab = () => {
               onChange={(v) => setForm({ ...form, footer_link_url: v })}
               disabled={!canEdit}
               placeholder="https://discord.gg/seu-servidor"
+            />
+          </div>
+        </section>
+      )}
+
+      {/* WhatsApp VPS — somente superadmin */}
+      {isSuperadmin && (
+        <section className="rounded-xl border border-border bg-card/60 p-5">
+          <h3 className="mb-1 flex items-center gap-2 text-sm font-extrabold uppercase tracking-wider text-foreground">
+            <ExternalLink className="h-4 w-4 text-emerald-500" /> Link WhatsApp (VPS)
+          </h3>
+          <p className="mb-4 text-xs text-muted-foreground">
+            Link usado no botão "Obter VPS" da página de preços.
+          </p>
+          <div className="space-y-4">
+            <Field
+              label="Link do WhatsApp"
+              hint='Ex.: "https://wa.me/5511999999999?text=Quero+uma+VPS"'
+              value={form.whatsapp_vps_link}
+              onChange={(v) => setForm({ ...form, whatsapp_vps_link: v })}
+              disabled={!canEdit}
+              placeholder="https://wa.me/5511999999999"
             />
           </div>
         </section>
