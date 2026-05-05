@@ -47,12 +47,12 @@ const ULTIMATE_FEATURES = [
 ];
 
 const VPS_FEATURES = [
-  "VPS otimizada pra Perfect World",
-  "Painel Orphea Core pré-instalado",
-  "Servidor PW configurado e rodando",
-  "Suporte completo na instalação",
-  "Backup automático incluso",
-  "Acesso root à máquina",
+  "Tudo do plano Ultimate incluso",
+  "Pagamento único — sem assinatura",
+  "Instalação completa na sua VPS",
+  "Suporte dedicado na configuração",
+  "Licença vitalícia do Orphea Core",
+  "Atualizações inclusas",
 ];
 
 const FAQ = [
@@ -435,11 +435,11 @@ const Pricing = () => {
               <div className="flex-1">
                 <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-emerald-500/15 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-emerald-400">
                   <Server className="h-3 w-3" />
-                  VPS
+                  VPS · Pagamento único
                 </div>
-                <h3 className="text-xl font-extrabold">VPS Perfect World</h3>
+                <h3 className="text-xl font-extrabold">Orphea Core pra VPS</h3>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Servidor pronto pra rodar com Orphea Core incluso. Fale conosco pelo WhatsApp.
+                  Painel completo instalado na sua VPS com suporte. Pague uma vez, use pra sempre.
                 </p>
                 <ul className="mt-4 space-y-2.5 text-left">
                   {VPS_FEATURES.map((f) => (
@@ -453,8 +453,9 @@ const Pricing = () => {
                 </ul>
               </div>
               <div className="mt-6 flex flex-col items-center gap-3 sm:mt-0 sm:min-w-[200px]">
-                <div className="mb-2 flex items-baseline gap-2">
+                <div className="mb-2 text-center">
                   <span className="text-3xl font-extrabold tracking-tight text-emerald-400">Sob consulta</span>
+                  <p className="mt-1 text-xs text-muted-foreground">pagamento único</p>
                 </div>
                 <a
                   href={settings.whatsapp_vps_link || "#"}
@@ -462,10 +463,10 @@ const Pricing = () => {
                   rel="noopener noreferrer"
                   className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-emerald-500 px-6 py-3 text-sm font-bold text-white shadow-lg transition-smooth hover:brightness-110"
                 >
-                  Obter VPS
+                  Obter agora
                   <ArrowRight className="h-4 w-4" />
                 </a>
-                <p className="text-[11px] text-muted-foreground">Redirecionado pro WhatsApp</p>
+                <p className="text-[11px] text-muted-foreground">Fale conosco pelo WhatsApp</p>
               </div>
             </div>
           </div>
