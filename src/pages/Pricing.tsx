@@ -289,7 +289,7 @@ const Pricing = () => {
             const monthlyEquivalent = cycle === "yearly" ? p.yearly / 12 : null;
             const isCurrent = plan === p.id;
             const isThisLoading = loading && checkoutTarget === priceId;
-            const Icon = p.id === "ultimate" ? Crown : Zap;
+            const Icon = p.id === "ultimate" ? Crown : p.id === "iniciante" ? Sparkles : Zap;
             return (
               <div
                 key={p.id}
