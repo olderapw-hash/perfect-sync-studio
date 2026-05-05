@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_files: {
+        Row: {
+          created_at: string
+          description: string | null
+          file_name: string
+          file_size: number | null
+          id: string
+          mime_type: string | null
+          storage_path: string
+          uploaded_by: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          file_name: string
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          storage_path: string
+          uploaded_by: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          file_name?: string
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          storage_path?: string
+          uploaded_by?: string
+        }
+        Relationships: []
+      }
       app_settings: {
         Row: {
           background_url: string | null
