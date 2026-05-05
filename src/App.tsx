@@ -61,11 +61,16 @@ const queryClient = new QueryClient();
 /** Modo VPS: chave de licença embutida no build → esconde páginas públicas */
 const isVpsMode = !!import.meta.env.VITE_LICENSE_KEY;
 
+/** Base path para subdiretório (ex: /orphea). Sem valor = raiz "/" */
+const basePath = import.meta.env.VITE_BASE_PATH
+  ? import.meta.env.VITE_BASE_PATH.replace(/\/$/, "")
+  : "";
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <LicenseGate>
     <TooltipProvider>
-      <BrowserRouter>
+      <BrowserRouter basename={basePath || undefined}>
         <AuthProvider>
           <AppSettingsProvider>
             <ServerPermissionsProvider>
