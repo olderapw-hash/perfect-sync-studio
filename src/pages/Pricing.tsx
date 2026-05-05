@@ -427,6 +427,50 @@ const Pricing = () => {
           })}
         </div>
 
+        {/* VPS */}
+        <div className="mt-8">
+          <div className="relative flex flex-col overflow-hidden rounded-2xl border-2 border-emerald-500/40 bg-gradient-to-br from-card via-card/80 to-card p-5 sm:p-7">
+            <div className="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-emerald-500/15 blur-3xl" />
+            <div className="relative flex flex-1 flex-col items-center text-center sm:flex-row sm:text-left sm:items-start sm:gap-8">
+              <div className="flex-1">
+                <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-emerald-500/15 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-emerald-400">
+                  <Server className="h-3 w-3" />
+                  VPS
+                </div>
+                <h3 className="text-xl font-extrabold">VPS Perfect World</h3>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Servidor pronto pra rodar com Orphea Core incluso. Fale conosco pelo WhatsApp.
+                </p>
+                <ul className="mt-4 space-y-2.5 text-left">
+                  {VPS_FEATURES.map((f) => (
+                    <li key={f} className="flex items-start gap-2.5 text-sm">
+                      <div className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400">
+                        <Check className="h-2.5 w-2.5" strokeWidth={3} />
+                      </div>
+                      <span className="text-foreground/90">{f}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="mt-6 flex flex-col items-center gap-3 sm:mt-0 sm:min-w-[200px]">
+                <div className="mb-2 flex items-baseline gap-2">
+                  <span className="text-3xl font-extrabold tracking-tight text-emerald-400">Sob consulta</span>
+                </div>
+                <a
+                  href={settings.whatsapp_vps_link || "#"}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-emerald-500 px-6 py-3 text-sm font-bold text-white shadow-lg transition-smooth hover:brightness-110"
+                >
+                  Obter VPS
+                  <ArrowRight className="h-4 w-4" />
+                </a>
+                <p className="text-[11px] text-muted-foreground">Redirecionado pro WhatsApp</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* FAQ */}
         <section className="mt-16">
           <h2 className="mb-6 text-center text-lg font-extrabold tracking-tight">
