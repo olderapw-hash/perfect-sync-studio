@@ -1,0 +1,1 @@
+ALTER TABLE public.app_settings ADD COLUMN whatsapp_vps_link text DEFAULT NULL;
