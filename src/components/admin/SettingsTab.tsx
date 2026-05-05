@@ -346,6 +346,28 @@ export const SettingsTab = () => {
         </section>
       )}
 
+      {/* WhatsApp VPS — somente superadmin */}
+      {isSuperadmin && (
+        <section className="rounded-xl border border-border bg-card/60 p-5">
+          <h3 className="mb-1 flex items-center gap-2 text-sm font-extrabold uppercase tracking-wider text-foreground">
+            <ExternalLink className="h-4 w-4 text-emerald-500" /> Link WhatsApp (VPS)
+          </h3>
+          <p className="mb-4 text-xs text-muted-foreground">
+            Link usado no botão "Obter VPS" da página de preços.
+          </p>
+          <div className="space-y-4">
+            <Field
+              label="Link do WhatsApp"
+              hint='Ex.: "https://wa.me/5511999999999?text=Quero+uma+VPS"'
+              value={form.whatsapp_vps_link}
+              onChange={(v) => setForm({ ...form, whatsapp_vps_link: v })}
+              disabled={!canEdit}
+              placeholder="https://wa.me/5511999999999"
+            />
+          </div>
+        </section>
+      )}
+
       <div className="flex justify-end gap-2">
         <button
           onClick={onSave}
