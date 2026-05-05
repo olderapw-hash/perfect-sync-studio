@@ -13,6 +13,7 @@ export interface AppSettings {
   footer_text: string | null;
   footer_link_label: string | null;
   footer_link_url: string | null;
+  whatsapp_vps_link: string | null;
 }
 
 interface Ctx {
@@ -32,6 +33,7 @@ const DEFAULTS: AppSettings = {
   footer_text: "Desenvolvido por:",
   footer_link_label: "Sath~",
   footer_link_url: "https://discord.gg/lovable-dev",
+  whatsapp_vps_link: null,
 };
 
 const AppSettingsContext = createContext<Ctx>({
