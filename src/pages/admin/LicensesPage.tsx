@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import {
   Copy,
   Eye,
@@ -87,6 +87,8 @@ const EMPTY_FORM: LicenseForm = {
   price_paid: "",
   payment_method: "pix",
 };
+
+const AdminFilesSection = lazy(() => import("@/components/admin/AdminFilesSection"));
 
 const STATUS_MAP: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   active: { label: "Ativa", variant: "default" },
@@ -338,6 +340,10 @@ export default function LicensesPage() {
             </Table>
           </div>
         )}
+
+        <Suspense fallback={null}>
+          <AdminFilesSection />
+        </Suspense>
       </div>
 
       {/* Dialog criar/editar */}
