@@ -153,7 +153,7 @@ export const SettingsTab = () => {
       updated_by: user?.id ?? null,
       updated_at: new Date().toISOString(),
     };
-    const { error } = await supabase.from("app_settings").upsert(payload, { onConflict: "id" });
+    const { error } = await supabase.from("app_settings").upsert(payload as any, { onConflict: "id" });
     setSaving(false);
     if (error) {
       toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
