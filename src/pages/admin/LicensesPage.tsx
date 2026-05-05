@@ -340,6 +340,10 @@ export default function LicensesPage() {
             </Table>
           </div>
         )}
+
+        <Suspense fallback={null}>
+          <AdminFilesSection />
+        </Suspense>
       </div>
 
       {/* Dialog criar/editar */}
