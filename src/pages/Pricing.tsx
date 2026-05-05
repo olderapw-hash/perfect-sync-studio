@@ -13,7 +13,7 @@ import { getPaymentEnvironment } from "@/lib/paddle";
 
 type BillingCycle = "monthly" | "yearly";
 
-const FREE_FEATURES = [
+const INICIANTE_FEATURES = [
   "Visualizar todo o painel",
   "Editar slots de equipamento (CLS) manualmente",
   "Editar inventário item por item (CLS)",
@@ -75,7 +75,7 @@ const FAQ = [
 ];
 
 interface PaidPlan {
-  id: "pro" | "ultimate";
+  id: "iniciante" | "pro" | "ultimate";
   name: string;
   tagline: string;
   monthly: number;
@@ -88,11 +88,21 @@ interface PaidPlan {
 
 const PAID_PLANS: PaidPlan[] = [
   {
+    id: "iniciante",
+    name: "Iniciante",
+    tagline: "Ideal pra começar a usar o painel",
+    monthly: 25,
+    yearly: 250,
+    monthlyPriceId: "pw_admin_iniciante_monthly",
+    yearlyPriceId: "pw_admin_iniciante_yearly",
+    features: INICIANTE_FEATURES,
+  },
+  {
     id: "pro",
     name: "Pro",
     tagline: "Gestão completa de personagens e templates",
-    monthly: 250,
-    yearly: 2500,
+    monthly: 150,
+    yearly: 1500,
     monthlyPriceId: "pw_admin_pro_monthly",
     yearlyPriceId: "pw_admin_pro_yearly",
     features: PRO_FEATURES,
@@ -101,8 +111,8 @@ const PAID_PLANS: PaidPlan[] = [
     id: "ultimate",
     name: "Ultimate",
     tagline: "Tudo do Pro + controle total do servidor",
-    monthly: 500,
-    yearly: 5000,
+    monthly: 300,
+    yearly: 3000,
     monthlyPriceId: "pw_admin_ultimate_monthly",
     yearlyPriceId: "pw_admin_ultimate_yearly",
     features: ULTIMATE_FEATURES,
