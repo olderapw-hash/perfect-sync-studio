@@ -413,7 +413,7 @@ const Pricing = () => {
               </div>
               <div className="mt-6 flex flex-col items-center gap-3 sm:mt-0 sm:min-w-[200px]">
                 <div className="mb-2 text-center">
-                  <span className="text-3xl font-extrabold tracking-tight text-emerald-400">Sob consulta</span>
+                  <span className="text-4xl font-extrabold tracking-tight text-emerald-400">R$ 700</span>
                   <p className="mt-1 text-xs text-muted-foreground">pagamento único</p>
                 </div>
                 <a
