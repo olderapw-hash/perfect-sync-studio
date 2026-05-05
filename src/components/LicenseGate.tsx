@@ -1,4 +1,4 @@
-import { Shield, AlertTriangle } from "lucide-react";
+import { Shield, AlertTriangle, Clock } from "lucide-react";
 import { useLicenseValidation } from "@/hooks/useLicenseValidation";
 
 const REASON_TEXT: Record<string, string> = {
@@ -14,7 +14,7 @@ const REASON_TEXT: Record<string, string> = {
  * Quando VITE_LICENSE_KEY não está definida, renderiza os children normalmente.
  */
 export function LicenseGate({ children }: { children: React.ReactNode }) {
-  const { valid, reason } = useLicenseValidation();
+  const { valid, reason, expiresSoon, daysRemaining } = useLicenseValidation();
 
   // Verificando...
   if (valid === null) {
@@ -46,5 +46,17 @@ export function LicenseGate({ children }: { children: React.ReactNode }) {
     );
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      {expiresSoon && (
+        <div className="sticky top-0 z-50 flex items-center justify-center gap-2 bg-yellow-500/90 px-4 py-2 text-yellow-950">
+          <Clock className="h-4 w-4" />
+          <span className="text-sm font-semibold">
+            Sua licença expira em {daysRemaining != null && daysRemaining <= 0 ? "menos de 1 dia" : `${daysRemaining} dia${daysRemaining === 1 ? "" : "s"}`}. Entre em contato para renovação.
+          </span>
+        </div>
+      )}
+      {children}
+    </>
+  );
 }

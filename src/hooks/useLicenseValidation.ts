@@ -15,6 +15,8 @@ interface LicenseState {
   plan?: string;
   clientName?: string;
   expiresAt?: string;
+  expiresSoon?: boolean;
+  daysRemaining?: number;
 }
 
 /**
@@ -53,6 +55,8 @@ export function useLicenseValidation(): LicenseState {
             plan: data.plan,
             clientName: data.client_name,
             expiresAt: data.expires_at,
+            expiresSoon: data.expires_soon ?? false,
+            daysRemaining: data.days_remaining,
           });
         } else {
           setState({ valid: false, reason: data.reason ?? "unknown" });
