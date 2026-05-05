@@ -51,7 +51,7 @@ export const AppSettingsProvider = ({ children }: { children: ReactNode }) => {
     // Tenta ler tabela completa (se admin) — senão cai pro branding público.
     const { data: full } = await supabase
       .from("app_settings")
-      .select("server_name, pw_api_base_url, icon_base_url, logo_url, primary_color, background_url, favicon_url, footer_text, footer_link_label, footer_link_url")
+      .select("server_name, pw_api_base_url, icon_base_url, logo_url, primary_color, background_url, favicon_url, footer_text, footer_link_label, footer_link_url, whatsapp_vps_link")
       .eq("id", 1)
       .maybeSingle();
 
@@ -67,6 +67,7 @@ export const AppSettingsProvider = ({ children }: { children: ReactNode }) => {
         footer_text: full.footer_text ?? DEFAULTS.footer_text,
         footer_link_label: full.footer_link_label ?? DEFAULTS.footer_link_label,
         footer_link_url: full.footer_link_url ?? DEFAULTS.footer_link_url,
+        whatsapp_vps_link: (full as any).whatsapp_vps_link ?? null,
       });
     } else {
       const { data: pub } = await supabase.rpc("get_public_branding");
