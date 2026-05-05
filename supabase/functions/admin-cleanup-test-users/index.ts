@@ -15,7 +15,33 @@ Deno.serve(async (req) => {
   try {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
+
+    // Auth check: accept either superadmin JWT or cron via service-role bearer
+    const authHeader = req.headers.get("Authorization") ?? "";
+    const bearer = authHeader.replace(/^Bearer\s+/i, "").trim();
+
+    // If bearer matches service role key, it's the cron scheduler — allow
+    const isCron = bearer === SERVICE_ROLE;
+
+    if (!isCron) {
+      // Validate as user JWT and check superadmin role
+      if (!bearer) return json({ error: "Unauthorized" }, 401);
+      const userClient = createClient(SUPABASE_URL, ANON_KEY, {
+        global: { headers: { Authorization: authHeader } },
+        auth: { persistSession: false, autoRefreshToken: false },
+      });
+      const { data: userData, error: userErr } = await userClient.auth.getUser(bearer);
+      if (userErr || !userData?.user) return json({ error: "Token inválido" }, 401);
+
+      const { data: roles } = await admin
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userData.user.id);
+      const isSuperadmin = (roles ?? []).some((r: { role: string }) => r.role === "superadmin");
+      if (!isSuperadmin) return json({ error: "Access denied: superadmin only" }, 403);
+    }
 
     // Lista expirados
     const { data: expired, error: listErr } = await admin

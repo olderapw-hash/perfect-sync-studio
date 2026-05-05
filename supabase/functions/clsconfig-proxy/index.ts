@@ -429,12 +429,39 @@ Deno.serve(async (req: Request) => {
     return new Response(
       JSON.stringify({
         success: false,
-        error:
-          "PW_API_BASE_URL inválida. Deve ser o domínio/base do servidor (ex.: https://seusite.com). Valor recebido: " +
-          base.slice(0, 80),
+        error: "PW_API_BASE_URL inválida. Deve começar com http:// ou https://.",
       }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
+  }
+
+  // SSRF protection: block private/loopback/link-local/metadata hosts
+  const _isBlockedHost = (h: string): boolean => {
+    if (!h) return true;
+    if (h === "localhost" || h.endsWith(".localhost") || h.endsWith(".local") || h.endsWith(".internal")) return true;
+    if (h === "::1" || h === "[::1]") return true;
+    if (h.startsWith("fe80:") || h.startsWith("fc") || h.startsWith("fd")) return true;
+    const m = h.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+    if (m) {
+      const [a, b] = [parseInt(m[1], 10), parseInt(m[2], 10)];
+      if (a === 10) return true;
+      if (a === 127) return true;
+      if (a === 0) return true;
+      if (a === 169 && b === 254) return true;
+      if (a === 172 && b >= 16 && b <= 31) return true;
+      if (a === 192 && b === 168) return true;
+      if (a >= 224) return true;
+    }
+    return false;
+  };
+
+  try {
+    const parsedBase = new URL(base);
+    if (_isBlockedHost(parsedBase.hostname.toLowerCase())) {
+      return jsonError("Host não permitido (endereço interno/privado)", 400);
+    }
+  } catch {
+    return jsonError("PW_API_BASE_URL inválida", 400);
   }
 
   const endpoint = base.endsWith(".php") ? base : `${base}/apicls/api_cls.php`;
