@@ -65,7 +65,8 @@ const Onboarding = () => {
       navigate("/auth", { replace: true });
       return;
     }
-    if (!isActive && !bypassPayment) {
+    // Se veio do pagamento, dá um tempo pro subscription atualizar
+    if (!isActive && !bypassPayment && !fromPayment) {
       navigate("/pricing", { replace: true });
       return;
     }
