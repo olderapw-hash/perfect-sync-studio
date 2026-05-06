@@ -8,6 +8,8 @@ import {
   Pencil,
   Plus,
   RefreshCw,
+  Shield,
+  Terminal,
   Trash2,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -49,6 +51,7 @@ import {
 interface License {
   id: string;
   license_key: string;
+  vps_activation_token: string | null;
   client_name: string;
   client_email: string | null;
   plan: string;
@@ -254,6 +257,7 @@ export default function LicensesPage() {
                   <TableHead>Plano</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Chave</TableHead>
+                  <TableHead>Token VPS</TableHead>
                   <TableHead>Validade</TableHead>
                   <TableHead>VPS</TableHead>
                   <TableHead>Valor</TableHead>
@@ -300,6 +304,39 @@ export default function LicensesPage() {
                             <Copy className="h-3 w-3" />
                           </button>
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        {lic.vps_activation_token ? (
+                          <div className="flex items-center gap-1">
+                            <Shield className="h-3 w-3 text-primary" />
+                            <span className="font-mono text-[10px] max-w-[80px] truncate">
+                              {lic.vps_activation_token.slice(0, 12)}...
+                            </span>
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(lic.vps_activation_token!);
+                                toast({ title: "Token VPS copiado!" });
+                              }}
+                              className="p-0.5 text-muted-foreground hover:text-foreground"
+                              title="Copiar token"
+                            >
+                              <Copy className="h-3 w-3" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                const cmd = `bash install-apicls-centos7.sh --secret SEU_SECRET --activation-token ${lic.vps_activation_token} --api-src /root/api_cls.php`;
+                                navigator.clipboard.writeText(cmd);
+                                toast({ title: "Comando de instalação copiado!" });
+                              }}
+                              className="p-0.5 text-muted-foreground hover:text-foreground"
+                              title="Copiar comando de instalação"
+                            >
+                              <Terminal className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
                       </TableCell>
                       <TableCell>{fmt(lic.expires_at)}</TableCell>
                       <TableCell className="font-mono text-muted-foreground">

@@ -16,6 +16,8 @@ INSTALL_DIR="/var/www/html/apicls"
 API_SRC=""
 API_URL=""
 SECRET="${PW_API_SECRET:-}"
+ACTIVATION_TOKEN=""
+ACTIVATION_URL=""
 WEB_USER=""
 OPEN_FIREWALL=1
 INSTALL_PACKAGES=1
@@ -44,6 +46,8 @@ Instalador PW Admin API CLS para CentOS 7
 
 Opcoes:
   --secret VALOR       Secret da VPS gerado no painel. Se omitir, gera um novo.
+  --activation-token T Token de ativacao da VPS (gerado ao criar licenca no painel).
+  --activation-url URL URL de validacao do token. Default: URL do painel + /functions/v1/validate-vps-activation
   --api-src CAMINHO    Caminho local do api_cls.php. Default: ./api_cls.php.
   --api-url URL        Baixa api_cls.php desta URL.
   --web-user USUARIO   Usuario do Apache/PHP. Default: auto-detecta apache.
@@ -55,7 +59,7 @@ Opcoes:
   -h, --help           Mostra esta ajuda.
 
 Exemplo:
-  bash install-apicls-centos7.sh --secret 8f74c4d4e7fbe1d0f3e420ef85a0a
+  bash install-apicls-centos7.sh --secret 8f74c4d4e7fbe1d0f3e420ef85a0a --activation-token abc123def456
 EOF
 }
 
@@ -63,6 +67,14 @@ while [ "$#" -gt 0 ]; do
   case "$1" in
     --secret)
       SECRET="${2:-}"
+      shift 2
+      ;;
+    --activation-token)
+      ACTIVATION_TOKEN="${2:-}"
+      shift 2
+      ;;
+    --activation-url)
+      ACTIVATION_URL="${2:-}"
       shift 2
       ;;
     --api-src)
@@ -234,6 +246,22 @@ elif grep -q "\$SECRET[[:space:]]*=" "$TMP_API"; then
   sed -i -E "s/(\$SECRET[[:space:]]*=[[:space:]]*)'[^']*'/\1'$SECRET'/" "$TMP_API"
 else
   die "Nao encontrei campo api_secret/\$SECRET no api_cls.php."
+fi
+
+# ---- VPS Activation Token ----
+if [ -n "$ACTIVATION_TOKEN" ]; then
+  sed -i -E "s/('vps_activation_token'[[:space:]]*=>[[:space:]]*)'[^']*'/\1'$ACTIVATION_TOKEN'/" "$TMP_API"
+  log "Token de ativacao configurado."
+
+  # Set activation URL
+  if [ -z "$ACTIVATION_URL" ]; then
+    # Auto-detect from VITE_SUPABASE_URL pattern in api_cls.php or use default
+    ACTIVATION_URL="https://ezgjmioxmyqgxgdpigeb.supabase.co/functions/v1/validate-vps-activation"
+  fi
+  sed -i -E "s|('vps_activation_url'[[:space:]]*=>[[:space:]]*)'[^']*'|\1'$ACTIVATION_URL'|" "$TMP_API"
+  log "URL de validacao: $ACTIVATION_URL"
+else
+  warn "Nenhum token de ativacao informado. A API funcionara sem protecao de VPS."
 fi
 
 php -l "$TMP_API" >/dev/null || die "api_cls.php baixado/copied tem erro de sintaxe."

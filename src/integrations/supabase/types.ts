@@ -852,6 +852,7 @@ export type Database = {
           price_paid: number | null
           status: Database["public"]["Enums"]["license_status"]
           updated_at: string
+          vps_activation_token: string | null
           vps_ip: string | null
         }
         Insert: {
@@ -869,6 +870,7 @@ export type Database = {
           price_paid?: number | null
           status?: Database["public"]["Enums"]["license_status"]
           updated_at?: string
+          vps_activation_token?: string | null
           vps_ip?: string | null
         }
         Update: {
@@ -886,6 +888,7 @@ export type Database = {
           price_paid?: number | null
           status?: Database["public"]["Enums"]["license_status"]
           updated_at?: string
+          vps_activation_token?: string | null
           vps_ip?: string | null
         }
         Relationships: []
@@ -1274,6 +1277,62 @@ export type Database = {
         }
         Relationships: []
       }
+      vps_activations: {
+        Row: {
+          activated_at: string | null
+          activation_token: string
+          created_at: string
+          hardware_fingerprint: string | null
+          hostname: string | null
+          id: string
+          ip_address: string | null
+          last_validated_at: string | null
+          notes: string | null
+          owner_id: string
+          server_id: string | null
+          status: Database["public"]["Enums"]["vps_activation_status"]
+          updated_at: string
+        }
+        Insert: {
+          activated_at?: string | null
+          activation_token: string
+          created_at?: string
+          hardware_fingerprint?: string | null
+          hostname?: string | null
+          id?: string
+          ip_address?: string | null
+          last_validated_at?: string | null
+          notes?: string | null
+          owner_id: string
+          server_id?: string | null
+          status?: Database["public"]["Enums"]["vps_activation_status"]
+          updated_at?: string
+        }
+        Update: {
+          activated_at?: string | null
+          activation_token?: string
+          created_at?: string
+          hardware_fingerprint?: string | null
+          hostname?: string | null
+          id?: string
+          ip_address?: string | null
+          last_validated_at?: string | null
+          notes?: string | null
+          owner_id?: string
+          server_id?: string | null
+          status?: Database["public"]["Enums"]["vps_activation_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vps_activations_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -1444,6 +1503,15 @@ export type Database = {
       start_free_trial: { Args: { _environment: string }; Returns: string }
       suspend_expired_licenses: { Args: never; Returns: undefined }
       validate_license: { Args: { _key: string }; Returns: Json }
+      validate_vps_activation: {
+        Args: {
+          _fingerprint: string
+          _hostname?: string
+          _ip?: string
+          _token: string
+        }
+        Returns: Json
+      }
     }
     Enums: {
       app_role: "admin" | "user" | "superadmin"
@@ -1460,6 +1528,7 @@ export type Database = {
       invite_status: "pending" | "accepted" | "revoked" | "expired"
       license_status: "active" | "expired" | "revoked" | "suspended"
       server_role: "owner" | "admin" | "editor" | "readonly"
+      vps_activation_status: "active" | "revoked" | "suspended"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1602,6 +1671,7 @@ export const Constants = {
       invite_status: ["pending", "accepted", "revoked", "expired"],
       license_status: ["active", "expired", "revoked", "suspended"],
       server_role: ["owner", "admin", "editor", "readonly"],
+      vps_activation_status: ["active", "revoked", "suspended"],
     },
   },
 } as const

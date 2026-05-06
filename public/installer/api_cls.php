@@ -223,6 +223,11 @@ $CONFIG = [
         '/home/gamedbd/valuables_list.txt',
         '/home/gamedbd/visibleid.txt',
     ],
+    // ---- VPS Activation Token ----
+    'vps_activation_token' => '',
+    'vps_activation_url' => '',
+    'vps_activation_cache_file' => __DIR__ . '/backups/.vps_activation_cache.json',
+    'vps_activation_cache_ttl_seconds' => 21600, // 6 hours
 ];
 
 $CULTIVATION_MAP = [
@@ -16656,13 +16661,126 @@ function respondJson($payload, $status = 200)
     echo safeJsonEncode($payload);
 }
 
-if (php_sapi_name() !== 'cli' || isset($_GET['action'])) {
+/**
+ * Gera fingerprint unico da VPS baseado em hostname, IPs e machine-id.
+ */
+function vpsFingerprint()
+{
+    $parts = [];
+    $parts[] = gethostname() ?: 'unknown';
+
+    // Machine ID (Linux)
+    $machineId = @file_get_contents('/etc/machine-id');
+    if ($machineId) {
+        $parts[] = trim($machineId);
+    } else {
+        // Fallback: product UUID (works on most VPS providers)
+        $productUuid = @file_get_contents('/sys/class/dmi/id/product_uuid');
+        if ($productUuid) {
+            $parts[] = trim($productUuid);
+        }
+    }
+
+    // Primary IP
+    $ip = @file_get_contents('https://api.ipify.org');
+    if ($ip) {
+        $parts[] = trim($ip);
+    }
+
+    return hash('sha256', implode('|', $parts));
+}
+
+/**
+ * Valida o token de ativacao da VPS com cache local.
+ * Retorna ['valid' => bool, 'reason' => string, ...].
+ */
+function vpsActivationCheck($config)
+{
+    $cacheFile = $config['vps_activation_cache_file'];
+    $ttl = $config['vps_activation_cache_ttl_seconds'];
+
+    // Check cache
+    if (file_exists($cacheFile)) {
+        $cached = @json_decode(@file_get_contents($cacheFile), true);
+        if ($cached && isset($cached['valid'], $cached['checked_at'])) {
+            $age = time() - $cached['checked_at'];
+            if ($age < $ttl) {
+                return $cached;
+            }
+        }
+    }
+
+    $fingerprint = vpsFingerprint();
+    $hostname = gethostname() ?: 'unknown';
+    $ip = @file_get_contents('https://api.ipify.org') ?: null;
+
+    $payload = json_encode([
+        'activation_token' => $config['vps_activation_token'],
+        'fingerprint' => $fingerprint,
+        'ip' => $ip ? trim($ip) : null,
+        'hostname' => $hostname,
+    ]);
+
+    $ch = curl_init($config['vps_activation_url']);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+        CURLOPT_POSTFIELDS => $payload,
+        CURLOPT_TIMEOUT => 15,
+        CURLOPT_CONNECTTIMEOUT => 10,
+    ]);
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlErr = curl_error($ch);
+    curl_close($ch);
+
+    if ($curlErr || $httpCode < 200 || $httpCode >= 500) {
+        // Network error: if we have a valid cache (even expired), allow gracefully
+        if (isset($cached) && $cached && isset($cached['valid']) && $cached['valid']) {
+            return $cached;
+        }
+        // No cache and server unreachable: allow (fail-open for first install resilience)
+        return ['valid' => true, 'status' => 'offline_grace', 'checked_at' => time()];
+    }
+
+    $result = @json_decode($response, true);
+    if (!$result || !isset($result['valid'])) {
+        return ['valid' => false, 'reason' => 'invalid_response'];
+    }
+
+    $result['checked_at'] = time();
+
+    // Cache result
+    $cacheDir = dirname($cacheFile);
+    if (!is_dir($cacheDir)) {
+        @mkdir($cacheDir, 0750, true);
+    }
+    @file_put_contents($cacheFile, json_encode($result));
+
+    return $result;
+}
+
+
     header('Content-Type: application/json; charset=utf-8');
 
     $secret = isset($_SERVER['HTTP_X_SYNC_SECRET']) ? $_SERVER['HTTP_X_SYNC_SECRET'] : (isset($_GET['secret']) ? $_GET['secret'] : '');
     if ($secret !== $CONFIG['api_secret']) {
         respondJson(['error' => 'Unauthorized'], 401);
         exit;
+    }
+
+    // ---- VPS Activation Token Validation ----
+    if (!empty($CONFIG['vps_activation_token']) && !empty($CONFIG['vps_activation_url'])) {
+        $vpsValid = vpsActivationCheck($CONFIG);
+        if (!$vpsValid['valid']) {
+            respondJson([
+                'error' => 'VPS_ACTIVATION_FAILED',
+                'reason' => isset($vpsValid['reason']) ? $vpsValid['reason'] : 'unknown',
+                'message' => isset($vpsValid['message']) ? $vpsValid['message'] : 'Este token de ativacao nao e valido para esta VPS.',
+            ], 403);
+            exit;
+        }
     }
 
     $action = isset($_GET['action']) ? $_GET['action'] : (isset($_POST['action']) ? $_POST['action'] : '');
