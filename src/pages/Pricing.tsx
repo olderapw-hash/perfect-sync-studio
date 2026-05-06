@@ -137,7 +137,7 @@ const Pricing = () => {
   const [pixPlanName, setPixPlanName] = useState("");
   const [pixAmount, setPixAmount] = useState("");
 
-  // Bypass: usuário com acesso e onboarding pronto vai direto pro painel.
+  // Bypass: usuário com acesso vai direto pro painel ou onboarding.
   useEffect(() => {
     if (authLoading || subLoading || serversLoading) return;
     if (!session) return;
@@ -148,6 +148,8 @@ const Pricing = () => {
     const bypass = isActive || isAdmin || isSuperadmin;
     if (bypass && active?.onboarding_completed) {
       navigate("/admin", { replace: true });
+    } else if (bypass && !active?.onboarding_completed) {
+      navigate("/onboarding", { replace: true });
     }
   }, [
     authLoading,
