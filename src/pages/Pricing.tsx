@@ -226,12 +226,21 @@ const Pricing = () => {
             </span>
           </Link>
           {session ? (
-            <Link
-              to="/admin"
-              className="rounded-md border border-border bg-card/40 px-3 py-2 text-xs font-medium hover:border-primary/50"
-            >
-              Voltar ao painel
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link
+                to="/admin"
+                className="rounded-md border border-border bg-card/40 px-3 py-2 text-xs font-medium hover:border-primary/50"
+              >
+                Voltar ao painel
+              </Link>
+              <button
+                onClick={async () => { await signOut(); navigate("/auth"); }}
+                className="inline-flex items-center gap-1.5 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive hover:bg-destructive/20 transition-smooth"
+              >
+                <LogOut className="h-3 w-3" />
+                Sair
+              </button>
+            </div>
           ) : (
             <Link
               to="/auth"
