@@ -245,6 +245,13 @@ const FALLBACK_SUPPORTED = new Set([
   "getGmPermissionState",
   "grantGmPermission",
   "revokeGmPermission",
+  // GM Commander v2 — Bulk Operations (Fase A homologada).
+  "searchPlayerDirectory",
+  "resolveBulkTargets",
+  "previewBulkTargets",
+  "queueBulkCommand",
+  "getBulkCommandJob",
+  "getBulkCommandJobs",
 ]);
 
 const FALLBACK_UNSUPPORTED = new Set<string>([]);
