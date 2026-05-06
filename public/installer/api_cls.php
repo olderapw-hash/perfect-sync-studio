@@ -228,6 +228,7 @@ $CONFIG = [
     'vps_activation_url' => '',
     'vps_activation_cache_file' => __DIR__ . '/backups/.vps_activation_cache.json',
     'vps_activation_cache_ttl_seconds' => 21600, // 6 hours
+    'superadmin_bypass' => false, // When true, skips VPS activation check (superadmin only)
 ];
 
 // ---- Load .env file for secrets (api_secret, activation token, etc.) ----
