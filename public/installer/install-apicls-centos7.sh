@@ -2304,6 +2304,35 @@ find "$INSTALL_DIR/backups" -type f -exec chmod 640 {} \; 2>/dev/null || true
 chown root:"$WEB_USER" /usr/local/sbin/pw-watchdog-runner.sh
 chmod 750 /usr/local/sbin/pw-watchdog-runner.sh
 
+# ---- Create .env with secrets ----
+ENV_FILE="$INSTALL_DIR/.env"
+log "Criando $ENV_FILE com secrets..."
+
+if [ -z "$ACTIVATION_URL" ] && [ -n "$ACTIVATION_TOKEN" ]; then
+  ACTIVATION_URL="https://ezgjmioxmyqgxgdpigeb.supabase.co/functions/v1/validate-vps-activation"
+fi
+
+cat > "$ENV_FILE" <<ENVEOF
+# Orphea Core API - Secrets
+# Este arquivo contem credenciais sensiveis. NAO compartilhe.
+# Gerado automaticamente pelo instalador em $(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+API_SECRET=$SECRET
+VPS_ACTIVATION_TOKEN=${ACTIVATION_TOKEN:-}
+VPS_ACTIVATION_URL=${ACTIVATION_URL:-}
+ENVEOF
+
+chown "$WEB_USER:$WEB_USER" "$ENV_FILE"
+chmod 600 "$ENV_FILE"
+log ".env criado com permissoes restritas (600)."
+
+if [ -n "$ACTIVATION_TOKEN" ]; then
+  log "Token de ativacao VPS configurado."
+  log "URL de validacao: $ACTIVATION_URL"
+else
+  warn "Nenhum token de ativacao informado. A API funcionara sem protecao de VPS."
+fi
+
 "$PHP_CLI_BIN" -l "$INSTALL_DIR/api_cls.php" >/dev/null || die "api_cls.php instalado com erro de sintaxe."
 "$PHP_CLI_BIN" -l "$INSTALL_DIR/gm-queue-worker.php" >/dev/null || die "gm-queue-worker.php instalado com erro de sintaxe."
 "$PHP_CLI_BIN" -l "$INSTALL_DIR/gm-schedule-worker.php" >/dev/null || die "gm-schedule-worker.php instalado com erro de sintaxe."
