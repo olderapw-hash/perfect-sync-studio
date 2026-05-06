@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Copy, Check, Clock, QrCode, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
