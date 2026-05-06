@@ -125,70 +125,120 @@ const Auth = () => {
             Orphea Core
           </h1>
           <p className="text-xs text-muted-foreground">
-            Login e cadastro · Perfect World
+            {showConfirmation ? "Verifique seu email" : "Login e cadastro · Perfect World"}
           </p>
         </header>
 
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <div>
-            <label htmlFor="email" className="mb-1 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              required
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none"
-            />
+        {showConfirmation ? (
+          <div className="flex flex-col items-center gap-4 text-center">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full border border-primary/30 bg-primary/10">
+              <MailCheck className="h-8 w-8 text-primary" />
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-semibold text-foreground">
+                Enviamos um link de confirmação para:
+              </p>
+              <p className="rounded-md border border-border bg-background/50 px-3 py-1.5 text-sm font-mono text-primary">
+                {email}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Abra seu email e clique no link para ativar sua conta.
+                Verifique também a pasta de spam.
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setShowConfirmation(false);
+                setMode("signin");
+                setEmail("");
+                setPassword("");
+                setConfirmEmail("");
+              }}
+              className="mt-2 w-full rounded-md border border-border bg-card/60 px-4 py-2 text-xs font-semibold text-foreground hover:border-primary/40"
+            >
+              Voltar para login
+            </button>
           </div>
-          <div>
-            <label htmlFor="password" className="mb-1 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Senha
-            </label>
-            <input
-              id="password"
-              type="password"
-              required
-              minLength={6}
-              autoComplete={mode === "signup" ? "new-password" : "current-password"}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none"
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={busy}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-bold text-primary-foreground shadow-glow transition-smooth hover:brightness-110 disabled:opacity-50"
-          >
-            {busy && <Loader2 className="h-4 w-4 animate-spin" />}
-            {mode === "signup" ? "Criar conta" : "Entrar"}
-          </button>
-        </form>
+        ) : (
+          <>
+            <form onSubmit={handleSubmit} className="space-y-3">
+              <div>
+                <label htmlFor="email" className="mb-1 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Email
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  required
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                />
+              </div>
+              {mode === "signup" && (
+                <div>
+                  <label htmlFor="confirm-email" className="mb-1 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Confirmar Email
+                  </label>
+                  <input
+                    id="confirm-email"
+                    type="email"
+                    required
+                    autoComplete="off"
+                    value={confirmEmail}
+                    onChange={(e) => setConfirmEmail(e.target.value)}
+                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                  />
+                </div>
+              )}
+              <div>
+                <label htmlFor="password" className="mb-1 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Senha
+                </label>
+                <input
+                  id="password"
+                  type="password"
+                  required
+                  minLength={6}
+                  autoComplete={mode === "signup" ? "new-password" : "current-password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={busy}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-bold text-primary-foreground shadow-glow transition-smooth hover:brightness-110 disabled:opacity-50"
+              >
+                {busy && <Loader2 className="h-4 w-4 animate-spin" />}
+                {mode === "signup" ? "Criar conta" : "Entrar"}
+              </button>
+            </form>
 
-        <p className="mt-4 text-center text-xs text-muted-foreground">
-          {mode === "signin" ? (
-            <>
-              Sem conta?{" "}
-              <button onClick={() => setMode("signup")} className="font-semibold text-primary hover:underline">
-                Cadastrar
-              </button>
-            </>
-          ) : (
-            <>
-              Já tem conta?{" "}
-              <button onClick={() => setMode("signin")} className="font-semibold text-primary hover:underline">
-                Entrar
-              </button>
-            </>
-          )}
-        </p>
-        <p className="mt-3 text-center text-[10px] text-muted-foreground/70">
-          Depois do login, você será guiado para assinatura ou configuração inicial do servidor.
-        </p>
+            <p className="mt-4 text-center text-xs text-muted-foreground">
+              {mode === "signin" ? (
+                <>
+                  Sem conta?{" "}
+                  <button onClick={() => { setMode("signup"); setConfirmEmail(""); }} className="font-semibold text-primary hover:underline">
+                    Cadastrar
+                  </button>
+                </>
+              ) : (
+                <>
+                  Já tem conta?{" "}
+                  <button onClick={() => { setMode("signin"); setConfirmEmail(""); }} className="font-semibold text-primary hover:underline">
+                    Entrar
+                  </button>
+                </>
+              )}
+            </p>
+            <p className="mt-3 text-center text-[10px] text-muted-foreground/70">
+              Depois do login, você será guiado para assinatura ou configuração inicial do servidor.
+            </p>
+          </>
+        )}
       </section>
     </main>
   );
