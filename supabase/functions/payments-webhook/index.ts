@@ -115,13 +115,18 @@ async function handleSubscriptionCreated(data: any, env: PaddleEnv) {
 
     const creatorId = superadminRole?.user_id || userId;
 
+    const licPlan = planName.includes('ultimate') ? 'ultimate' : 'pro';
+    const licExpiresAt = currentBillingPeriod?.endsAt || null;
+
     const { error: licError } = await supabase.from('licenses').insert({
       client_name: customerName,
       client_email: customerEmail,
-      plan: planName.includes('ultimate') ? 'ultimate' : 'pro',
+      plan: licPlan,
       status: 'active',
       created_by: creatorId,
       payment_method: 'paddle',
+      expires_at: licExpiresAt,
+      activated_at: new Date().toISOString(),
       notes: `Auto-criado via Paddle. Subscription: ${id}`,
     });
 
