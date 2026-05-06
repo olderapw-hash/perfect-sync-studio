@@ -287,7 +287,6 @@ const Pricing = () => {
         <div className="grid gap-4 sm:gap-6 lg:grid-cols-3">
           {/* Iniciante / Pro / Ultimate */}
           {PAID_PLANS.map((p) => {
-            const priceId = cycle === "monthly" ? p.monthlyPriceId : p.yearlyPriceId;
             const value = cycle === "monthly" ? p.monthly : p.yearly;
             const suffix = cycle === "monthly" ? "/mês" : "/ano";
             const monthlyEquivalent = cycle === "yearly" ? p.yearly / 12 : null;
