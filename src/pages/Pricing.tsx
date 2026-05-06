@@ -1,13 +1,15 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowRight, Check, Crown, Loader2, Server, Shield, Sparkles, Zap } from "lucide-react";
+import { ArrowRight, Check, Crown, Loader2, Server, Shield, Sparkles, Zap, QrCode } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { usePaddleCheckout } from "@/hooks/usePaddleCheckout";
+import { usePixCheckout } from "@/hooks/usePixCheckout";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useServers } from "@/hooks/useServers";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
+import { PixCheckoutModal } from "@/components/PixCheckoutModal";
 import { supabase } from "@/integrations/supabase/client";
 import { getPaymentEnvironment } from "@/lib/paddle";
 
@@ -129,10 +131,14 @@ const Pricing = () => {
   const { isActive, isTrial, plan, loading: subLoading, refetch: refetchSub } = useSubscription();
   const { active, loading: serversLoading } = useServers();
   const { openCheckout, loading } = usePaddleCheckout();
+  const { createPixPayment, pixData, loading: pixLoading, status: pixStatus, checking: pixChecking, reset: resetPix } = usePixCheckout();
   const { settings } = useAppSettings();
   const [trialLoading, setTrialLoading] = useState(false);
   const [cycle, setCycle] = useState<BillingCycle>("monthly");
   const [checkoutTarget, setCheckoutTarget] = useState<string | null>(null);
+  const [pixModalOpen, setPixModalOpen] = useState(false);
+  const [pixPlanName, setPixPlanName] = useState("");
+  const [pixAmount, setPixAmount] = useState("");
 
   // Bypass: usuário com acesso e onboarding pronto vai direto pro painel.
   useEffect(() => {
@@ -199,6 +205,28 @@ const Pricing = () => {
       toast.error("Não foi possível ativar o plano gratuito. Tenta de novo.");
     } finally {
       setTrialLoading(false);
+    }
+  };
+
+  const handlePixCheckout = async (plan: PaidPlan) => {
+    if (!session) {
+      navigate("/auth?next=/pricing");
+      return;
+    }
+    const amountCents = cycle === "monthly" ? plan.monthly * 100 : plan.yearly * 100;
+    const priceId = cycle === "monthly" ? plan.monthlyPriceId : plan.yearlyPriceId;
+    setPixPlanName(`Orphea Core ${plan.name}`);
+    setPixAmount(formatBRL(cycle === "monthly" ? plan.monthly : plan.yearly) + (cycle === "monthly" ? "/mês" : "/ano"));
+    try {
+      await createPixPayment({
+        priceId,
+        productId: plan.monthlyPriceId.replace("_monthly", "").replace("_yearly", ""),
+        amountCents,
+        environment: getPaymentEnvironment(),
+      });
+      setPixModalOpen(true);
+    } catch {
+      // error handled in hook
     }
   };
 
@@ -378,8 +406,30 @@ const Pricing = () => {
                   </button>
 
                   <p className="mt-3 text-center text-xs text-muted-foreground">
-                    Pagamento seguro via Paddle
+                    Cartão de crédito via Paddle
                   </p>
+
+                  {!isCurrent && (
+                    <button
+                      onClick={() => handlePixCheckout(p)}
+                      disabled={pixLoading}
+                      className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-6 py-2.5 text-sm font-bold text-emerald-400 transition-smooth hover:bg-emerald-500/20 disabled:opacity-60"
+                    >
+                      {pixLoading ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <>
+                          <QrCode className="h-4 w-4" />
+                          Pagar com Pix
+                        </>
+                      )}
+                    </button>
+                  )}
+                  {!isCurrent && (
+                    <p className="mt-1 text-center text-[11px] text-muted-foreground">
+                      Renovação mensal manual · QR Code instantâneo
+                    </p>
+                  )}
                 </div>
               </div>
             );
@@ -452,6 +502,20 @@ const Pricing = () => {
           </div>
         </section>
       </main>
+
+      <PixCheckoutModal
+        open={pixModalOpen}
+        onClose={() => {
+          setPixModalOpen(false);
+          resetPix();
+          refetchSub();
+        }}
+        pixData={pixData}
+        status={pixStatus}
+        checking={pixChecking}
+        planName={pixPlanName}
+        amount={pixAmount}
+      />
     </div>
   );
 };

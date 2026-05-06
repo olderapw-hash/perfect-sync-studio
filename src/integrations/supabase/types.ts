@@ -1102,6 +1102,63 @@ export type Database = {
           },
         ]
       }
+      pix_payments: {
+        Row: {
+          amount_cents: number
+          created_at: string
+          environment: string
+          expires_at: string | null
+          id: string
+          mp_external_reference: string
+          mp_payment_id: string | null
+          paid_at: string | null
+          price_id: string
+          product_id: string
+          qr_code: string | null
+          qr_code_base64: string | null
+          status: string
+          ticket_url: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount_cents: number
+          created_at?: string
+          environment?: string
+          expires_at?: string | null
+          id?: string
+          mp_external_reference: string
+          mp_payment_id?: string | null
+          paid_at?: string | null
+          price_id: string
+          product_id: string
+          qr_code?: string | null
+          qr_code_base64?: string | null
+          status?: string
+          ticket_url?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount_cents?: number
+          created_at?: string
+          environment?: string
+          expires_at?: string | null
+          id?: string
+          mp_external_reference?: string
+          mp_payment_id?: string | null
+          paid_at?: string | null
+          price_id?: string
+          product_id?: string
+          qr_code?: string | null
+          qr_code_base64?: string | null
+          status?: string
+          ticket_url?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       server_invites: {
         Row: {
           accepted_at: string | null
