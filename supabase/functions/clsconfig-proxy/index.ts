@@ -224,13 +224,13 @@ async function requireAdmin(req: Request): Promise<Response | { userId: string }
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  const { data: claimsRes, error: claimsErr } = await supabase.auth.getClaims(token);
-  if (claimsErr || !claimsRes?.claims?.sub) {
-    console.warn("[clsconfig-proxy] getClaims failed:", claimsErr?.message);
+  const { data: userData, error: userErr } = await supabase.auth.getUser(token);
+  if (userErr || !userData?.user?.id) {
+    console.warn("[clsconfig-proxy] getUser failed:", userErr?.message);
     return jsonError("Unauthorized: token inválido ou expirado", 401);
   }
 
-  const userId = claimsRes.claims.sub as string;
+  const userId = userData.user.id;
 
   // 1) Tenta admin/superadmin global.
   const { data: roleRows, error: roleErr } = await supabase
