@@ -97,14 +97,23 @@ const AccountSettingsPage = () => {
 };
 
 /* ---------- Subscription ---------- */
+const PLAN_PRICES: Record<string, { monthly: number; priceId: string; productId: string }> = {
+  iniciante: { monthly: 2500, priceId: "pw_admin_iniciante_monthly", productId: "pw_admin_iniciante" },
+  pro: { monthly: 15000, priceId: "pw_admin_pro_monthly", productId: "pw_admin_pro" },
+  ultimate: { monthly: 30000, priceId: "pw_admin_ultimate_monthly", productId: "pw_admin_ultimate" },
+};
+
 const SubscriptionCard = () => {
-  const { subscription, isActive, isTrial, plan, loading } = useSubscription();
+  const { subscription, isActive, isTrial, plan, loading, refetch } = useSubscription();
   const navigate = useNavigate();
+  const { createPixPayment, pixData, loading: pixLoading, status: pixStatus, checking: pixChecking, reset: resetPix } = usePixCheckout();
+  const [pixModalOpen, setPixModalOpen] = useState(false);
 
   const planLabel: Record<string, string> = {
     free: "Gratuito",
     pro: "Pro",
     ultimate: "Ultimate",
+    iniciante: "Iniciante",
   };
 
   const statusLabel: Record<string, string> = {
@@ -123,100 +132,152 @@ const SubscriptionCard = () => {
     canceled: "bg-destructive/20 text-destructive border-destructive/40",
   };
 
+  const handleRenewPix = async () => {
+    const planConfig = PLAN_PRICES[plan] || PLAN_PRICES.pro;
+    try {
+      await createPixPayment({
+        priceId: planConfig.priceId,
+        productId: planConfig.productId,
+        amountCents: planConfig.monthly,
+        environment: getPaymentEnvironment(),
+      });
+      setPixModalOpen(true);
+    } catch {
+      // error handled in hook
+    }
+  };
+
+  const formatBRL = (cents: number) =>
+    (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+
   return (
-    <Card className="border-border/60 bg-card/60 backdrop-blur-md">
-      <CardHeader className="pb-3">
-        <div className="flex items-center gap-2">
-          <CreditCard className="h-4 w-4 text-primary" />
-          <CardTitle className="text-sm font-bold uppercase tracking-wider">
-            Assinatura
-          </CardTitle>
-        </div>
-        <CardDescription className="text-xs">
-          Gerencie seu plano, upgrade ou cancele sua assinatura.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {loading ? (
-          <div className="py-4 text-center text-xs text-muted-foreground">Carregando…</div>
-        ) : !subscription ? (
-          <div className="space-y-3">
-            <div className="rounded-md border border-border/40 bg-background/40 px-4 py-3 text-sm text-muted-foreground">
-              Você não possui uma assinatura ativa.
-            </div>
-            <Button size="sm" className="w-full" onClick={() => navigate("/pricing")}>
-              <Crown className="mr-2 h-3.5 w-3.5" />
-              Ver planos e assinar
-            </Button>
+    <>
+      <Card className="border-border/60 bg-card/60 backdrop-blur-md">
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-2">
+            <CreditCard className="h-4 w-4 text-primary" />
+            <CardTitle className="text-sm font-bold uppercase tracking-wider">
+              Assinatura
+            </CardTitle>
           </div>
-        ) : (
-          <div className="space-y-3">
-            {/* Plan & Status */}
-            <div className="flex items-center justify-between rounded-md border border-border/40 bg-background/40 px-4 py-3">
-              <span className="text-sm text-muted-foreground">Plano</span>
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-foreground">{planLabel[plan] ?? plan}</span>
-                {isTrial && (
-                  <Badge variant="outline" className="border-amber-500/40 text-amber-400 text-[10px]">
-                    TRIAL
-                  </Badge>
+          <CardDescription className="text-xs">
+            Gerencie seu plano, upgrade ou cancele sua assinatura.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {loading ? (
+            <div className="py-4 text-center text-xs text-muted-foreground">Carregando…</div>
+          ) : !subscription ? (
+            <div className="space-y-3">
+              <div className="rounded-md border border-border/40 bg-background/40 px-4 py-3 text-sm text-muted-foreground">
+                Você não possui uma assinatura ativa.
+              </div>
+              <Button size="sm" className="w-full" onClick={() => navigate("/pricing")}>
+                <Crown className="mr-2 h-3.5 w-3.5" />
+                Ver planos e assinar
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {/* Plan & Status */}
+              <div className="flex items-center justify-between rounded-md border border-border/40 bg-background/40 px-4 py-3">
+                <span className="text-sm text-muted-foreground">Plano</span>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-foreground">{planLabel[plan] ?? plan}</span>
+                  {isTrial && (
+                    <Badge variant="outline" className="border-amber-500/40 text-amber-400 text-[10px]">
+                      TRIAL
+                    </Badge>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between rounded-md border border-border/40 bg-background/40 px-4 py-3">
+                <span className="text-sm text-muted-foreground">Status</span>
+                <Badge
+                  variant="outline"
+                  className={`text-[10px] ${statusColor[subscription.status] ?? ""}`}
+                >
+                  {statusLabel[subscription.status] ?? subscription.status}
+                </Badge>
+              </div>
+
+              {subscription.current_period_end && (
+                <div className="flex items-center justify-between rounded-md border border-border/40 bg-background/40 px-4 py-3">
+                  <span className="text-sm text-muted-foreground">
+                    {subscription.cancel_at_period_end ? "Acesso até" : "Próxima cobrança"}
+                  </span>
+                  <span className="font-mono text-sm text-foreground">
+                    {new Date(subscription.current_period_end).toLocaleDateString("pt-BR")}
+                  </span>
+                </div>
+              )}
+
+              {subscription.cancel_at_period_end && (
+                <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs text-amber-400">
+                  Sua assinatura será cancelada ao final do período. Você continuará tendo acesso até a data acima.
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex flex-col gap-2 pt-1">
+                {/* Upgrade */}
+                {plan !== "ultimate" && (
+                  <Button
+                    size="sm"
+                    className="w-full"
+                    onClick={() => navigate("/pricing")}
+                  >
+                    <ArrowUpRight className="mr-2 h-3.5 w-3.5" />
+                    {plan === "free" || isTrial ? "Assinar um plano" : "Fazer upgrade"}
+                  </Button>
+                )}
+
+                {/* Renew via Pix */}
+                {isActive && !isTrial && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10"
+                    onClick={handleRenewPix}
+                    disabled={pixLoading}
+                  >
+                    {pixLoading ? (
+                      <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <QrCode className="mr-2 h-3.5 w-3.5" />
+                    )}
+                    Renovar via Pix · {formatBRL(PLAN_PRICES[plan]?.monthly || 15000)}
+                  </Button>
+                )}
+
+                {/* Cancel — only for paid (non-trial) active subs */}
+                {isActive && !isTrial && !subscription.cancel_at_period_end && subscription.paddle_subscription_id && (
+                  <CancelSubscriptionButton
+                    paddleSubscriptionId={subscription.paddle_subscription_id}
+                    environment={subscription.environment}
+                  />
                 )}
               </div>
             </div>
+          )}
+        </CardContent>
+      </Card>
 
-            <div className="flex items-center justify-between rounded-md border border-border/40 bg-background/40 px-4 py-3">
-              <span className="text-sm text-muted-foreground">Status</span>
-              <Badge
-                variant="outline"
-                className={`text-[10px] ${statusColor[subscription.status] ?? ""}`}
-              >
-                {statusLabel[subscription.status] ?? subscription.status}
-              </Badge>
-            </div>
-
-            {subscription.current_period_end && (
-              <div className="flex items-center justify-between rounded-md border border-border/40 bg-background/40 px-4 py-3">
-                <span className="text-sm text-muted-foreground">
-                  {subscription.cancel_at_period_end ? "Acesso até" : "Próxima cobrança"}
-                </span>
-                <span className="font-mono text-sm text-foreground">
-                  {new Date(subscription.current_period_end).toLocaleDateString("pt-BR")}
-                </span>
-              </div>
-            )}
-
-            {subscription.cancel_at_period_end && (
-              <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs text-amber-400">
-                Sua assinatura será cancelada ao final do período. Você continuará tendo acesso até a data acima.
-              </div>
-            )}
-
-            {/* Actions */}
-            <div className="flex flex-col gap-2 pt-1">
-              {/* Upgrade */}
-              {plan !== "ultimate" && (
-                <Button
-                  size="sm"
-                  className="w-full"
-                  onClick={() => navigate("/pricing")}
-                >
-                  <ArrowUpRight className="mr-2 h-3.5 w-3.5" />
-                  {plan === "free" || isTrial ? "Assinar um plano" : "Fazer upgrade"}
-                </Button>
-              )}
-
-              {/* Cancel — only for paid (non-trial) active subs */}
-              {isActive && !isTrial && !subscription.cancel_at_period_end && subscription.paddle_subscription_id && (
-                <CancelSubscriptionButton
-                  paddleSubscriptionId={subscription.paddle_subscription_id}
-                  environment={subscription.environment}
-                />
-              )}
-            </div>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+      <PixCheckoutModal
+        open={pixModalOpen}
+        onClose={() => {
+          setPixModalOpen(false);
+          resetPix();
+          refetch();
+        }}
+        pixData={pixData}
+        status={pixStatus}
+        checking={pixChecking}
+        planName={`Orphea Core ${planLabel[plan] ?? plan}`}
+        amount={`${formatBRL(PLAN_PRICES[plan]?.monthly || 15000)}/mês`}
+      />
+    </>
   );
 };
 
