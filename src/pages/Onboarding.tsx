@@ -10,7 +10,7 @@
 //        c) clica "Já instalei, testar conexão"
 //        d) sucesso -> set_active_tenant e vai pro /admin
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   ArrowRight,
   CheckCircle2,
