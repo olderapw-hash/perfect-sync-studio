@@ -84,6 +84,8 @@ const Install = () => {
   const [testing, setTesting] = useState(false);
   const [showRealValues, setShowRealValues] = useState(false);
   const [hasStorageZip, setHasStorageZip] = useState(false);
+  const [vpsToken, setVpsToken] = useState<string | null>(null);
+  const [vpsStatus, setVpsStatus] = useState<string | null>(null);
 
   // Check if zip exists in storage
   useEffect(() => {
