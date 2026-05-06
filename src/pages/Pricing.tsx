@@ -466,6 +466,9 @@ const Pricing = () => {
         open={pixModalOpen}
         onClose={() => {
           setPixModalOpen(false);
+          if (pixStatus === "approved") {
+            navigate("/onboarding");
+          }
           resetPix();
           refetchSub();
         }}
