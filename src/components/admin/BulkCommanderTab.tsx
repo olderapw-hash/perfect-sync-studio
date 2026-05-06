@@ -72,7 +72,21 @@ import {
   type GmCommandCapability,
   type PreviewBulkTargetsResponse,
 } from "@/lib/pwApiActions";
-import { PW_CLASSES } from "@/lib/pwClasses";
+
+const PW_CLASSES = [
+  { id: 0, name: "Guerreiro" },
+  { id: 1, name: "Mágico" },
+  { id: 2, name: "Arqueiro" },
+  { id: 3, name: "Sacerdote" },
+  { id: 4, name: "Lupina" },
+  { id: 5, name: "Felina" },
+  { id: 6, name: "Assassino" },
+  { id: 7, name: "Aquariano" },
+  { id: 8, name: "Buscador" },
+  { id: 9, name: "Místico" },
+  { id: 10, name: "Lâmina Crepuscular" },
+  { id: 11, name: "Conjuradora" },
+];
 
 /* ─── Constants ─── */
 
