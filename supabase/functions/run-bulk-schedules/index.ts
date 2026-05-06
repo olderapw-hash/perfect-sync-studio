@@ -10,6 +10,20 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2.95.0/cors";
 
+/** Block SSRF: reject private/loopback/link-local/metadata IPs */
+function isBlockedHost(hostname: string): boolean {
+  // IPv4 patterns
+  if (/^(10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.|127\.|0\.|169\.254\.)/.test(hostname)) return true;
+  // IPv6 loopback, link-local, unique-local
+  if (/^(::1|fc|fd|fe80)/i.test(hostname)) return true;
+  // IPv4-mapped IPv6
+  if (/^::ffff:(10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.|127\.|0\.|169\.254\.)/i.test(hostname)) return true;
+  // Common metadata endpoints
+  if (hostname === "metadata.google.internal" || hostname === "metadata") return true;
+  if (hostname === "localhost") return true;
+  return false;
+}
+
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
