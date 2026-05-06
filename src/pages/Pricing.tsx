@@ -136,6 +136,21 @@ const Pricing = () => {
   const [pixModalOpen, setPixModalOpen] = useState(false);
   const [pixPlanName, setPixPlanName] = useState("");
   const [pixAmount, setPixAmount] = useState("");
+  const [hasPaidPix, setHasPaidPix] = useState(false);
+
+  // Checa se o usuário tem pagamento Pix aprovado (fallback visual)
+  useEffect(() => {
+    if (!session?.user) return;
+    supabase
+      .from("pix_payments")
+      .select("id")
+      .eq("user_id", session.user.id)
+      .eq("status", "approved")
+      .limit(1)
+      .then(({ data }) => {
+        if (data && data.length > 0) setHasPaidPix(true);
+      });
+  }, [session?.user?.id]);
 
   // Bypass: usuário com acesso vai direto pro painel ou onboarding.
   useEffect(() => {
