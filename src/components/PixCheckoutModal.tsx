@@ -30,6 +30,17 @@ export function PixCheckoutModal({
   const [copied, setCopied] = useState(false);
   const navigate = useNavigate();
 
+  // Auto-redirect after payment confirmed
+  useEffect(() => {
+    if (status === "approved") {
+      const t = setTimeout(() => {
+        onClose();
+        navigate("/onboarding");
+      }, 2500);
+      return () => clearTimeout(t);
+    }
+  }, [status, onClose, navigate]);
+
   if (!open || !pixData) return null;
 
   const handleCopy = async () => {
