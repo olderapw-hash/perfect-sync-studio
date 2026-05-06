@@ -180,6 +180,9 @@ const App = () => (
                         </SuperadminRoute>
                       }
                     />
+
+                    {/* Conta do usuário */}
+                    <Route path="account" element={<AccountSettingsPage />} />
                   </Route>
 
                   {/* /trial — área enxuta para usuários no Free Trial.
