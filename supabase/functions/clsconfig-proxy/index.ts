@@ -97,6 +97,14 @@ const ALLOWED_ACTIONS = new Set([
   "revokeGmPermission",
   // GM Commander — moderação extra.
   "clearRolePk",
+  // GM Commander v2 — Bulk Commands (Phase A).
+  "searchPlayerDirectory",
+  "getPlayerTargetProfile",
+  "resolveBulkTargets",
+  "previewBulkTargets",
+  "queueBulkCommand",
+  "getBulkCommandJob",
+  "getBulkCommandJobs",
 ]);
 
 // Mapa Action → permissão exigida (deve refletir src/lib/serverPermissions.ts).
