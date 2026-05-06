@@ -34,7 +34,7 @@ export function PixCheckoutModal({
   useEffect(() => {
     if (status === "approved") {
       const t = setTimeout(() => {
-        navigate("/onboarding");
+        navigate("/onboarding", { state: { fromPayment: true } });
       }, 2000);
       return () => clearTimeout(t);
     }
