@@ -102,6 +102,23 @@ Deno.serve(async (req) => {
           continue;
         }
 
+        // SSRF check: block private/internal URLs
+        let parsedUrl: URL;
+        try {
+          parsedUrl = new URL(tenant.pw_api_base_url);
+        } catch {
+          const errMsg = "Invalid pw_api_base_url";
+          await supabase.from("gm_bulk_schedules").update({ last_run_at: now.toISOString(), last_run_status: "error", last_error: errMsg }).eq("id", schedule.id);
+          results.push({ schedule_id: schedule.id, status: "error", error: errMsg });
+          continue;
+        }
+        if (isBlockedHost(parsedUrl.hostname)) {
+          const errMsg = "Blocked: private/internal URL not allowed";
+          await supabase.from("gm_bulk_schedules").update({ last_run_at: now.toISOString(), last_run_status: "error", last_error: errMsg }).eq("id", schedule.id);
+          results.push({ schedule_id: schedule.id, status: "error", error: errMsg });
+          continue;
+        }
+
         // Call the VPS queueBulkCommand directly
         const apiUrl = `${tenant.pw_api_base_url.replace(/\/$/, "")}/api_cls.php?action=queueBulkCommand`;
         const payload = {
