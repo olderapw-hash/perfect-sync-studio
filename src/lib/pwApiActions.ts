@@ -1909,3 +1909,147 @@ export interface WatchdogCheckResponse {
   status?: WatchdogStatusBlock;
   error?: string;
 }
+
+/* ─────────── GM Commander v2 — Bulk Operations tipos ─────────── */
+
+export interface BulkSelectionParams {
+  roleids?: number[];
+  names?: string[];
+  guild_id?: number;
+  guild_ids?: number[];
+  class_ids?: number[];
+  level_min?: number;
+  level_max?: number;
+  online_only?: boolean;
+  all_online?: boolean;
+  ranking_key?: string;
+  ranking_limit?: number;
+}
+
+export interface PlayerDirectoryEntry {
+  roleid: number;
+  userid?: number;
+  name?: string;
+  cls?: number;
+  level?: number;
+  guild?: string;
+  guild_id?: number;
+  online?: boolean;
+  [k: string]: unknown;
+}
+
+export interface PlayerDirectoryResponse {
+  success: boolean;
+  entries: PlayerDirectoryEntry[];
+  count: number;
+  selection?: Record<string, unknown>;
+  warnings?: string[];
+  online_diagnostics?: Record<string, number>;
+  capabilities?: Record<string, boolean>;
+  error?: string;
+}
+
+export type BulkCommandKey = "sendMailItem" | "sendMailGold" | "grantMallCash" | "sendSystemMessage";
+
+export interface BulkTarget {
+  roleid: number;
+  userid?: number;
+  name?: string;
+  cls?: number;
+  level?: number;
+  guild?: string;
+  online?: boolean;
+  [k: string]: unknown;
+}
+
+export interface ResolveBulkTargetsPayload extends BulkSelectionParams {
+  command_key: BulkCommandKey;
+}
+
+export interface ResolveBulkTargetsResponse {
+  success: boolean;
+  command_key: string;
+  selection: Record<string, unknown>;
+  count: number;
+  targets: BulkTarget[];
+  profiles: PlayerDirectoryEntry[];
+  warnings: string[];
+  resolved_at: string;
+  error?: string;
+}
+
+export interface PreviewBulkTargetsPayload extends BulkSelectionParams {
+  command_key: BulkCommandKey;
+  /** Command-specific fields (item_id, count, amount, message, etc.) */
+  [k: string]: unknown;
+}
+
+export interface BulkCommandPayloadPreview {
+  item_id?: number;
+  count?: number;
+  money?: number;
+  amount?: number | null;
+  message?: string;
+}
+
+export interface PreviewBulkTargetsResponse {
+  success: boolean;
+  command_key: string;
+  count: number;
+  sample_size: number;
+  sample_targets: BulkTarget[];
+  selection: Record<string, unknown>;
+  warnings: string[];
+  command_payload_preview: BulkCommandPayloadPreview;
+  previewed_at: string;
+  error?: string;
+}
+
+export interface QueueBulkCommandPayload extends BulkSelectionParams {
+  command_key: BulkCommandKey;
+  /** Command-specific fields */
+  [k: string]: unknown;
+}
+
+export interface BulkJobSummary {
+  id: string;
+  command_key: string;
+  status: "queued" | "processing" | "completed" | "failed" | "cancelled" | string;
+  created_at: string;
+  updated_at: string;
+  target_count: number;
+  completed_count?: number;
+  failed_count?: number;
+  actor?: { name?: string; ip?: string };
+  selection?: Record<string, unknown>;
+  warnings?: string[];
+  [k: string]: unknown;
+}
+
+export interface QueueBulkCommandResponse {
+  success: boolean;
+  job: BulkJobSummary;
+  job_file?: string;
+  audit_file?: string;
+  error?: string;
+}
+
+export interface GetBulkCommandJobResponse {
+  success: boolean;
+  job: BulkJobSummary & {
+    command_payload?: Record<string, unknown>;
+    targets_pending?: BulkTarget[];
+    targets_completed?: BulkTarget[];
+    targets_failed?: Array<BulkTarget & { error?: string }>;
+    preview?: { sample_targets?: BulkTarget[] };
+  };
+  error?: string;
+}
+
+export interface GetBulkCommandJobsResponse {
+  success: boolean;
+  jobs: BulkJobSummary[];
+  limit: number;
+  collected_at: string;
+  error?: string;
+}
