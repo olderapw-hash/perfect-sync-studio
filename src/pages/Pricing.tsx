@@ -136,6 +136,21 @@ const Pricing = () => {
   const [pixModalOpen, setPixModalOpen] = useState(false);
   const [pixPlanName, setPixPlanName] = useState("");
   const [pixAmount, setPixAmount] = useState("");
+  const [hasPaidPix, setHasPaidPix] = useState(false);
+
+  // Checa se o usuário tem pagamento Pix aprovado (fallback visual)
+  useEffect(() => {
+    if (!session?.user) return;
+    supabase
+      .from("pix_payments")
+      .select("id")
+      .eq("user_id", session.user.id)
+      .eq("status", "approved")
+      .limit(1)
+      .then(({ data }) => {
+        if (data && data.length > 0) setHasPaidPix(true);
+      });
+  }, [session?.user?.id]);
 
   // Bypass: usuário com acesso vai direto pro painel ou onboarding.
   useEffect(() => {
@@ -253,6 +268,27 @@ const Pricing = () => {
       </header>
 
       <main className="mx-auto max-w-6xl px-4 py-8 sm:py-16">
+        {/* Banner: pagamento confirmado → ir pro onboarding */}
+        {hasPaidPix && session && (
+          <div className="mb-8 rounded-2xl border-2 border-emerald-500/40 bg-emerald-500/10 p-6 text-center">
+            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500/20">
+              <Check className="h-7 w-7 text-emerald-400" />
+            </div>
+            <h3 className="text-lg font-extrabold text-emerald-400">Pagamento confirmado!</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Seu plano já está ativo. Configure seu servidor agora.
+            </p>
+            <button
+              onClick={() => navigate("/onboarding", { state: { fromPayment: true } })}
+              className="mt-4 inline-flex items-center gap-2 rounded-md bg-emerald-500 px-8 py-3 text-sm font-bold text-white shadow-lg transition-smooth hover:brightness-110"
+            >
+              <Server className="h-4 w-4" />
+              Configurar meu servidor
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+
         <div className="mb-6 text-center sm:mb-8">
           <p className="text-xs font-bold uppercase tracking-wider text-primary">Escolha seu plano</p>
           <h1 className="mt-2 text-2xl font-extrabold tracking-tight sm:text-4xl">

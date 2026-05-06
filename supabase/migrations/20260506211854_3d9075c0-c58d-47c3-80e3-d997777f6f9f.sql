@@ -1,0 +1,1 @@
+ALTER TABLE public.subscriptions DROP CONSTRAINT IF EXISTS subscriptions_paddle_required_when_not_trial;
