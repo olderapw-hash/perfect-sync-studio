@@ -126,7 +126,7 @@ const formatBRL = (n: number) =>
 
 const Pricing = () => {
   const navigate = useNavigate();
-  const { session, user, isAdmin, isSuperadmin, loading: authLoading } = useAuth();
+  const { session, user, isAdmin, isSuperadmin, loading: authLoading, signOut } = useAuth();
   const { isActive, isTrial, plan, loading: subLoading, refetch: refetchSub } = useSubscription();
   const { active, loading: serversLoading } = useServers();
   const { createPixPayment, pixData, loading: pixLoading, status: pixStatus, checking: pixChecking, reset: resetPix } = usePixCheckout();
