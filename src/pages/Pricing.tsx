@@ -406,8 +406,30 @@ const Pricing = () => {
                   </button>
 
                   <p className="mt-3 text-center text-xs text-muted-foreground">
-                    Pagamento seguro via Paddle
+                    Cartão de crédito via Paddle
                   </p>
+
+                  {!isCurrent && (
+                    <button
+                      onClick={() => handlePixCheckout(p)}
+                      disabled={pixLoading}
+                      className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-6 py-2.5 text-sm font-bold text-emerald-400 transition-smooth hover:bg-emerald-500/20 disabled:opacity-60"
+                    >
+                      {pixLoading ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <>
+                          <QrCode className="h-4 w-4" />
+                          Pagar com Pix
+                        </>
+                      )}
+                    </button>
+                  )}
+                  {!isCurrent && (
+                    <p className="mt-1 text-center text-[11px] text-muted-foreground">
+                      Renovação mensal manual · QR Code instantâneo
+                    </p>
+                  )}
                 </div>
               </div>
             );
