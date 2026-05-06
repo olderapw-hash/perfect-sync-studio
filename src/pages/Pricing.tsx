@@ -502,6 +502,20 @@ const Pricing = () => {
           </div>
         </section>
       </main>
+
+      <PixCheckoutModal
+        open={pixModalOpen}
+        onClose={() => {
+          setPixModalOpen(false);
+          resetPix();
+          refetchSub();
+        }}
+        pixData={pixData}
+        status={pixStatus}
+        checking={pixChecking}
+        planName={pixPlanName}
+        amount={pixAmount}
+      />
     </div>
   );
 };
