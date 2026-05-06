@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Loader2 } from "lucide-react";
+import { Loader2, MailCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useSubscription } from "@/hooks/useSubscription";
@@ -21,6 +21,8 @@ const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  const [confirmEmail, setConfirmEmail] = useState("");
+  const [showConfirmation, setShowConfirmation] = useState(false);
 
   useEffect(() => {
     if (authLoading || subLoading || serversLoading || !session) return;
