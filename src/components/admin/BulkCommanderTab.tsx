@@ -72,6 +72,7 @@ import {
   type GmCommandCapability,
   type PreviewBulkTargetsResponse,
 } from "@/lib/pwApiActions";
+import { BulkScheduleManager } from "@/components/admin/BulkScheduleManager";
 
 const PW_CLASSES = [
   { id: 0, name: "Guerreiro" },
