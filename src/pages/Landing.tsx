@@ -429,6 +429,11 @@ const Landing = () => {
             <a href="#faq" className="hover:text-foreground">FAQ</a>
             <Link to="/auth" className="hover:text-foreground">Entrar</Link>
           </div>
+          <div className="flex items-center gap-5">
+            <Link to="/privacy" className="hover:text-foreground">Privacidade</Link>
+            <Link to="/terms" className="hover:text-foreground">Termos</Link>
+            <Link to="/refund-policy" className="hover:text-foreground">Reembolso</Link>
+          </div>
         </div>
       </footer>
     </div>
