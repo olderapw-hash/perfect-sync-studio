@@ -162,27 +162,6 @@ const Pricing = () => {
     navigate,
   ]);
 
-  const handleCheckout = async (priceId: string) => {
-    if (!session) {
-      navigate("/auth?next=/pricing");
-      return;
-    }
-    setCheckoutTarget(priceId);
-    try {
-      await openCheckout({
-        priceId,
-        customerEmail: user?.email,
-        userId: user?.id,
-        successUrl: `${window.location.origin}/checkout/success`,
-      });
-    } catch (e) {
-      console.error(e);
-      toast.error("Erro ao abrir checkout. Tenta de novo.");
-    } finally {
-      setCheckoutTarget(null);
-    }
-  };
-
   const handleStartTrial = async () => {
     if (!session) {
       navigate("/auth?next=/pricing");
