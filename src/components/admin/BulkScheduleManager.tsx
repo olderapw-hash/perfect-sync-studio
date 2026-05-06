@@ -348,26 +348,25 @@ function ScheduleFormDialog({
       tenant_id: tenantId,
       name: name.trim(),
       command_key: commandKey,
-      selection,
-      command_payload,
+      selection: selection as unknown as Record<string, never>,
+      command_payload: command_payload as unknown as Record<string, never>,
       day_of_week: parseInt(dayOfWeek),
       time_utc: timeUtc,
       timezone: "America/Sao_Paulo",
       is_active: isActive,
-      ...(isEdit ? { updated_by: userId } : { created_by: userId }),
     };
 
     let err;
     if (isEdit && schedule) {
       const { error: e } = await supabase
         .from("gm_bulk_schedules")
-        .update(row)
+        .update({ ...row, updated_by: userId } as never)
         .eq("id", schedule.id);
       err = e;
     } else {
       const { error: e } = await supabase
         .from("gm_bulk_schedules")
-        .insert({ ...row, created_by: userId });
+        .insert({ ...row, created_by: userId } as never);
       err = e;
     }
 
