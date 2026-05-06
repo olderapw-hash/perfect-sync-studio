@@ -59,7 +59,7 @@ const FILES: InstallerFile[] = [
   {
     name: "api_cls.php",
     description:
-      "Bridge HTTP completa: gamedbd, templates CLS, backups, restore, item catalog e correio (sendMailItem/sendMailGold).",
+      "Bridge HTTP completa: gamedbd, templates CLS, backups, restore, item catalog, correio, GM Commander bulk e moderação.",
     staticPath: "/installer/api_cls.php",
     icon: FileCode,
     language: "php",
@@ -77,19 +77,42 @@ const FILES: InstallerFile[] = [
   {
     name: "pw_send_mail.php",
     description:
-      "Handler do correio real (item/gold). Conversa com o gdeliveryd via send_mail.lua. Sem ele o correio fica em modo queue-only.",
+      "Handler do correio real (item/gold). Conversa com o gdeliveryd via send_mail.lua.",
     staticPath: "/installer/pw_send_mail.php",
     icon: FileCode,
     language: "php",
-    primary: true,
   },
   {
     name: "sendreward-api.sh",
     description:
-      "Wrapper sudo chamado pelo Apache para executar o pw_send_mail.php como root (acesso ao console do gdeliveryd).",
+      "Wrapper sudo chamado pelo Apache para executar o pw_send_mail.php como root.",
     staticPath: "/installer/sendreward-api.sh",
     icon: Terminal,
     language: "bash",
+  },
+  {
+    name: "backupgamedbd-api.sh",
+    description:
+      "Wrapper sudo para backups do gamedbd. Chamado pelo api_cls.php via sudoers.",
+    staticPath: "/installer/backupgamedbd-api.sh",
+    icon: Terminal,
+    language: "bash",
+  },
+  {
+    name: "gm-queue-worker.php",
+    description:
+      "Worker que processa jobs bulk do GM Commander (premiação em massa).",
+    staticPath: "/installer/gm-queue-worker.php",
+    icon: FileCode,
+    language: "php",
+  },
+  {
+    name: "gm-schedule-worker.php",
+    description:
+      "Worker de agendamento: cria jobs bulk a partir de schedules configurados.",
+    staticPath: "/installer/gm-schedule-worker.php",
+    icon: FileCode,
+    language: "php",
   },
   {
     name: "README.md",
@@ -122,6 +145,8 @@ const API_FEATURES: { label: string; detail: string }[] = [
   { label: "Backups", detail: "backupGamedbd, listBackups, getBackupContent, restoreBackup" },
   { label: "Item catalog", detail: "getItemCatalog (webtradeid, auctionid, valuables, visibleid)" },
   { label: "Correio real via gdeliveryd", detail: "sendMailItem, sendMailGold (com fallback queue + dry_run)" },
+  { label: "GM Commander Bulk", detail: "resolveBulkTargets, previewBulkTargets, queueBulkCommand, getBulkCommandJobs" },
+  { label: "Moderação", detail: "kickRole, banAccount, unbanAccount, muteAccount, clearRolePk" },
 ];
 
 /** Tenta inferir uma URL "esperada" do api_cls.php a partir da URL cadastrada. */
@@ -212,11 +237,8 @@ const Install = () => {
   const secretDisplay = showRealValues && secret ? secret : "SEU_SECRET";
 
   const installCommand = [
-    `scp api_cls.php root@${ipDisplay}:/root/api_cls.php`,
-    `scp install-apicls-centos7.sh root@${ipDisplay}:/root/install-apicls-centos7.sh`,
-    `scp pw_send_mail.php root@${ipDisplay}:/root/pw_send_mail.php`,
-    `scp sendreward-api.sh root@${ipDisplay}:/root/sendreward-api.sh`,
-    `ssh root@${ipDisplay} "bash /root/install-apicls-centos7.sh --secret ${secretDisplay} --api-src /root/api_cls.php"`,
+    `scp api_cls.php install-apicls-centos7.sh root@${ipDisplay}:/root/`,
+    `ssh root@${ipDisplay} "bash /root/install-apicls-centos7.sh --secret ${secretDisplay}"`,
   ].join("\n");
 
   const handleDownload = (file: InstallerFile) => {
@@ -458,13 +480,12 @@ const Install = () => {
           <div className="mb-3 flex items-center gap-2">
             <Terminal className="h-4 w-4 text-primary" />
             <h2 className="text-sm font-extrabold uppercase tracking-wider">
-              Método recomendado · instalador automático
+            Método recomendado · 2 comandos
             </h2>
           </div>
           <p className="mb-3 text-xs text-muted-foreground">
-            Baixe os dois arquivos abaixo, suba pra VPS e rode o instalador. Ele
-            instala Apache + PHP, configura sudoers, cria as pastas de backup e
-            testa a conexão sozinho.
+            Baixe <strong>api_cls.php</strong> e <strong>install-apicls-centos7.sh</strong>, suba pra VPS e rode o instalador. 
+            Ele instala tudo automaticamente: Apache, PHP, sudoers, scripts auxiliares e testa a conexão.
           </p>
 
           {/* Toggle: placeholders vs valores reais */}

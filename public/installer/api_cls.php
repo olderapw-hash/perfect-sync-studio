@@ -146,6 +146,9 @@ $CONFIG = [
     'gm_v2_queue_logs_dir' => __DIR__ . '/backups/gm-commander-v2/queue/logs',
     'gm_v2_audit_file' => __DIR__ . '/backups/gm-commander-v2/audit/history.log',
     'gm_v2_queue_lock_file' => __DIR__ . '/backups/gm-commander-v2/queue/worker.lock',
+    'gm_v2_schedules_dir' => __DIR__ . '/backups/gm-commander-v2/schedules/items',
+    'gm_v2_schedule_logs_dir' => __DIR__ . '/backups/gm-commander-v2/schedules/logs',
+    'gm_v2_schedule_lock_file' => __DIR__ . '/backups/gm-commander-v2/schedules/worker.lock',
     'gm_v2_directory_limit' => 200,
     'gm_v2_preview_sample_size' => 20,
     'gm_v2_max_targets_per_job' => 500,
@@ -154,6 +157,10 @@ $CONFIG = [
     'gm_v2_queue_backoff_seconds' => 30,
     'gm_v2_queue_scan_limit' => 20,
     'gm_v2_queue_allowed_commands' => ['sendMailItem', 'sendMailGold', 'grantMallCash', 'sendSystemMessage'],
+    'gm_v2_schedule_allowed_commands' => ['sendMailItem', 'sendMailGold', 'grantMallCash'],
+    'gm_v2_schedule_scan_limit' => 50,
+    'gm_v2_schedule_retry_backoff_seconds' => 300,
+    'gm_v2_schedule_default_timezone' => 'America/Sao_Paulo',
     'maintenance_reason_max_length' => 240,
     'maintenance_eta_max_minutes' => 1440,
     'maintenance_state_file' => __DIR__ . '/backups/maintenance/state.json',
@@ -4720,6 +4727,21 @@ function gmV2QueueLockFile(array $config)
     return trim((string) array_value($config, 'gm_v2_queue_lock_file', gmV2StateDir($config) . '/queue/worker.lock'));
 }
 
+function gmV2SchedulesDir(array $config)
+{
+    return trim((string) array_value($config, 'gm_v2_schedules_dir', gmV2StateDir($config) . '/schedules/items'));
+}
+
+function gmV2ScheduleLogsDir(array $config)
+{
+    return trim((string) array_value($config, 'gm_v2_schedule_logs_dir', gmV2StateDir($config) . '/schedules/logs'));
+}
+
+function gmV2ScheduleLockFile(array $config)
+{
+    return trim((string) array_value($config, 'gm_v2_schedule_lock_file', gmV2StateDir($config) . '/schedules/worker.lock'));
+}
+
 function gmV2EnsureEnvironment(array $config)
 {
     if (!gmV2Enabled($config)) {
@@ -4731,8 +4753,11 @@ function gmV2EnsureEnvironment(array $config)
         gmV2QueueJobsDir($config),
         gmV2QueueAttemptsDir($config),
         gmV2QueueLogsDir($config),
+        gmV2SchedulesDir($config),
+        gmV2ScheduleLogsDir($config),
         dirname(gmV2AuditFile($config)),
         dirname(gmV2QueueLockFile($config)),
+        dirname(gmV2ScheduleLockFile($config)),
     ];
 
     foreach ($dirs as $dir) {
@@ -4744,14 +4769,36 @@ function gmV2EnsureEnvironment(array $config)
         'jobs_dir' => gmV2QueueJobsDir($config),
         'attempts_dir' => gmV2QueueAttemptsDir($config),
         'logs_dir' => gmV2QueueLogsDir($config),
+        'schedules_dir' => gmV2SchedulesDir($config),
+        'schedule_logs_dir' => gmV2ScheduleLogsDir($config),
         'audit_file' => gmV2AuditFile($config),
         'lock_file' => gmV2QueueLockFile($config),
+        'schedule_lock_file' => gmV2ScheduleLockFile($config),
     ];
 }
 
 function gmV2AllowedBulkCommands(array $config)
 {
     $configured = array_value($config, 'gm_v2_queue_allowed_commands', []);
+    $commands = [];
+    foreach ((array) $configured as $candidate) {
+        $definition = gmCommandDefinition($config, $candidate);
+        if (!is_array($definition)) {
+            continue;
+        }
+
+        $canonical = trim((string) array_value($definition, 'key', ''));
+        if ($canonical !== '' && !in_array($canonical, $commands, true)) {
+            $commands[] = $canonical;
+        }
+    }
+
+    return $commands;
+}
+
+function gmV2AllowedScheduleCommands(array $config)
+{
+    $configured = array_value($config, 'gm_v2_schedule_allowed_commands', []);
     $commands = [];
     foreach ((array) $configured as $candidate) {
         $definition = gmCommandDefinition($config, $candidate);
@@ -4878,6 +4925,22 @@ function gmV2SelectionHasExplicitTargets(array $selection)
     return !empty($selection['roleids']) || !empty($selection['userids']) || !empty($selection['names']) || !empty($selection['guild_ids']);
 }
 
+function gmV2SelectionHasAnyCriteria(array $selection)
+{
+    return !empty($selection['roleids'])
+        || !empty($selection['userids'])
+        || !empty($selection['names'])
+        || trim((string) array_value($selection, 'query', '')) !== ''
+        || trim((string) array_value($selection, 'guild', '')) !== ''
+        || !empty($selection['guild_ids'])
+        || !empty($selection['class_ids'])
+        || intval(array_value($selection, 'level_min', 0)) > 0
+        || intval(array_value($selection, 'level_max', 0)) > 0
+        || !empty($selection['all_online'])
+        || !empty($selection['online_only'])
+        || trim((string) array_value($selection, 'ranking_key', '')) !== '';
+}
+
 function gmV2NormalizeSelection(array $request, array $config)
 {
     $selection = is_array(array_value($request, 'selection', null)) ? array_value($request, 'selection', []) : [];
@@ -4950,6 +5013,136 @@ function gmV2NormalizeCommandKey(array $config, $commandKey, $bulkOnly = true)
     }
 
     return $canonical;
+}
+
+function gmV2NormalizeScheduleCommandKey(array $config, $commandKey)
+{
+    $canonical = gmV2NormalizeCommandKey($config, $commandKey, true);
+    if (!in_array($canonical, gmV2AllowedScheduleCommands($config), true)) {
+        throw new InvalidArgumentException('command_key nao esta liberado para agendamento semanal');
+    }
+
+    return $canonical;
+}
+
+function gmV2NormalizeWeekdayToken($value)
+{
+    if (is_int($value) || (is_string($value) && preg_match('/^-?\d+$/', trim($value)))) {
+        $weekday = intval($value);
+        if ($weekday === 0) {
+            $weekday = 7;
+        }
+        return ($weekday >= 1 && $weekday <= 7) ? $weekday : 0;
+    }
+
+    $token = strtolower(trim((string) $value));
+    $map = [
+        '1' => 1, 'mon' => 1, 'monday' => 1, 'seg' => 1, 'segunda' => 1, 'segunda-feira' => 1,
+        '2' => 2, 'tue' => 2, 'tuesday' => 2, 'ter' => 2, 'terca' => 2, 'terça' => 2, 'terca-feira' => 2, 'terça-feira' => 2,
+        '3' => 3, 'wed' => 3, 'wednesday' => 3, 'qua' => 3, 'quarta' => 3, 'quarta-feira' => 3,
+        '4' => 4, 'thu' => 4, 'thursday' => 4, 'qui' => 4, 'quinta' => 4, 'quinta-feira' => 4,
+        '5' => 5, 'fri' => 5, 'friday' => 5, 'sex' => 5, 'sexta' => 5, 'sexta-feira' => 5,
+        '6' => 6, 'sat' => 6, 'saturday' => 6, 'sab' => 6, 'sábado' => 6, 'sabado' => 6,
+        '7' => 7, 'sun' => 7, 'sunday' => 7, 'dom' => 7, 'domingo' => 7,
+    ];
+
+    return isset($map[$token]) ? intval($map[$token]) : 0;
+}
+
+function gmV2NormalizeWeekdayList($value)
+{
+    $items = [];
+    if (is_array($value)) {
+        $items = $value;
+    } elseif (is_string($value)) {
+        $items = preg_split('/[\s,;|]+/', trim($value));
+    } elseif ($value !== null && $value !== '') {
+        $items = [$value];
+    }
+
+    $normalized = [];
+    foreach ((array) $items as $item) {
+        $weekday = gmV2NormalizeWeekdayToken($item);
+        if ($weekday > 0 && !in_array($weekday, $normalized, true)) {
+            $normalized[] = $weekday;
+        }
+    }
+
+    sort($normalized, SORT_NUMERIC);
+    return $normalized;
+}
+
+function gmV2NormalizeTimeOfDay($value)
+{
+    $text = trim((string) $value);
+    if ($text === '') {
+        return '';
+    }
+
+    if (!preg_match('/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/', $text, $matches)) {
+        return '';
+    }
+
+    $hour = intval($matches[1]);
+    $minute = intval($matches[2]);
+    $second = isset($matches[3]) ? intval($matches[3]) : 0;
+    if ($hour < 0 || $hour > 23 || $minute < 0 || $minute > 59 || $second < 0 || $second > 59) {
+        return '';
+    }
+
+    return sprintf('%02d:%02d:%02d', $hour, $minute, $second);
+}
+
+function gmV2NormalizeTimezoneName($value, array $config)
+{
+    $candidate = trim((string) $value);
+    if ($candidate === '') {
+        $candidate = trim((string) array_value($config, 'gm_v2_schedule_default_timezone', date_default_timezone_get()));
+    }
+
+    try {
+        $timezone = new DateTimeZone($candidate);
+        return $timezone->getName();
+    } catch (Exception $e) {
+        throw new InvalidArgumentException('timezone invalida');
+    }
+}
+
+function gmV2ComputeNextScheduleRunAt(array $weekdays, $timeOfDay, $timezoneName, $from = null)
+{
+    if (empty($weekdays)) {
+        throw new InvalidArgumentException('weekdays obrigatorio');
+    }
+
+    $timeOfDay = gmV2NormalizeTimeOfDay($timeOfDay);
+    if ($timeOfDay === '') {
+        throw new InvalidArgumentException('time_of_day invalido');
+    }
+
+    $timezone = new DateTimeZone($timezoneName);
+    if ($from instanceof DateTimeInterface) {
+        $base = DateTimeImmutable::createFromInterface($from)->setTimezone($timezone);
+    } else {
+        $base = new DateTimeImmutable('now', $timezone);
+    }
+
+    $parts = array_map('intval', explode(':', $timeOfDay));
+    $startOfDay = $base->setTime(0, 0, 0);
+    for ($offset = 0; $offset <= 14; $offset++) {
+        $candidateDay = ($offset === 0) ? $startOfDay : $startOfDay->modify('+' . $offset . ' day');
+        $weekday = intval($candidateDay->format('N'));
+        if (!in_array($weekday, $weekdays, true)) {
+            continue;
+        }
+
+        $candidate = $candidateDay->setTime($parts[0], $parts[1], $parts[2]);
+        if ($candidate > $base) {
+            return $candidate->format(DateTimeInterface::ATOM);
+        }
+    }
+
+    $fallback = $startOfDay->modify('+7 day')->setTime($parts[0], $parts[1], $parts[2]);
+    return $fallback->format(DateTimeInterface::ATOM);
 }
 
 function gmV2OnlineLookup(array $config, GamedProtocol $proto)
@@ -5476,6 +5669,34 @@ function gmV2CommandPayloadFromRequest($commandKey, array $request)
     return $merged;
 }
 
+function gmV2ValidateBulkCommandTemplate($commandKey, array $commandPayload)
+{
+    switch (trim((string) $commandKey)) {
+        case 'sendMailItem':
+            if (intval(firstArrayValue($commandPayload, ['item_id', 'itemId'], 0)) <= 0) {
+                throw new InvalidArgumentException('item_id obrigatorio para sendMailItem');
+            }
+            if (intval(firstArrayValue($commandPayload, ['count', 'quantity'], 1)) <= 0) {
+                throw new InvalidArgumentException('count obrigatorio para sendMailItem');
+            }
+            return;
+
+        case 'sendMailGold':
+            if (intval(firstArrayValue($commandPayload, ['money'], 0)) <= 0) {
+                throw new InvalidArgumentException('money obrigatorio para sendMailGold');
+            }
+            return;
+
+        case 'grantMallCash':
+            $amount = firstArrayValue($commandPayload, ['amount', 'gold', 'cash_gold', 'mall_gold', 'value'], null);
+            $cashUnits = firstArrayValue($commandPayload, ['cash_units', 'cashUnits', 'raw_cash_units'], null);
+            if (floatval($amount) <= 0 && intval($cashUnits) <= 0) {
+                throw new InvalidArgumentException('amount ou cash_units obrigatorio para grantMallCash');
+            }
+            return;
+    }
+}
+
 function gmV2PreviewBulkTargetsPayload(array $config, array $request)
 {
     $resolved = gmV2ResolveBulkTargetsPayload($config, $request);
@@ -5948,6 +6169,528 @@ function gmV2RunQueueWorker(array $config, array $options = [])
 
             $processedJob = gmV2ProcessQueueJob($config, $job);
             $result['processed_jobs'][] = gmV2JobSummary($processedJob);
+        }
+    } finally {
+        @flock($lockHandle, LOCK_UN);
+        @fclose($lockHandle);
+    }
+
+    return $result;
+}
+
+function gmV2SchedulePath(array $config, $scheduleId)
+{
+    return rtrim(gmV2SchedulesDir($config), '/\\') . DIRECTORY_SEPARATOR . trim((string) $scheduleId) . '.json';
+}
+
+function gmV2ReadSchedule(array $config, $scheduleId)
+{
+    $path = gmV2SchedulePath($config, $scheduleId);
+    if (!is_file($path) || !is_readable($path)) {
+        return null;
+    }
+
+    $raw = @file_get_contents($path);
+    if (!is_string($raw) || trim($raw) === '') {
+        return null;
+    }
+
+    $decoded = json_decode($raw, true);
+    return (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) ? $decoded : null;
+}
+
+function gmV2WriteSchedule(array $config, array $schedule)
+{
+    gmV2EnsureEnvironment($config);
+    $schedule['updated_at'] = gmdate('c');
+    $path = gmV2SchedulePath($config, array_value($schedule, 'id', ''));
+    writeAtomicFile($path, safeJsonEncode($schedule));
+    return $path;
+}
+
+function gmV2ScheduleSummary(array $schedule)
+{
+    return [
+        'id' => trim((string) array_value($schedule, 'id', '')),
+        'name' => trim((string) array_value($schedule, 'name', '')),
+        'command_key' => trim((string) array_value($schedule, 'command_key', '')),
+        'enabled' => !empty($schedule['enabled']),
+        'weekdays' => array_values((array) array_value($schedule, 'weekdays', [])),
+        'time_of_day' => trim((string) array_value($schedule, 'time_of_day', '')),
+        'timezone' => trim((string) array_value($schedule, 'timezone', '')),
+        'created_at' => array_value($schedule, 'created_at', null),
+        'updated_at' => array_value($schedule, 'updated_at', null),
+        'actor' => array_value($schedule, 'actor', []),
+        'updated_by' => array_value($schedule, 'updated_by', []),
+        'selection' => array_value($schedule, 'selection', []),
+        'preview_count' => intval(array_value(array_value($schedule, 'preview', []), 'count', 0)),
+        'preview_warnings' => array_value(array_value($schedule, 'preview', []), 'warnings', []),
+        'next_run_at' => array_value($schedule, 'next_run_at', null),
+        'next_retry_at' => array_value($schedule, 'next_retry_at', null),
+        'last_run_at' => array_value($schedule, 'last_run_at', null),
+        'last_job_id' => array_value($schedule, 'last_job_id', null),
+        'last_result' => array_value($schedule, 'last_result', null),
+        'last_error' => array_value($schedule, 'last_error', null),
+        'last_error_at' => array_value($schedule, 'last_error_at', null),
+    ];
+}
+
+function gmV2ListSchedules(array $config, $limit = 50)
+{
+    gmV2EnsureEnvironment($config);
+    $files = glob(rtrim(gmV2SchedulesDir($config), '/\\') . DIRECTORY_SEPARATOR . '*.json');
+    if (!is_array($files)) {
+        return [];
+    }
+
+    usort($files, function ($a, $b) {
+        return intval(@filemtime($b)) <=> intval(@filemtime($a));
+    });
+
+    $limit = max(1, min(200, intval($limit)));
+    $items = [];
+    foreach (array_slice($files, 0, $limit) as $file) {
+        $raw = @file_get_contents($file);
+        $decoded = json_decode((string) $raw, true);
+        if (is_array($decoded)) {
+            $items[] = gmV2ScheduleSummary($decoded);
+        }
+    }
+
+    return $items;
+}
+
+function gmV2BuildSchedulePreviewSnapshot(array $config, array $request)
+{
+    try {
+        $preview = gmV2PreviewBulkTargetsPayload($config, $request);
+        return [
+            'available' => true,
+            'count' => intval(array_value($preview, 'count', 0)),
+            'sample_targets' => array_value($preview, 'sample_targets', []),
+            'warnings' => array_value($preview, 'warnings', []),
+            'previewed_at' => array_value($preview, 'previewed_at', gmdate('c')),
+        ];
+    } catch (Exception $e) {
+        return [
+            'available' => false,
+            'count' => 0,
+            'sample_targets' => [],
+            'warnings' => [],
+            'error' => $e->getMessage(),
+            'previewed_at' => gmdate('c'),
+        ];
+    }
+}
+
+function gmV2NormalizeScheduleRequest(array $config, array $request, array $existing = [])
+{
+    $base = [];
+    if (!empty($existing)) {
+        $base = array_merge((array) array_value($existing, 'command_payload', []), [
+            'command_key' => array_value($existing, 'command_key', ''),
+            'selection' => array_value($existing, 'selection', []),
+            'name' => array_value($existing, 'name', ''),
+            'weekdays' => array_value($existing, 'weekdays', []),
+            'time_of_day' => array_value($existing, 'time_of_day', ''),
+            'timezone' => array_value($existing, 'timezone', array_value($config, 'gm_v2_schedule_default_timezone', 'America/Sao_Paulo')),
+            'enabled' => !empty($existing['enabled']),
+        ]);
+    }
+
+    $merged = $base;
+    foreach ($request as $key => $value) {
+        if ($key === 'selection' && is_array($value)) {
+            $merged['selection'] = $value;
+        } else {
+            $merged[$key] = $value;
+        }
+    }
+
+    $commandKey = gmV2NormalizeScheduleCommandKey($config, firstArrayValue($merged, ['command_key', 'commandKey', 'command'], ''));
+    $selectionSource = $merged;
+    unset(
+        $selectionSource['name'],
+        $selectionSource['label'],
+        $selectionSource['schedule_name'],
+        $selectionSource['weekdays'],
+        $selectionSource['days_of_week'],
+        $selectionSource['day_of_week'],
+        $selectionSource['weekday'],
+        $selectionSource['dow'],
+        $selectionSource['time_of_day'],
+        $selectionSource['time'],
+        $selectionSource['run_time'],
+        $selectionSource['run_at_time'],
+        $selectionSource['timezone'],
+        $selectionSource['tz'],
+        $selectionSource['enabled'],
+        $selectionSource['active'],
+        $selectionSource['paused'],
+        $selectionSource['schedule_id'],
+        $selectionSource['scheduleId'],
+        $selectionSource['id']
+    );
+    $selection = gmV2NormalizeSelection($selectionSource, $config);
+    if (!gmV2SelectionHasAnyCriteria($selection)) {
+        throw new InvalidArgumentException('Selecao obrigatoria para schedule bulk');
+    }
+
+    $weekdays = gmV2NormalizeWeekdayList(firstArrayValue($merged, ['weekdays', 'days_of_week', 'day_of_week', 'weekday', 'dow'], []));
+    if (empty($weekdays)) {
+        throw new InvalidArgumentException('weekdays obrigatorio');
+    }
+
+    $timeOfDay = gmV2NormalizeTimeOfDay(firstArrayValue($merged, ['time_of_day', 'time', 'run_time', 'run_at_time'], ''));
+    if ($timeOfDay === '') {
+        throw new InvalidArgumentException('time_of_day invalido');
+    }
+
+    $timezone = gmV2NormalizeTimezoneName(firstArrayValue($merged, ['timezone', 'tz'], ''), $config);
+    $enabledValue = firstArrayValue($merged, ['enabled', 'active'], null);
+    $pausedValue = firstArrayValue($merged, ['paused'], null);
+    if ($enabledValue === null && $pausedValue === null) {
+        $enabled = array_key_exists('enabled', $existing) ? !empty($existing['enabled']) : true;
+    } elseif ($enabledValue !== null) {
+        $enabled = truthyValue($enabledValue);
+    } else {
+        $enabled = !truthyValue($pausedValue);
+    }
+
+    $name = trimOneLineText(firstArrayValue($merged, ['name', 'label', 'schedule_name'], array_value($existing, 'name', '')));
+    if ($name === '') {
+        $name = 'Schedule ' . $commandKey . ' ' . implode(',', $weekdays) . ' ' . substr($timeOfDay, 0, 5);
+    }
+
+    $commandSource = $merged;
+    unset(
+        $commandSource['name'],
+        $commandSource['label'],
+        $commandSource['schedule_name'],
+        $commandSource['weekdays'],
+        $commandSource['days_of_week'],
+        $commandSource['day_of_week'],
+        $commandSource['weekday'],
+        $commandSource['dow'],
+        $commandSource['time_of_day'],
+        $commandSource['time'],
+        $commandSource['run_time'],
+        $commandSource['run_at_time'],
+        $commandSource['timezone'],
+        $commandSource['tz'],
+        $commandSource['enabled'],
+        $commandSource['active'],
+        $commandSource['paused'],
+        $commandSource['schedule_id'],
+        $commandSource['scheduleId'],
+        $commandSource['id']
+    );
+    $commandPayload = gmV2CommandPayloadFromRequest($commandKey, $commandSource);
+    gmV2ValidateBulkCommandTemplate($commandKey, $commandPayload);
+    $preview = gmV2BuildSchedulePreviewSnapshot($config, array_merge($commandPayload, [
+        'command_key' => $commandKey,
+        'selection' => $selection,
+    ]));
+
+    $nextRunAt = null;
+    if ($enabled) {
+        $nextRunAt = gmV2ComputeNextScheduleRunAt($weekdays, $timeOfDay, $timezone);
+    }
+
+    return [
+        'name' => $name,
+        'command_key' => $commandKey,
+        'selection' => $selection,
+        'command_payload' => $commandPayload,
+        'weekdays' => $weekdays,
+        'time_of_day' => $timeOfDay,
+        'timezone' => $timezone,
+        'enabled' => $enabled,
+        'preview' => $preview,
+        'next_run_at' => $nextRunAt,
+        'next_retry_at' => null,
+    ];
+}
+
+function gmV2CreateBulkSchedule(array $config, array $request)
+{
+    gmV2EnsureEnvironment($config);
+    $payload = gmV2NormalizeScheduleRequest($config, $request);
+    $scheduleId = buildOperationId('gmv2-schedule');
+    $actor = [
+        'name' => gmV2RequestActor($request),
+        'ip' => gmV2RequestIp(),
+    ];
+
+    $schedule = array_merge([
+        'type' => 'gm_v2_schedule',
+        'id' => $scheduleId,
+        'created_at' => gmdate('c'),
+        'updated_at' => gmdate('c'),
+        'actor' => $actor,
+        'updated_by' => $actor,
+        'last_run_at' => null,
+        'last_job_id' => null,
+        'last_job_file' => null,
+        'last_result' => null,
+        'last_error' => null,
+        'last_error_at' => null,
+    ], $payload);
+
+    $scheduleFile = gmV2WriteSchedule($config, $schedule);
+    gmV2AppendAudit($config, 'schedule_created', [
+        'schedule_id' => $scheduleId,
+        'command_key' => array_value($schedule, 'command_key', ''),
+        'actor' => $actor,
+        'selection' => array_value($schedule, 'selection', []),
+        'next_run_at' => array_value($schedule, 'next_run_at', null),
+    ]);
+
+    return [
+        'success' => true,
+        'schedule' => gmV2ScheduleSummary($schedule),
+        'schedule_file' => $scheduleFile,
+        'audit_file' => gmV2AuditFile($config),
+    ];
+}
+
+function gmV2UpdateBulkSchedule(array $config, $scheduleId, array $request)
+{
+    $existing = gmV2ReadSchedule($config, $scheduleId);
+    if (!is_array($existing)) {
+        throw new InvalidArgumentException('Schedule nao encontrado');
+    }
+
+    $payload = gmV2NormalizeScheduleRequest($config, $request, $existing);
+    $updatedBy = [
+        'name' => gmV2RequestActor($request),
+        'ip' => gmV2RequestIp(),
+    ];
+
+    $schedule = array_merge($existing, $payload, [
+        'id' => array_value($existing, 'id', trim((string) $scheduleId)),
+        'type' => 'gm_v2_schedule',
+        'updated_by' => $updatedBy,
+        'last_error' => null,
+        'last_error_at' => null,
+    ]);
+
+    $scheduleFile = gmV2WriteSchedule($config, $schedule);
+    gmV2AppendAudit($config, 'schedule_updated', [
+        'schedule_id' => array_value($schedule, 'id', ''),
+        'command_key' => array_value($schedule, 'command_key', ''),
+        'actor' => $updatedBy,
+        'selection' => array_value($schedule, 'selection', []),
+        'next_run_at' => array_value($schedule, 'next_run_at', null),
+    ]);
+
+    return [
+        'success' => true,
+        'schedule' => gmV2ScheduleSummary($schedule),
+        'schedule_file' => $scheduleFile,
+        'audit_file' => gmV2AuditFile($config),
+    ];
+}
+
+function gmV2DeleteBulkSchedule(array $config, $scheduleId, array $request = [])
+{
+    $schedule = gmV2ReadSchedule($config, $scheduleId);
+    if (!is_array($schedule)) {
+        throw new InvalidArgumentException('Schedule nao encontrado');
+    }
+
+    $path = gmV2SchedulePath($config, $scheduleId);
+    if (is_file($path)) {
+        @unlink($path);
+    }
+
+    gmV2AppendAudit($config, 'schedule_deleted', [
+        'schedule_id' => trim((string) $scheduleId),
+        'command_key' => array_value($schedule, 'command_key', ''),
+        'actor' => [
+            'name' => gmV2RequestActor($request),
+            'ip' => gmV2RequestIp(),
+        ],
+    ]);
+
+    return [
+        'success' => true,
+        'deleted' => true,
+        'schedule_id' => trim((string) $scheduleId),
+        'audit_file' => gmV2AuditFile($config),
+    ];
+}
+
+function gmV2GetBulkSchedulePayload(array $config, $scheduleId)
+{
+    $schedule = gmV2ReadSchedule($config, $scheduleId);
+    if (!is_array($schedule)) {
+        throw new InvalidArgumentException('Schedule nao encontrado');
+    }
+
+    return [
+        'success' => true,
+        'schedule' => $schedule,
+        'summary' => gmV2ScheduleSummary($schedule),
+        'schedule_file' => gmV2SchedulePath($config, $scheduleId),
+    ];
+}
+
+function gmV2GetBulkSchedulesPayload(array $config, $limit = 50)
+{
+    return [
+        'success' => true,
+        'schedules' => gmV2ListSchedules($config, $limit),
+        'limit' => max(1, min(200, intval($limit))),
+        'collected_at' => gmdate('c'),
+    ];
+}
+
+function gmV2IsScheduleDue(array $schedule, $nowTs = null)
+{
+    if (empty($schedule['enabled'])) {
+        return false;
+    }
+
+    $nowTs = ($nowTs === null) ? time() : intval($nowTs);
+    $nextRunAt = trim((string) array_value($schedule, 'next_run_at', ''));
+    if ($nextRunAt === '') {
+        return false;
+    }
+
+    $nextRetryAt = trim((string) array_value($schedule, 'next_retry_at', ''));
+    if ($nextRetryAt !== '' && strtotime($nextRetryAt) > $nowTs) {
+        return false;
+    }
+
+    $runTs = strtotime($nextRunAt);
+    return ($runTs !== false && $runTs <= $nowTs);
+}
+
+function gmV2ProcessDueSchedule(array $config, array $schedule)
+{
+    $scheduleId = trim((string) array_value($schedule, 'id', ''));
+    if ($scheduleId === '') {
+        throw new InvalidArgumentException('Schedule invalido sem id');
+    }
+
+    if (empty($schedule['enabled'])) {
+        return $schedule;
+    }
+
+    if (!gmV2IsScheduleDue($schedule)) {
+        return $schedule;
+    }
+
+    $request = array_merge((array) array_value($schedule, 'command_payload', []), [
+        'command_key' => array_value($schedule, 'command_key', ''),
+        'selection' => array_value($schedule, 'selection', []),
+        'actor' => trim((string) array_value(array_value($schedule, 'actor', []), 'name', 'schedule')),
+        'schedule_id' => $scheduleId,
+    ]);
+
+    try {
+        $queued = gmV2CreateQueuedJob($config, $request);
+        $jobId = trim((string) array_value(array_value($queued, 'job', []), 'id', ''));
+        $from = new DateTimeImmutable(trim((string) array_value($schedule, 'next_run_at', 'now')));
+
+        $schedule['last_run_at'] = gmdate('c');
+        $schedule['last_job_id'] = $jobId;
+        $schedule['last_job_file'] = array_value($queued, 'job_file', null);
+        $schedule['last_result'] = 'queued';
+        $schedule['last_error'] = null;
+        $schedule['last_error_at'] = null;
+        $schedule['next_retry_at'] = null;
+        $schedule['next_run_at'] = gmV2ComputeNextScheduleRunAt(
+            (array) array_value($schedule, 'weekdays', []),
+            array_value($schedule, 'time_of_day', ''),
+            array_value($schedule, 'timezone', array_value($config, 'gm_v2_schedule_default_timezone', 'America/Sao_Paulo')),
+            $from->modify('+1 second')
+        );
+
+        gmV2WriteSchedule($config, $schedule);
+        gmV2AppendAudit($config, 'schedule_triggered', [
+            'schedule_id' => $scheduleId,
+            'job_id' => $jobId,
+            'command_key' => array_value($schedule, 'command_key', ''),
+            'selection' => array_value($schedule, 'selection', []),
+            'next_run_at' => array_value($schedule, 'next_run_at', null),
+        ]);
+    } catch (Exception $e) {
+        $schedule['last_result'] = 'error';
+        $schedule['last_error'] = $e->getMessage();
+        $schedule['last_error_at'] = gmdate('c');
+        $schedule['next_retry_at'] = gmdate('c', time() + max(60, intval(array_value($config, 'gm_v2_schedule_retry_backoff_seconds', 300))));
+        gmV2WriteSchedule($config, $schedule);
+        gmV2AppendAudit($config, 'schedule_error', [
+            'schedule_id' => $scheduleId,
+            'command_key' => array_value($schedule, 'command_key', ''),
+            'error' => $e->getMessage(),
+            'next_retry_at' => array_value($schedule, 'next_retry_at', null),
+        ]);
+    }
+
+    return $schedule;
+}
+
+function gmV2RunScheduleWorker(array $config, array $options = [])
+{
+    $paths = gmV2EnsureEnvironment($config);
+    $lockHandle = @fopen($paths['schedule_lock_file'], 'c+');
+    if (!is_resource($lockHandle)) {
+        throw new Exception('Nao foi possivel abrir lock do worker de schedules');
+    }
+
+    if (!@flock($lockHandle, LOCK_EX | LOCK_NB)) {
+        return [
+            'success' => true,
+            'skipped' => true,
+            'reason' => 'schedule_worker_locked',
+            'checked_at' => gmdate('c'),
+        ];
+    }
+
+    $result = [
+        'success' => true,
+        'checked_at' => gmdate('c'),
+        'processed_schedules' => [],
+        'scan_limit' => max(1, intval(array_value($config, 'gm_v2_schedule_scan_limit', 50))),
+    ];
+
+    try {
+        $files = glob(rtrim(gmV2SchedulesDir($config), '/\\') . DIRECTORY_SEPARATOR . '*.json');
+        if (!is_array($files)) {
+            $files = [];
+        }
+
+        usort($files, function ($a, $b) {
+            return intval(@filemtime($a)) <=> intval(@filemtime($b));
+        });
+
+        $scanLimit = max(1, intval(array_value($config, 'gm_v2_schedule_scan_limit', 50)));
+        foreach (array_slice($files, 0, $scanLimit) as $file) {
+            $raw = @file_get_contents($file);
+            $schedule = json_decode((string) $raw, true);
+            if (!is_array($schedule) || empty($schedule['enabled'])) {
+                continue;
+            }
+
+            $nextRunAt = trim((string) array_value($schedule, 'next_run_at', ''));
+            if ($nextRunAt === '') {
+                $schedule['next_run_at'] = gmV2ComputeNextScheduleRunAt(
+                    (array) array_value($schedule, 'weekdays', []),
+                    array_value($schedule, 'time_of_day', ''),
+                    array_value($schedule, 'timezone', array_value($config, 'gm_v2_schedule_default_timezone', 'America/Sao_Paulo'))
+                );
+                gmV2WriteSchedule($config, $schedule);
+            }
+
+            if (!gmV2IsScheduleDue($schedule)) {
+                continue;
+            }
+
+            $processed = gmV2ProcessDueSchedule($config, $schedule);
+            $result['processed_schedules'][] = gmV2ScheduleSummary($processed);
         }
     } finally {
         @flock($lockHandle, LOCK_UN);
@@ -9758,6 +10501,12 @@ function gmCommandCatalogPayload(array $config)
             'bulk_queue' => '/apicls/api_cls.php?action=queueBulkCommand',
             'bulk_job' => '/apicls/api_cls.php?action=getBulkCommandJob',
             'bulk_jobs' => '/apicls/api_cls.php?action=getBulkCommandJobs',
+            'bulk_schedule_create' => '/apicls/api_cls.php?action=scheduleBulkCommand',
+            'bulk_schedule' => '/apicls/api_cls.php?action=getBulkSchedule',
+            'bulk_schedules' => '/apicls/api_cls.php?action=getBulkSchedules',
+            'bulk_schedule_update' => '/apicls/api_cls.php?action=updateBulkSchedule',
+            'bulk_schedule_delete' => '/apicls/api_cls.php?action=deleteBulkSchedule',
+            'bulk_schedule_runner' => '/apicls/api_cls.php?action=runDueBulkSchedules',
         ],
         'collected_at' => gmdate('c'),
     ];
@@ -16196,6 +16945,126 @@ if (php_sapi_name() !== 'cli' || isset($_GET['action'])) {
             }
             break;
 
+        case 'scheduleBulkCommand':
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                respondJson(['error' => 'Use POST para scheduleBulkCommand'], 405);
+                exit;
+            }
+
+            $request = readRequestPayload();
+            if (isset($request['__json_error'])) {
+                respondJson(['error' => 'JSON invalido: ' . $request['__json_error']], 400);
+                exit;
+            }
+
+            try {
+                respondJson(gmV2CreateBulkSchedule($CONFIG, $request));
+            } catch (InvalidArgumentException $e) {
+                respondJson(['error' => $e->getMessage()], 400);
+            } catch (Exception $e) {
+                respondJson(['error' => $e->getMessage()], 500);
+            }
+            break;
+
+        case 'getBulkSchedule':
+            try {
+                $scheduleId = trim((string) firstArrayValue($_GET, ['schedule_id', 'scheduleId', 'id'], ''));
+                if ($scheduleId === '') {
+                    throw new InvalidArgumentException('schedule_id obrigatorio');
+                }
+                respondJson(gmV2GetBulkSchedulePayload($CONFIG, $scheduleId));
+            } catch (InvalidArgumentException $e) {
+                respondJson(['error' => $e->getMessage()], 400);
+            } catch (Exception $e) {
+                respondJson(['error' => $e->getMessage()], 500);
+            }
+            break;
+
+        case 'getBulkSchedules':
+            try {
+                $limit = max(1, min(200, intval(firstArrayValue($_GET, ['limit'], 50))));
+                respondJson(gmV2GetBulkSchedulesPayload($CONFIG, $limit));
+            } catch (InvalidArgumentException $e) {
+                respondJson(['error' => $e->getMessage()], 400);
+            } catch (Exception $e) {
+                respondJson(['error' => $e->getMessage()], 500);
+            }
+            break;
+
+        case 'updateBulkSchedule':
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                respondJson(['error' => 'Use POST para updateBulkSchedule'], 405);
+                exit;
+            }
+
+            $request = readRequestPayload();
+            if (isset($request['__json_error'])) {
+                respondJson(['error' => 'JSON invalido: ' . $request['__json_error']], 400);
+                exit;
+            }
+
+            try {
+                $scheduleId = trim((string) firstArrayValue($request, ['schedule_id', 'scheduleId', 'id'], ''));
+                if ($scheduleId === '') {
+                    throw new InvalidArgumentException('schedule_id obrigatorio');
+                }
+                respondJson(gmV2UpdateBulkSchedule($CONFIG, $scheduleId, $request));
+            } catch (InvalidArgumentException $e) {
+                respondJson(['error' => $e->getMessage()], 400);
+            } catch (Exception $e) {
+                respondJson(['error' => $e->getMessage()], 500);
+            }
+            break;
+
+        case 'deleteBulkSchedule':
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                respondJson(['error' => 'Use POST para deleteBulkSchedule'], 405);
+                exit;
+            }
+
+            $request = readRequestPayload();
+            if (isset($request['__json_error'])) {
+                respondJson(['error' => 'JSON invalido: ' . $request['__json_error']], 400);
+                exit;
+            }
+
+            try {
+                $scheduleId = trim((string) firstArrayValue($request, ['schedule_id', 'scheduleId', 'id'], ''));
+                if ($scheduleId === '') {
+                    throw new InvalidArgumentException('schedule_id obrigatorio');
+                }
+                respondJson(gmV2DeleteBulkSchedule($CONFIG, $scheduleId, $request));
+            } catch (InvalidArgumentException $e) {
+                respondJson(['error' => $e->getMessage()], 400);
+            } catch (Exception $e) {
+                respondJson(['error' => $e->getMessage()], 500);
+            }
+            break;
+
+        case 'runDueBulkSchedules':
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                respondJson(['error' => 'Use POST para runDueBulkSchedules'], 405);
+                exit;
+            }
+
+            $request = readRequestPayload();
+            if (isset($request['__json_error'])) {
+                respondJson(['error' => 'JSON invalido: ' . $request['__json_error']], 400);
+                exit;
+            }
+
+            try {
+                respondJson(gmV2RunScheduleWorker($CONFIG, [
+                    'source' => 'http',
+                    'actor' => gmV2RequestActor($request),
+                ]));
+            } catch (InvalidArgumentException $e) {
+                respondJson(['error' => $e->getMessage()], 400);
+            } catch (Exception $e) {
+                respondJson(['error' => $e->getMessage()], 500);
+            }
+            break;
+
         case 'getMallCashBalance':
         case 'getUserCashInfo':
         case 'getAccountMallCash':
@@ -17188,7 +18057,7 @@ if (php_sapi_name() !== 'cli' || isset($_GET['action'])) {
 
         default:
             respondJson([
-                'error' => 'Acao invalida. Use: getRole, getRoles, getRoleEditable, getRolesEditable, getClasses, getClsconfig, getClsconfigDebug, getItemCatalog, getGmCommandCatalog, getGmActionHistory, getGmPermissionCatalog, getGmPermissionState, getMallCashBalance, searchPlayerDirectory, getPlayerTargetProfile, resolveBulkTargets, previewBulkTargets, queueBulkCommand, getBulkCommandJob, getBulkCommandJobs, getServiceStatus, getControlCenterSnapshot, getManageableServices, getManageableInstances, setInstanceAutoStart, startInstance, startInstances, stopInstance, stopInstances, restartInstance, restartInstances, getServerOperationStatus, getServerOperationsHistory, getServerLogs, sendSystemMessage, getMaintenanceMode, setMaintenanceMode, getWatchdogStatus, getWatchdogHistory, saveWatchdogConfig, enableWatchdog, disableWatchdog, runWatchdogCheckNow, startServer, stopServer, restartServer, startService, stopService, restartService, sendMailItem, sendMailGold, grantMallCash, grantGmPermission, revokeGmPermission, kickRole, banAccount, unbanAccount, muteAccount, muteRole, clearRolePk, reviveRole, teleportRole, listBackups, backupGamedbd, backupNow, getBackupContent, getRestorePlan, getRestoreHistory, restoreNow, restoreBackup, exportClsconfig, saveRoleEditable, saveClsconfigTemplate',
+                'error' => 'Acao invalida. Use: getRole, getRoles, getRoleEditable, getRolesEditable, getClasses, getClsconfig, getClsconfigDebug, getItemCatalog, getGmCommandCatalog, getGmActionHistory, getGmPermissionCatalog, getGmPermissionState, getMallCashBalance, searchPlayerDirectory, getPlayerTargetProfile, resolveBulkTargets, previewBulkTargets, queueBulkCommand, getBulkCommandJob, getBulkCommandJobs, scheduleBulkCommand, getBulkSchedule, getBulkSchedules, updateBulkSchedule, deleteBulkSchedule, runDueBulkSchedules, getServiceStatus, getControlCenterSnapshot, getManageableServices, getManageableInstances, setInstanceAutoStart, startInstance, startInstances, stopInstance, stopInstances, restartInstance, restartInstances, getServerOperationStatus, getServerOperationsHistory, getServerLogs, sendSystemMessage, getMaintenanceMode, setMaintenanceMode, getWatchdogStatus, getWatchdogHistory, saveWatchdogConfig, enableWatchdog, disableWatchdog, runWatchdogCheckNow, startServer, stopServer, restartServer, startService, stopService, restartService, sendMailItem, sendMailGold, grantMallCash, grantGmPermission, revokeGmPermission, kickRole, banAccount, unbanAccount, muteAccount, muteRole, clearRolePk, reviveRole, teleportRole, listBackups, backupGamedbd, backupNow, getBackupContent, getRestorePlan, getRestoreHistory, restoreNow, restoreBackup, exportClsconfig, saveRoleEditable, saveClsconfigTemplate',
             ], 400);
             break;
     }
@@ -17219,6 +18088,22 @@ if (php_sapi_name() !== 'cli' || isset($_GET['action'])) {
     } elseif ($cliAction === 'gm-queue-worker') {
         try {
             $result = gmV2RunQueueWorker($CONFIG, [
+                'source' => 'cli',
+            ]);
+            echo safeJsonEncode($result) . PHP_EOL;
+            exit(!empty($result['success']) ? 0 : 1);
+        } catch (Exception $e) {
+            $payload = [
+                'success' => false,
+                'error' => $e->getMessage(),
+                'checked_at' => gmdate('c'),
+            ];
+            echo safeJsonEncode($payload) . PHP_EOL;
+            exit(1);
+        }
+    } elseif ($cliAction === 'gm-schedule-worker') {
+        try {
+            $result = gmV2RunScheduleWorker($CONFIG, [
                 'source' => 'cli',
             ]);
             echo safeJsonEncode($result) . PHP_EOL;

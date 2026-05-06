@@ -1,0 +1,3 @@
+apache ALL=(root) NOPASSWD: /usr/local/sbin/exportclsconfig-api.sh
+apache ALL=(root) NOPASSWD: /usr/local/sbin/backupgamedbd-api.sh
+apache ALL=(root) NOPASSWD: /usr/local/sbin/sendreward-api.sh

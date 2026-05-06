@@ -179,6 +179,8 @@ if [ -z "$WEB_USER" ]; then
 fi
 
 id "$WEB_USER" >/dev/null 2>&1 || die "Usuario web '$WEB_USER' nao existe. Use --web-user."
+PHP_CLI_BIN="$(command -v php 2>/dev/null || true)"
+[ -n "$PHP_CLI_BIN" ] || die "php nao encontrado no sistema."
 
 TMP_DIR="$(mktemp -d /tmp/apicls-install.XXXXXX)"
 cleanup() {
@@ -218,8 +220,12 @@ if ! grep -q "getServiceStatus" "$TMP_API" || ! grep -q "getControlCenterSnapsho
   die "api_cls.php parece desatualizado. Ele precisa conter getServiceStatus, getControlCenterSnapshot e getServerLogs."
 fi
 
-if ! grep -q "sendSystemMessage" "$TMP_API" || ! grep -q "getMaintenanceMode" "$TMP_API" || ! grep -q "getManageableServices" "$TMP_API" || ! grep -q "getManageableInstances" "$TMP_API" || ! grep -q "setInstanceAutoStart" "$TMP_API" || ! grep -q "startInstance" "$TMP_API" || ! grep -q "startInstances" "$TMP_API" || ! grep -q "stopInstance" "$TMP_API" || ! grep -q "stopInstances" "$TMP_API" || ! grep -q "restartInstance" "$TMP_API" || ! grep -q "restartInstances" "$TMP_API" || ! grep -q "getServerOperationStatus" "$TMP_API" || ! grep -q "getServerOperationsHistory" "$TMP_API" || ! grep -q "setMaintenanceMode" "$TMP_API" || ! grep -q "startServer" "$TMP_API" || ! grep -q "stopServer" "$TMP_API" || ! grep -q "restartServer" "$TMP_API" || ! grep -q "startService" "$TMP_API" || ! grep -q "stopService" "$TMP_API" || ! grep -q "restartService" "$TMP_API" || ! grep -q "backupNow" "$TMP_API"; then
-  die "api_cls.php parece desatualizado. Ele precisa conter sendSystemMessage, getMaintenanceMode, getManageableServices, getManageableInstances, setInstanceAutoStart, startInstance, startInstances, stopInstance, stopInstances, restartInstance, restartInstances, getServerOperationStatus, getServerOperationsHistory, setMaintenanceMode, startServer, stopServer, restartServer, startService, stopService, restartService e backupNow."
+if ! grep -q "sendSystemMessage" "$TMP_API" || ! grep -q "getGmCommandCatalog" "$TMP_API" || ! grep -q "getGmActionHistory" "$TMP_API" || ! grep -q "getGmPermissionCatalog" "$TMP_API" || ! grep -q "getGmPermissionState" "$TMP_API" || ! grep -q "grantGmPermission" "$TMP_API" || ! grep -q "revokeGmPermission" "$TMP_API" || ! grep -q "getMallCashBalance" "$TMP_API" || ! grep -q "grantMallCash" "$TMP_API" || ! grep -q "muteAccount" "$TMP_API" || ! grep -q "muteRole" "$TMP_API" || ! grep -q "teleportRole" "$TMP_API" || ! grep -q "getMaintenanceMode" "$TMP_API" || ! grep -q "getManageableServices" "$TMP_API" || ! grep -q "getManageableInstances" "$TMP_API" || ! grep -q "setInstanceAutoStart" "$TMP_API" || ! grep -q "startInstance" "$TMP_API" || ! grep -q "startInstances" "$TMP_API" || ! grep -q "stopInstance" "$TMP_API" || ! grep -q "stopInstances" "$TMP_API" || ! grep -q "restartInstance" "$TMP_API" || ! grep -q "restartInstances" "$TMP_API" || ! grep -q "getServerOperationStatus" "$TMP_API" || ! grep -q "getServerOperationsHistory" "$TMP_API" || ! grep -q "setMaintenanceMode" "$TMP_API" || ! grep -q "startServer" "$TMP_API" || ! grep -q "stopServer" "$TMP_API" || ! grep -q "restartServer" "$TMP_API" || ! grep -q "startService" "$TMP_API" || ! grep -q "stopService" "$TMP_API" || ! grep -q "restartService" "$TMP_API" || ! grep -q "backupNow" "$TMP_API" || ! grep -q "getRestorePlan" "$TMP_API" || ! grep -q "getRestoreHistory" "$TMP_API" || ! grep -q "restoreNow" "$TMP_API"; then
+  die "api_cls.php parece desatualizado. Ele precisa conter sendSystemMessage, getGmCommandCatalog, getGmActionHistory, getGmPermissionCatalog, getGmPermissionState, grantGmPermission, revokeGmPermission, getMallCashBalance, grantMallCash, muteAccount, muteRole, teleportRole, getMaintenanceMode, getManageableServices, getManageableInstances, setInstanceAutoStart, startInstance, startInstances, stopInstance, stopInstances, restartInstance, restartInstances, getServerOperationStatus, getServerOperationsHistory, setMaintenanceMode, startServer, stopServer, restartServer, startService, stopService, restartService, backupNow, getRestorePlan, getRestoreHistory e restoreNow."
+fi
+
+if ! grep -q "scheduleBulkCommand" "$TMP_API" || ! grep -q "getBulkSchedules" "$TMP_API" || ! grep -q "runDueBulkSchedules" "$TMP_API"; then
+  die "api_cls.php parece desatualizado. Ele precisa conter scheduleBulkCommand, getBulkSchedules e runDueBulkSchedules."
 fi
 
 if grep -q "'api_secret'" "$TMP_API"; then
@@ -247,12 +253,96 @@ mkdir -p "$INSTALL_DIR/backups/uniquenamed"
 mkdir -p "$INSTALL_DIR/backups/panel"
 mkdir -p "$INSTALL_DIR/backups/full"
 mkdir -p "$INSTALL_DIR/backups/watchdog"
+mkdir -p "$INSTALL_DIR/backups/restore"
+mkdir -p "$INSTALL_DIR/backups/gm-actions"
 mkdir -p "$INSTALL_DIR/backups/security-logs"
 mkdir -p "$INSTALL_DIR/backups/sysmsg-logs"
 mkdir -p "$INSTALL_DIR/backups/maintenance"
 mkdir -p "$INSTALL_DIR/backups/server-ops"
+mkdir -p "$INSTALL_DIR/backups/gm-commander-v2/queue/jobs"
+mkdir -p "$INSTALL_DIR/backups/gm-commander-v2/queue/attempts"
+mkdir -p "$INSTALL_DIR/backups/gm-commander-v2/queue/logs"
+mkdir -p "$INSTALL_DIR/backups/gm-commander-v2/schedules/items"
+mkdir -p "$INSTALL_DIR/backups/gm-commander-v2/schedules/logs"
+mkdir -p "$INSTALL_DIR/backups/gm-commander-v2/audit"
 
 cp -f "$TMP_API" "$INSTALL_DIR/api_cls.php"
+
+cat > "$INSTALL_DIR/gm-queue-worker.php" <<'EOF'
+<?php
+
+if (!isset($argv) || !is_array($argv)) {
+    $argv = [__FILE__];
+}
+
+array_splice($argv, 1, 0, ['gm-queue-worker']);
+$argc = count($argv);
+
+require __DIR__ . '/api_cls.php';
+EOF
+
+cat > "$INSTALL_DIR/gm-schedule-worker.php" <<'EOF'
+<?php
+
+if (!isset($argv) || !is_array($argv)) {
+    $argv = [__FILE__];
+}
+
+array_splice($argv, 1, 0, ['gm-schedule-worker']);
+$argc = count($argv);
+
+require __DIR__ . '/api_cls.php';
+EOF
+
+cat > "$INSTALL_DIR/.htaccess" <<'EOF'
+Options -Indexes
+
+<IfModule mod_authz_core.c>
+  <FilesMatch "^(?:\.|backupgamedbd-api\.sh|install-apicls-centos7\.sh|README\.md|gm-queue-worker\.php|gm-schedule-worker\.php|sudoers\..*|clsconfig)$">
+    Require all denied
+  </FilesMatch>
+</IfModule>
+
+<IfModule !mod_authz_core.c>
+  <FilesMatch "^(?:\.|backupgamedbd-api\.sh|install-apicls-centos7\.sh|README\.md|gm-queue-worker\.php|gm-schedule-worker\.php|sudoers\..*|clsconfig)$">
+    Order allow,deny
+    Deny from all
+  </FilesMatch>
+</IfModule>
+EOF
+
+cat > "$INSTALL_DIR/backups/.htaccess" <<'EOF'
+Options -Indexes
+
+<IfModule mod_authz_core.c>
+  Require all denied
+</IfModule>
+
+<IfModule !mod_authz_core.c>
+  Order allow,deny
+  Deny from all
+</IfModule>
+EOF
+
+cat > /etc/httpd/conf.d/apicls-security.conf <<EOF
+<Directory "$INSTALL_DIR">
+    Options -Indexes +FollowSymLinks
+    AllowOverride All
+</Directory>
+
+<Directory "$INSTALL_DIR/backups">
+    Require all denied
+    AllowOverride None
+</Directory>
+
+<LocationMatch "^/apicls/backups(?:/|$)">
+    Require all denied
+</LocationMatch>
+
+<LocationMatch "^/apicls/(?:backupgamedbd-api\.sh|install-apicls-centos7\.sh|README\.md|sudoers\.gamedbd-backup\.example|clsconfig)$">
+    Require all denied
+</LocationMatch>
+EOF
 
 cat > /usr/local/sbin/exportclsconfig-api.sh <<'EOF'
 #!/bin/sh
@@ -450,14 +540,9 @@ fi
 MYSQLDUMP_BIN="$(command -v mysqldump 2>/dev/null || true)"
 GZIP_BIN="$(command -v gzip 2>/dev/null || true)"
 MYSQL_DEFAULTS_FILE="/root/.my.cnf"
-MYSQL_ARGS=()
 
 [ -n "$MYSQLDUMP_BIN" ] || { echo "mysqldump nao encontrado" >&2; exit 11; }
 [ -n "$GZIP_BIN" ] || { echo "gzip nao encontrado" >&2; exit 12; }
-
-if [ -f "$MYSQL_DEFAULTS_FILE" ]; then
-  MYSQL_ARGS+=(--defaults-extra-file="$MYSQL_DEFAULTS_FILE")
-fi
 
 mkdir -p "$BACKUP_ROOT"
 chmod 750 "$BACKUP_ROOT" 2>/dev/null || true
@@ -475,15 +560,26 @@ OUT="$BACKUP_ROOT/mysql-backup-$TS-$RAND.sql.gz"
 TMP="$BACKUP_ROOT/.mysql-backup-$TS-$RAND.tmp"
 ERR="$BACKUP_ROOT/.mysql-backup-$TS-$RAND.err"
 
-"$MYSQLDUMP_BIN" \
-  "${MYSQL_ARGS[@]}" \
-  --all-databases \
-  --events \
-  --routines \
-  --triggers \
-  --single-transaction \
-  --quick \
-  --lock-tables=false 2>"$ERR" | "$GZIP_BIN" -c > "$TMP" || DUMP_EXIT=$?
+if [ -f "$MYSQL_DEFAULTS_FILE" ]; then
+  "$MYSQLDUMP_BIN" \
+    --defaults-extra-file="$MYSQL_DEFAULTS_FILE" \
+    --all-databases \
+    --events \
+    --routines \
+    --triggers \
+    --single-transaction \
+    --quick \
+    --lock-tables=false 2>"$ERR" | "$GZIP_BIN" -c > "$TMP" || DUMP_EXIT=$?
+else
+  "$MYSQLDUMP_BIN" \
+    --all-databases \
+    --events \
+    --routines \
+    --triggers \
+    --single-transaction \
+    --quick \
+    --lock-tables=false 2>"$ERR" | "$GZIP_BIN" -c > "$TMP" || DUMP_EXIT=$?
+fi
 
 DUMP_EXIT="${DUMP_EXIT:-0}"
 if [ "$DUMP_EXIT" -ne 0 ]; then
@@ -526,6 +622,645 @@ echo json_encode($payload, JSON_UNESCAPED_SLASHES) . PHP_EOL;
 ' "$OUT" "$BYTES" "$SHA1" "$REASON"
 
 rm -f "$ERR"
+EOF
+
+cat > /usr/local/sbin/restoremysql-api.sh <<'EOF'
+#!/bin/bash
+set -euo pipefail
+
+BACKUP_FILE="${1:-}"
+MYSQL_DEFAULTS_FILE="/root/.my.cnf"
+
+if [ "$(id -u)" != "0" ]; then
+  echo "restoremysql-api.sh precisa rodar como root" >&2
+  exit 10
+fi
+
+[ -n "$BACKUP_FILE" ] || { echo "Informe o arquivo mysql-backup-*.sql.gz" >&2; exit 11; }
+[ -f "$BACKUP_FILE" ] || { echo "Backup MySQL nao encontrado: $BACKUP_FILE" >&2; exit 12; }
+[ -r "$BACKUP_FILE" ] || { echo "Backup MySQL sem permissao de leitura: $BACKUP_FILE" >&2; exit 13; }
+
+MYSQL_BIN="$(command -v mysql 2>/dev/null || true)"
+GZIP_BIN="$(command -v gzip 2>/dev/null || true)"
+[ -n "$MYSQL_BIN" ] || { echo "mysql nao encontrado" >&2; exit 14; }
+[ -n "$GZIP_BIN" ] || { echo "gzip nao encontrado" >&2; exit 15; }
+
+"$GZIP_BIN" -t "$BACKUP_FILE" >/dev/null 2>&1 || {
+  echo "Arquivo .sql.gz invalido ou corrompido: $BACKUP_FILE" >&2
+  exit 16
+}
+
+ERR="$(mktemp /tmp/restoremysql-api.XXXXXX.err)"
+trap 'rm -f "$ERR"' EXIT
+
+if [ -f "$MYSQL_DEFAULTS_FILE" ]; then
+  "$GZIP_BIN" -dc "$BACKUP_FILE" | "$MYSQL_BIN" --defaults-extra-file="$MYSQL_DEFAULTS_FILE" 2>"$ERR" || RESTORE_EXIT=$?
+else
+  "$GZIP_BIN" -dc "$BACKUP_FILE" | "$MYSQL_BIN" 2>"$ERR" || RESTORE_EXIT=$?
+fi
+
+RESTORE_EXIT="${RESTORE_EXIT:-0}"
+if [ "$RESTORE_EXIT" -ne 0 ]; then
+  ERR_TEXT="$(cat "$ERR" 2>/dev/null || true)"
+  if printf '%s' "$ERR_TEXT" | grep -qi 'access denied'; then
+    cat >&2 <<'MYSQL_AUTH_HINT'
+mysql nao autenticou para o restore. Configure um arquivo /root/.my.cnf com as credenciais do MariaDB, por exemplo:
+[client]
+user=root
+password=SUA_SENHA
+host=localhost
+MYSQL_AUTH_HINT
+  fi
+  printf '%s\n' "$ERR_TEXT" >&2
+  exit "$RESTORE_EXIT"
+fi
+
+BYTES="$(stat -c '%s' "$BACKUP_FILE" 2>/dev/null || wc -c < "$BACKUP_FILE")"
+SHA1="$(sha1sum "$BACKUP_FILE" | awk '{print $1}')"
+USED_DEFAULTS_FILE=""
+if [ -f "$MYSQL_DEFAULTS_FILE" ]; then
+  USED_DEFAULTS_FILE="$MYSQL_DEFAULTS_FILE"
+fi
+
+php -r '
+$payload = [
+    "type" => "mysql_backup",
+    "restored" => true,
+    "backup_file" => $argv[1],
+    "name" => basename($argv[1]),
+    "bytes" => (int) $argv[2],
+    "sha1" => $argv[3],
+    "target" => "all_databases",
+    "service" => "mysql",
+    "used_defaults_file" => $argv[4],
+    "applied_at" => gmdate("c"),
+];
+echo json_encode($payload, JSON_UNESCAPED_SLASHES) . PHP_EOL;
+' "$BACKUP_FILE" "$BYTES" "$SHA1" "$USED_DEFAULTS_FILE"
+EOF
+
+cat > /usr/local/sbin/grantmallcash-api.sh <<'EOF'
+#!/bin/bash
+set -euo pipefail
+
+USERID="${1:-}"
+CASH_UNITS="${2:-}"
+DB_NAME="${3:-pw}"
+MYSQL_DEFAULTS_FILE="/root/.my.cnf"
+
+if [ "$(id -u)" != "0" ]; then
+  echo "grantmallcash-api.sh precisa rodar como root" >&2
+  exit 10
+fi
+
+[[ "$USERID" =~ ^[0-9]+$ ]] || { echo "userid invalido" >&2; exit 11; }
+[[ "$CASH_UNITS" =~ ^[0-9]+$ ]] || { echo "cash_units invalido" >&2; exit 12; }
+[ "$USERID" -gt 0 ] || { echo "userid invalido" >&2; exit 13; }
+[ "$CASH_UNITS" -gt 0 ] || { echo "cash_units invalido" >&2; exit 14; }
+[ -n "$DB_NAME" ] || { echo "db_name invalido" >&2; exit 15; }
+
+MYSQL_BIN="$(command -v mysql 2>/dev/null || true)"
+[ -n "$MYSQL_BIN" ] || { echo "mysql nao encontrado" >&2; exit 16; }
+
+ERR="$(mktemp /tmp/grantmallcash-api.XXXXXX.err)"
+trap 'rm -f "$ERR"' EXIT
+
+SQL="SET @error := NULL; CALL usecash($USERID, 1, 0, 1, 0, $CASH_UNITS, 1, @error); SELECT COALESCE(@error, 0) AS error_code;"
+
+if [ -f "$MYSQL_DEFAULTS_FILE" ]; then
+  OUTPUT="$("$MYSQL_BIN" --defaults-extra-file="$MYSQL_DEFAULTS_FILE" --database="$DB_NAME" --batch --skip-column-names -e "$SQL" 2>"$ERR")" || MYSQL_EXIT=$?
+else
+  OUTPUT="$("$MYSQL_BIN" --database="$DB_NAME" --batch --skip-column-names -e "$SQL" 2>"$ERR")" || MYSQL_EXIT=$?
+fi
+
+MYSQL_EXIT="${MYSQL_EXIT:-0}"
+if [ "$MYSQL_EXIT" -ne 0 ]; then
+  ERR_TEXT="$(cat "$ERR" 2>/dev/null || true)"
+  if printf '%s' "$ERR_TEXT" | grep -qi 'access denied'; then
+    cat >&2 <<'MYSQL_AUTH_HINT'
+mysql nao autenticou para grantMallCash. Configure um arquivo /root/.my.cnf com as credenciais do MariaDB, por exemplo:
+[client]
+user=root
+password=SUA_SENHA
+host=localhost
+MYSQL_AUTH_HINT
+  fi
+  printf '%s\n' "$ERR_TEXT" >&2
+  exit "$MYSQL_EXIT"
+fi
+
+ERROR_CODE="$(printf '%s\n' "$OUTPUT" | awk 'NF { last=$0 } END { print last }')"
+[[ "$ERROR_CODE" =~ ^-?[0-9]+$ ]] || { echo "Saida inesperada do usecash: $OUTPUT" >&2; exit 17; }
+
+php -r '
+$payload = [
+    "success" => ((int) $argv[4] === 0),
+    "userid" => (int) $argv[1],
+    "cash_units" => (int) $argv[2],
+    "db_name" => $argv[3],
+    "error_code" => (int) $argv[4],
+    "applied_at" => gmdate("c"),
+];
+echo json_encode($payload, JSON_UNESCAPED_SLASHES) . PHP_EOL;
+' "$USERID" "$CASH_UNITS" "$DB_NAME" "$ERROR_CODE"
+EOF
+
+cat > /usr/local/sbin/gmpermission-api.sh <<'EOF'
+#!/bin/bash
+set -euo pipefail
+
+ACTION="${1:-inspect}"
+USERID="${2:-}"
+ZONEID="${3:-1}"
+DB_NAME="${4:-pw}"
+AUTH_TABLE="${5:-auth}"
+USERID_FIELD="${6:-userid}"
+ZONEID_FIELD="${7:-zoneid}"
+RID_FIELD="${8:-rid}"
+RULE_IDS_CSV="${9:-}"
+TEMPLATE_MIN_RULES="${10:-30}"
+MYSQL_DEFAULTS_FILE="/root/.my.cnf"
+
+if [ "$(id -u)" != "0" ]; then
+  echo "gmpermission-api.sh precisa rodar como root" >&2
+  exit 10
+fi
+
+case "$ACTION" in
+  inspect|grant|revoke) ;;
+  *)
+    echo "Acao invalida: $ACTION" >&2
+    exit 11
+    ;;
+esac
+
+[[ "$USERID" =~ ^[0-9]+$ ]] || { echo "userid invalido" >&2; exit 12; }
+[[ "$ZONEID" =~ ^[0-9]+$ ]] || { echo "zoneid invalido" >&2; exit 13; }
+[[ "$TEMPLATE_MIN_RULES" =~ ^[0-9]+$ ]] || { echo "template_min_rules invalido" >&2; exit 14; }
+[ "$USERID" -gt 0 ] || { echo "userid invalido" >&2; exit 15; }
+[ "$ZONEID" -gt 0 ] || { echo "zoneid invalido" >&2; exit 16; }
+[ "$TEMPLATE_MIN_RULES" -gt 0 ] || { echo "template_min_rules invalido" >&2; exit 17; }
+[ -n "$DB_NAME" ] || { echo "db_name invalido" >&2; exit 18; }
+
+for IDENT in "$AUTH_TABLE" "$USERID_FIELD" "$ZONEID_FIELD" "$RID_FIELD"; do
+  [[ "$IDENT" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || { echo "Identificador SQL invalido: $IDENT" >&2; exit 19; }
+done
+
+MYSQL_BIN="$(command -v mysql 2>/dev/null || true)"
+[ -n "$MYSQL_BIN" ] || { echo "mysql nao encontrado" >&2; exit 20; }
+
+ERR="$(mktemp /tmp/gmpermission-api.XXXXXX.err)"
+trap 'rm -f "$ERR"' EXIT
+
+mysql_exec() {
+  local sql="$1"
+  local output=""
+  local mysql_exit=0
+  if [ -f "$MYSQL_DEFAULTS_FILE" ]; then
+    output="$("$MYSQL_BIN" --defaults-extra-file="$MYSQL_DEFAULTS_FILE" --database="$DB_NAME" --batch --skip-column-names -e "$sql" 2>"$ERR")" || mysql_exit=$?
+  else
+    output="$("$MYSQL_BIN" --database="$DB_NAME" --batch --skip-column-names -e "$sql" 2>"$ERR")" || mysql_exit=$?
+  fi
+
+  mysql_exit="${mysql_exit:-0}"
+  if [ "$mysql_exit" -ne 0 ]; then
+    ERR_TEXT="$(cat "$ERR" 2>/dev/null || true)"
+    if printf '%s' "$ERR_TEXT" | grep -qi 'access denied'; then
+      cat >&2 <<'MYSQL_AUTH_HINT'
+mysql nao autenticou para gmpermission. Configure um arquivo /root/.my.cnf com as credenciais do MariaDB, por exemplo:
+[client]
+user=root
+password=SUA_SENHA
+host=localhost
+MYSQL_AUTH_HINT
+    fi
+    printf '%s\n' "$ERR_TEXT" >&2
+    exit "$mysql_exit"
+  fi
+
+  printf '%s' "$output"
+}
+
+normalize_list() {
+  local input="$1"
+  if [ -z "$input" ]; then
+    return 0
+  fi
+  printf '%s\n' "$input" | sed '/^[[:space:]]*$/d' | sort -n -u
+}
+
+list_to_csv() {
+  local input="$1"
+  if [ -z "$input" ]; then
+    return 0
+  fi
+  printf '%s\n' "$input" | sed '/^[[:space:]]*$/d' | paste -sd, -
+}
+
+parse_rule_ids() {
+  local input="$1"
+  if [ -z "$input" ]; then
+    return 0
+  fi
+  printf '%s' "$input" \
+    | tr ',;:|' '\n' \
+    | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' \
+    | awk 'NF && $1 ~ /^[0-9]+$/ && $1 >= 0 { print $1 }' \
+    | sort -n -u
+}
+
+load_rules_for_user() {
+  local target_userid="$1"
+  mysql_exec "SELECT \`$RID_FIELD\` FROM \`$AUTH_TABLE\` WHERE \`$USERID_FIELD\`=$target_userid AND \`$ZONEID_FIELD\`=$ZONEID ORDER BY \`$RID_FIELD\`;" \
+    | awk 'NF && $1 ~ /^[0-9]+$/ && $1 >= 0 { print $1 }' \
+    | sort -n -u
+}
+
+CURRENT_RULES_LIST="$(load_rules_for_user "$USERID")"
+CURRENT_RULES_CSV="$(list_to_csv "$CURRENT_RULES_LIST")"
+
+TEMPLATE_SOURCE="configured"
+TEMPLATE_USERID="0"
+TEMPLATE_RULES_LIST="$(parse_rule_ids "$RULE_IDS_CSV")"
+
+if [ -z "$TEMPLATE_RULES_LIST" ]; then
+  TEMPLATE_SOURCE="none"
+  CANDIDATE_USERID="$(mysql_exec "SELECT \`$USERID_FIELD\`, COUNT(*) AS cnt FROM \`$AUTH_TABLE\` WHERE \`$ZONEID_FIELD\`=$ZONEID GROUP BY \`$USERID_FIELD\` HAVING COUNT(*) >= $TEMPLATE_MIN_RULES ORDER BY cnt DESC, \`$USERID_FIELD\` ASC LIMIT 1;" | awk 'NF { print $1; exit }')"
+  if [ -n "$CANDIDATE_USERID" ] && [[ "$CANDIDATE_USERID" =~ ^[0-9]+$ ]] && [ "$CANDIDATE_USERID" -gt 0 ]; then
+    TEMPLATE_SOURCE="auth_table_sample"
+    TEMPLATE_USERID="$CANDIDATE_USERID"
+    TEMPLATE_RULES_LIST="$(load_rules_for_user "$CANDIDATE_USERID")"
+  elif [ -n "$CURRENT_RULES_LIST" ]; then
+    TEMPLATE_SOURCE="current_user"
+    TEMPLATE_USERID="$USERID"
+    TEMPLATE_RULES_LIST="$CURRENT_RULES_LIST"
+  fi
+fi
+
+TEMPLATE_RULES_CSV="$(list_to_csv "$TEMPLATE_RULES_LIST")"
+MISSING_RULES_LIST="$(comm -23 <(normalize_list "$TEMPLATE_RULES_LIST") <(normalize_list "$CURRENT_RULES_LIST") || true)"
+MATCHING_RULES_LIST="$(comm -12 <(normalize_list "$TEMPLATE_RULES_LIST") <(normalize_list "$CURRENT_RULES_LIST") || true)"
+MISSING_RULES_CSV="$(list_to_csv "$MISSING_RULES_LIST")"
+MATCHING_RULES_CSV="$(list_to_csv "$MATCHING_RULES_LIST")"
+
+INSERTED_RULES_LIST=""
+DELETED_RULES_LIST=""
+
+if [ "$ACTION" = "grant" ]; then
+  [ -n "$TEMPLATE_RULES_LIST" ] || { echo "Nenhum template de permissao GM disponivel para grant" >&2; exit 21; }
+  if [ -n "$MISSING_RULES_LIST" ]; then
+    VALUES_SQL=""
+    while IFS= read -r RID; do
+      [ -n "$RID" ] || continue
+      VALUES_SQL="${VALUES_SQL}($USERID,$ZONEID,$RID),"
+    done <<< "$MISSING_RULES_LIST"
+    VALUES_SQL="${VALUES_SQL%,}"
+    [ -n "$VALUES_SQL" ] || { echo "Nenhum rid faltante para grant" >&2; exit 22; }
+    mysql_exec "INSERT INTO \`$AUTH_TABLE\` (\`$USERID_FIELD\`, \`$ZONEID_FIELD\`, \`$RID_FIELD\`) VALUES $VALUES_SQL;" >/dev/null
+    INSERTED_RULES_LIST="$MISSING_RULES_LIST"
+  fi
+elif [ "$ACTION" = "revoke" ]; then
+  [ -n "$TEMPLATE_RULES_LIST" ] || { echo "Nenhum template de permissao GM disponivel para revoke" >&2; exit 23; }
+  if [ -n "$MATCHING_RULES_LIST" ]; then
+    RID_IN="$(list_to_csv "$MATCHING_RULES_LIST")"
+    mysql_exec "DELETE FROM \`$AUTH_TABLE\` WHERE \`$USERID_FIELD\`=$USERID AND \`$ZONEID_FIELD\`=$ZONEID AND \`$RID_FIELD\` IN ($RID_IN);" >/dev/null
+    DELETED_RULES_LIST="$MATCHING_RULES_LIST"
+  fi
+fi
+
+AFTER_RULES_LIST="$(load_rules_for_user "$USERID")"
+AFTER_RULES_CSV="$(list_to_csv "$AFTER_RULES_LIST")"
+INSERTED_RULES_CSV="$(list_to_csv "$INSERTED_RULES_LIST")"
+DELETED_RULES_CSV="$(list_to_csv "$DELETED_RULES_LIST")"
+
+php -r '
+function ints($csv) {
+    $csv = trim((string) $csv);
+    if ($csv === "") {
+        return [];
+    }
+    $items = preg_split("/[\s,;:|]+/", $csv, -1, PREG_SPLIT_NO_EMPTY);
+    $out = [];
+    foreach ((array) $items as $item) {
+        if (!is_numeric($item)) {
+            continue;
+        }
+        $value = (int) $item;
+        if ($value >= 0) {
+            $out[] = $value;
+        }
+    }
+    $out = array_values(array_unique($out));
+    sort($out, SORT_NUMERIC);
+    return $out;
+}
+$current = ints($argv[7]);
+$template = ints($argv[8]);
+$missing = ints($argv[9]);
+$matching = ints($argv[10]);
+$inserted = ints($argv[11]);
+$deleted = ints($argv[12]);
+$after = ints($argv[13]);
+$payload = [
+    "success" => true,
+    "action" => $argv[1],
+    "userid" => (int) $argv[2],
+    "zoneid" => (int) $argv[3],
+    "db_name" => $argv[4],
+    "auth_table" => $argv[5],
+    "template_source" => $argv[6],
+    "template_userid" => (int) $argv[14],
+    "current_rule_ids" => $current,
+    "current_rule_count" => count($current),
+    "template_rule_ids" => $template,
+    "template_rule_count" => count($template),
+    "missing_rule_ids" => $missing,
+    "missing_rule_count" => count($missing),
+    "matching_rule_ids" => $matching,
+    "matching_rule_count" => count($matching),
+    "inserted_rule_ids" => $inserted,
+    "inserted_rule_count" => count($inserted),
+    "deleted_rule_ids" => $deleted,
+    "deleted_rule_count" => count($deleted),
+    "after_rule_ids" => $after,
+    "after_rule_count" => count($after),
+    "applied_at" => gmdate("c"),
+];
+echo json_encode($payload, JSON_UNESCAPED_SLASHES) . PHP_EOL;
+' "$ACTION" "$USERID" "$ZONEID" "$DB_NAME" "$AUTH_TABLE" "$TEMPLATE_SOURCE" "$CURRENT_RULES_CSV" "$TEMPLATE_RULES_CSV" "$MISSING_RULES_CSV" "$MATCHING_RULES_CSV" "$INSERTED_RULES_CSV" "$DELETED_RULES_CSV" "$AFTER_RULES_CSV" "$TEMPLATE_USERID"
+EOF
+
+cat > /usr/local/sbin/accountforbid-api.sh <<'EOF'
+#!/bin/bash
+set -euo pipefail
+
+ACTION="${1:-inspect}"
+USERID="${2:-}"
+SECONDS="${3:-0}"
+DB_NAME="${4:-pw}"
+FORBID_TABLE="${5:-forbid}"
+USERID_FIELD="${6:-userid}"
+TYPE_FIELD="${7:-type}"
+CTIME_FIELD="${8:-ctime}"
+FORBID_TIME_FIELD="${9:-forbid_time}"
+REASON_FIELD="${10:-reason}"
+GMROLEID_FIELD="${11:-gmroleid}"
+REASON_B64="${12:-}"
+GMROLEID="${13:-0}"
+TYPE_IDS_CSV="${14:-}"
+MYSQL_DEFAULTS_FILE="/root/.my.cnf"
+
+if [ "$(id -u)" != "0" ]; then
+  echo "accountforbid-api.sh precisa rodar como root" >&2
+  exit 10
+fi
+
+case "$ACTION" in
+  inspect|ban|unban) ;;
+  *)
+    echo "Acao invalida: $ACTION" >&2
+    exit 11
+    ;;
+esac
+
+[[ "$USERID" =~ ^[0-9]+$ ]] || { echo "userid invalido" >&2; exit 12; }
+[[ "$SECONDS" =~ ^[0-9]+$ ]] || { echo "seconds invalido" >&2; exit 13; }
+[[ "$GMROLEID" =~ ^[0-9]+$ ]] || { echo "gmroleid invalido" >&2; exit 14; }
+[ "$USERID" -gt 0 ] || { echo "userid invalido" >&2; exit 15; }
+[ "$SECONDS" -ge 0 ] || { echo "seconds invalido" >&2; exit 16; }
+[ -n "$DB_NAME" ] || { echo "db_name invalido" >&2; exit 17; }
+
+for IDENT in "$FORBID_TABLE" "$USERID_FIELD" "$TYPE_FIELD" "$CTIME_FIELD" "$FORBID_TIME_FIELD" "$REASON_FIELD" "$GMROLEID_FIELD"; do
+  [[ "$IDENT" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || { echo "Identificador SQL invalido: $IDENT" >&2; exit 18; }
+done
+
+MYSQL_BIN="$(command -v mysql 2>/dev/null || true)"
+[ -n "$MYSQL_BIN" ] || { echo "mysql nao encontrado" >&2; exit 19; }
+
+ERR="$(mktemp /tmp/accountforbid-api.XXXXXX.err)"
+trap 'rm -f "$ERR"' EXIT
+
+mysql_exec() {
+  local sql="$1"
+  local output=""
+  local mysql_exit=0
+  if [ -f "$MYSQL_DEFAULTS_FILE" ]; then
+    output="$("$MYSQL_BIN" --defaults-extra-file="$MYSQL_DEFAULTS_FILE" --database="$DB_NAME" --batch --skip-column-names -e "$sql" 2>"$ERR")" || mysql_exit=$?
+  else
+    output="$("$MYSQL_BIN" --database="$DB_NAME" --batch --skip-column-names -e "$sql" 2>"$ERR")" || mysql_exit=$?
+  fi
+
+  mysql_exit="${mysql_exit:-0}"
+  if [ "$mysql_exit" -ne 0 ]; then
+    ERR_TEXT="$(cat "$ERR" 2>/dev/null || true)"
+    if printf '%s' "$ERR_TEXT" | grep -qi 'access denied'; then
+      cat >&2 <<'MYSQL_AUTH_HINT'
+mysql nao autenticou para accountforbid. Configure um arquivo /root/.my.cnf com as credenciais do MariaDB, por exemplo:
+[client]
+user=root
+password=SUA_SENHA
+host=localhost
+MYSQL_AUTH_HINT
+    fi
+    printf '%s\n' "$ERR_TEXT" >&2
+    exit "$mysql_exit"
+  fi
+
+  printf '%s' "$output"
+}
+
+normalize_list() {
+  local input="$1"
+  if [ -z "$input" ]; then
+    return 0
+  fi
+  printf '%s\n' "$input" | sed '/^[[:space:]]*$/d' | sort -n -u
+}
+
+list_to_csv() {
+  local input="$1"
+  if [ -z "$input" ]; then
+    return 0
+  fi
+  printf '%s\n' "$input" | sed '/^[[:space:]]*$/d' | paste -sd, -
+}
+
+parse_type_ids() {
+  local input="$1"
+  if [ -z "$input" ]; then
+    return 0
+  fi
+  printf '%s' "$input" \
+    | tr ',;:|' '\n' \
+    | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' \
+    | awk 'NF && $1 ~ /^[0-9]+$/ && $1 >= 0 { print $1 }' \
+    | sort -n -u
+}
+
+decode_reason() {
+  local input="$1"
+  if [ -z "$input" ]; then
+    return 0
+  fi
+  if command -v base64 >/dev/null 2>&1; then
+    printf '%s' "$input" | base64 --decode 2>/dev/null || printf '%s' "$input" | base64 -d 2>/dev/null || true
+  else
+    printf '%s' "$input"
+  fi
+}
+
+sql_escape() {
+  printf '%s' "$1" | sed "s/\\\\/\\\\\\\\/g; s/'/''/g"
+}
+
+load_types_for_user() {
+  mysql_exec "SELECT \`$TYPE_FIELD\` FROM \`$FORBID_TABLE\` WHERE \`$USERID_FIELD\`=$USERID ORDER BY \`$TYPE_FIELD\`;" \
+    | awk 'NF && $1 ~ /^[0-9]+$/ && $1 >= 0 { print $1 }' \
+    | sort -n -u
+}
+
+CURRENT_TYPES_LIST="$(load_types_for_user)"
+CURRENT_TYPES_CSV="$(list_to_csv "$CURRENT_TYPES_LIST")"
+REQUESTED_TYPES_LIST="$(parse_type_ids "$TYPE_IDS_CSV")"
+REQUESTED_TYPES_CSV="$(list_to_csv "$REQUESTED_TYPES_LIST")"
+NOW_TS="$(date +%s)"
+MAX_FORBID_TS=2147483647
+
+TARGET_TYPES_LIST="$REQUESTED_TYPES_LIST"
+if [ "$ACTION" = "ban" ] && [ -z "$TARGET_TYPES_LIST" ]; then
+  if [ -n "$CURRENT_TYPES_LIST" ]; then
+    TARGET_TYPES_LIST="$CURRENT_TYPES_LIST"
+  else
+    TARGET_TYPES_LIST="0"
+  fi
+fi
+if [ "$ACTION" = "unban" ] && [ -z "$TARGET_TYPES_LIST" ]; then
+  TARGET_TYPES_LIST="$CURRENT_TYPES_LIST"
+fi
+
+TARGET_TYPES_CSV="$(list_to_csv "$TARGET_TYPES_LIST")"
+INSERTED_TYPES_LIST=""
+UPDATED_TYPES_LIST=""
+DELETED_TYPES_LIST=""
+REASON_TEXT="$(decode_reason "$REASON_B64")"
+REASON_SQL="'$(sql_escape "$REASON_TEXT")'"
+FORBID_UNTIL_TS=0
+
+if [ "$ACTION" = "ban" ]; then
+  if [ "$SECONDS" -ge "$MAX_FORBID_TS" ]; then
+    FORBID_UNTIL_TS="$MAX_FORBID_TS"
+  else
+    FORBID_UNTIL_TS=$((NOW_TS + SECONDS))
+    if [ "$FORBID_UNTIL_TS" -gt "$MAX_FORBID_TS" ]; then
+      FORBID_UNTIL_TS="$MAX_FORBID_TS"
+    fi
+  fi
+fi
+
+if [ "$ACTION" = "ban" ] && [ -n "$TARGET_TYPES_LIST" ]; then
+  while IFS= read -r TYPE_ID; do
+    [ -n "$TYPE_ID" ] || continue
+    if printf '%s\n' "$CURRENT_TYPES_LIST" | grep -qx "$TYPE_ID"; then
+      mysql_exec "UPDATE \`$FORBID_TABLE\` SET \`$CTIME_FIELD\`=NOW(), \`$FORBID_TIME_FIELD\`=$FORBID_UNTIL_TS, \`$REASON_FIELD\`=$REASON_SQL, \`$GMROLEID_FIELD\`=$GMROLEID WHERE \`$USERID_FIELD\`=$USERID AND \`$TYPE_FIELD\`=$TYPE_ID;" >/dev/null
+      UPDATED_TYPES_LIST="${UPDATED_TYPES_LIST}${TYPE_ID}"$'\n'
+    else
+      mysql_exec "INSERT INTO \`$FORBID_TABLE\` (\`$USERID_FIELD\`, \`$TYPE_FIELD\`, \`$CTIME_FIELD\`, \`$FORBID_TIME_FIELD\`, \`$REASON_FIELD\`, \`$GMROLEID_FIELD\`) VALUES ($USERID, $TYPE_ID, NOW(), $FORBID_UNTIL_TS, $REASON_SQL, $GMROLEID);" >/dev/null
+      INSERTED_TYPES_LIST="${INSERTED_TYPES_LIST}${TYPE_ID}"$'\n'
+    fi
+  done <<< "$TARGET_TYPES_LIST"
+elif [ "$ACTION" = "unban" ] && [ -n "$TARGET_TYPES_LIST" ]; then
+  TYPE_IN="$(list_to_csv "$TARGET_TYPES_LIST")"
+  mysql_exec "DELETE FROM \`$FORBID_TABLE\` WHERE \`$USERID_FIELD\`=$USERID AND \`$TYPE_FIELD\` IN ($TYPE_IN);" >/dev/null
+  DELETED_TYPES_LIST="$TARGET_TYPES_LIST"
+fi
+
+AFTER_TYPES_LIST="$(load_types_for_user)"
+AFTER_TYPES_CSV="$(list_to_csv "$AFTER_TYPES_LIST")"
+INSERTED_TYPES_CSV="$(list_to_csv "$INSERTED_TYPES_LIST")"
+UPDATED_TYPES_CSV="$(list_to_csv "$UPDATED_TYPES_LIST")"
+DELETED_TYPES_CSV="$(list_to_csv "$DELETED_TYPES_LIST")"
+
+php -r '
+function ints($csv) {
+    $csv = trim((string) $csv);
+    if ($csv === "") {
+        return [];
+    }
+    $items = preg_split("/[\s,;:|]+/", $csv, -1, PREG_SPLIT_NO_EMPTY);
+    $out = [];
+    foreach ((array) $items as $item) {
+        if (!is_numeric($item)) {
+            continue;
+        }
+        $value = (int) $item;
+        if ($value >= 0) {
+            $out[] = $value;
+        }
+    }
+    $out = array_values(array_unique($out));
+    sort($out, SORT_NUMERIC);
+    return $out;
+}
+$action = $argv[1];
+$current = ints($argv[8]);
+$requested = ints($argv[9]);
+$target = ints($argv[10]);
+$inserted = ints($argv[11]);
+$updated = ints($argv[12]);
+$deleted = ints($argv[13]);
+$after = ints($argv[14]);
+$success = true;
+$error = "";
+if ($action === "ban") {
+    $missing = array_values(array_diff($target, $after));
+    if (!empty($missing)) {
+        $success = false;
+        $error = "Tipos de ban nao refletiram apos aplicacao: " . implode(",", $missing);
+    }
+} elseif ($action === "unban") {
+    $remaining = array_values(array_intersect($target, $after));
+    if (!empty($remaining)) {
+        $success = false;
+        $error = "Tipos de ban ainda presentes apos liberacao: " . implode(",", $remaining);
+    }
+}
+$payload = [
+    "success" => $success,
+    "action" => $action,
+    "userid" => (int) $argv[2],
+    "seconds" => (int) $argv[3],
+    "db_name" => $argv[4],
+    "forbid_table" => $argv[5],
+    "reason" => $argv[6],
+    "gmroleid" => (int) $argv[7],
+    "created_at_unix" => (int) $argv[15],
+    "forbid_until_unix" => (int) $argv[16],
+    "requested_duration_seconds" => (int) $argv[17],
+    "before_type_ids" => $current,
+    "before_row_count" => count($current),
+    "requested_type_ids" => $requested,
+    "applied_type_ids" => $target,
+    "after_type_ids" => $after,
+    "after_row_count" => count($after),
+    "inserted_type_ids" => $inserted,
+    "inserted_type_count" => count($inserted),
+    "updated_type_ids" => $updated,
+    "updated_type_count" => count($updated),
+    "deleted_type_ids" => $deleted,
+    "deleted_type_count" => count($deleted),
+    "applied_at" => gmdate("c"),
+];
+if ($payload["created_at_unix"] > 0) {
+    $payload["created_at"] = gmdate("c", $payload["created_at_unix"]);
+}
+if ($payload["forbid_until_unix"] > 0) {
+    $payload["forbid_until"] = gmdate("c", $payload["forbid_until_unix"]);
+}
+if ($error !== "") {
+    $payload["error"] = $error;
+}
+echo json_encode($payload, JSON_UNESCAPED_SLASHES) . PHP_EOL;
+' "$ACTION" "$USERID" "$SECONDS" "$DB_NAME" "$FORBID_TABLE" "$REASON_TEXT" "$GMROLEID" "$CURRENT_TYPES_CSV" "$REQUESTED_TYPES_CSV" "$TARGET_TYPES_CSV" "$INSERTED_TYPES_CSV" "$UPDATED_TYPES_CSV" "$DELETED_TYPES_CSV" "$AFTER_TYPES_CSV" "$NOW_TS" "$FORBID_UNTIL_TS" "$SECONDS"
 EOF
 
 cat > /usr/local/sbin/backupuniquenamed-api.sh <<'EOF'
@@ -1504,9 +2239,9 @@ done
 printf '{"success":true,"action":"stop","count":%s,"instances":[%s]}\n' "$count" "$results"
 EOF
 
-sed -i 's/\r$//' /usr/local/sbin/exportclsconfig-api.sh /usr/local/sbin/backupgamedbd-api.sh /usr/local/sbin/backupclsconfig-api.sh /usr/local/sbin/backupmysql-api.sh /usr/local/sbin/backupuniquenamed-api.sh /usr/local/sbin/backuppanel-api.sh /usr/local/sbin/backupfull-api.sh /usr/local/sbin/pw-watchdog-runner.sh /usr/local/bin/pw_send_mail.php /usr/local/sbin/sendreward-api.sh /usr/local/sbin/panel_service_control.sh /usr/local/sbin/panel_start.sh /usr/local/sbin/panel_stop.sh /usr/local/sbin/panel_restart.sh /usr/local/sbin/panel_instance_start.sh /usr/local/sbin/panel_instance_stop.sh
-chown root:root /usr/local/sbin/exportclsconfig-api.sh /usr/local/sbin/backupgamedbd-api.sh /usr/local/sbin/backupclsconfig-api.sh /usr/local/sbin/backupmysql-api.sh /usr/local/sbin/backupuniquenamed-api.sh /usr/local/sbin/backuppanel-api.sh /usr/local/sbin/backupfull-api.sh /usr/local/sbin/pw-watchdog-runner.sh /usr/local/bin/pw_send_mail.php /usr/local/sbin/sendreward-api.sh /usr/local/sbin/panel_service_control.sh /usr/local/sbin/panel_start.sh /usr/local/sbin/panel_stop.sh /usr/local/sbin/panel_restart.sh /usr/local/sbin/panel_instance_start.sh /usr/local/sbin/panel_instance_stop.sh
-chmod 750 /usr/local/sbin/exportclsconfig-api.sh /usr/local/sbin/backupgamedbd-api.sh /usr/local/sbin/backupclsconfig-api.sh /usr/local/sbin/backupmysql-api.sh /usr/local/sbin/backupuniquenamed-api.sh /usr/local/sbin/backuppanel-api.sh /usr/local/sbin/backupfull-api.sh /usr/local/sbin/pw-watchdog-runner.sh /usr/local/bin/pw_send_mail.php /usr/local/sbin/sendreward-api.sh /usr/local/sbin/panel_service_control.sh /usr/local/sbin/panel_start.sh /usr/local/sbin/panel_stop.sh /usr/local/sbin/panel_restart.sh /usr/local/sbin/panel_instance_start.sh /usr/local/sbin/panel_instance_stop.sh
+sed -i 's/\r$//' /usr/local/sbin/exportclsconfig-api.sh /usr/local/sbin/backupgamedbd-api.sh /usr/local/sbin/backupclsconfig-api.sh /usr/local/sbin/backupmysql-api.sh /usr/local/sbin/restoremysql-api.sh /usr/local/sbin/grantmallcash-api.sh /usr/local/sbin/gmpermission-api.sh /usr/local/sbin/accountforbid-api.sh /usr/local/sbin/backupuniquenamed-api.sh /usr/local/sbin/backuppanel-api.sh /usr/local/sbin/backupfull-api.sh /usr/local/sbin/pw-watchdog-runner.sh /usr/local/bin/pw_send_mail.php /usr/local/sbin/sendreward-api.sh /usr/local/sbin/panel_service_control.sh /usr/local/sbin/panel_start.sh /usr/local/sbin/panel_stop.sh /usr/local/sbin/panel_restart.sh /usr/local/sbin/panel_instance_start.sh /usr/local/sbin/panel_instance_stop.sh
+chown root:root /usr/local/sbin/exportclsconfig-api.sh /usr/local/sbin/backupgamedbd-api.sh /usr/local/sbin/backupclsconfig-api.sh /usr/local/sbin/backupmysql-api.sh /usr/local/sbin/restoremysql-api.sh /usr/local/sbin/grantmallcash-api.sh /usr/local/sbin/gmpermission-api.sh /usr/local/sbin/accountforbid-api.sh /usr/local/sbin/backupuniquenamed-api.sh /usr/local/sbin/backuppanel-api.sh /usr/local/sbin/backupfull-api.sh /usr/local/sbin/pw-watchdog-runner.sh /usr/local/bin/pw_send_mail.php /usr/local/sbin/sendreward-api.sh /usr/local/sbin/panel_service_control.sh /usr/local/sbin/panel_start.sh /usr/local/sbin/panel_stop.sh /usr/local/sbin/panel_restart.sh /usr/local/sbin/panel_instance_start.sh /usr/local/sbin/panel_instance_stop.sh
+chmod 750 /usr/local/sbin/exportclsconfig-api.sh /usr/local/sbin/backupgamedbd-api.sh /usr/local/sbin/backupclsconfig-api.sh /usr/local/sbin/backupmysql-api.sh /usr/local/sbin/restoremysql-api.sh /usr/local/sbin/grantmallcash-api.sh /usr/local/sbin/gmpermission-api.sh /usr/local/sbin/accountforbid-api.sh /usr/local/sbin/backupuniquenamed-api.sh /usr/local/sbin/backuppanel-api.sh /usr/local/sbin/backupfull-api.sh /usr/local/sbin/pw-watchdog-runner.sh /usr/local/bin/pw_send_mail.php /usr/local/sbin/sendreward-api.sh /usr/local/sbin/panel_service_control.sh /usr/local/sbin/panel_start.sh /usr/local/sbin/panel_stop.sh /usr/local/sbin/panel_restart.sh /usr/local/sbin/panel_instance_start.sh /usr/local/sbin/panel_instance_stop.sh
 
 if [ -e "$SUDOERS_FILE" ] && [ ! -f "$SUDOERS_FILE" ]; then
   die "$SUDOERS_FILE existe, mas nao e arquivo. Remova ou renomeie esse caminho."
@@ -1517,6 +2252,10 @@ $WEB_USER ALL=(root) NOPASSWD: /usr/local/sbin/exportclsconfig-api.sh
 $WEB_USER ALL=(root) NOPASSWD: /usr/local/sbin/backupgamedbd-api.sh
 $WEB_USER ALL=(root) NOPASSWD: /usr/local/sbin/backupclsconfig-api.sh
 $WEB_USER ALL=(root) NOPASSWD: /usr/local/sbin/backupmysql-api.sh
+$WEB_USER ALL=(root) NOPASSWD: /usr/local/sbin/restoremysql-api.sh
+$WEB_USER ALL=(root) NOPASSWD: /usr/local/sbin/grantmallcash-api.sh
+$WEB_USER ALL=(root) NOPASSWD: /usr/local/sbin/gmpermission-api.sh
+$WEB_USER ALL=(root) NOPASSWD: /usr/local/sbin/accountforbid-api.sh
 $WEB_USER ALL=(root) NOPASSWD: /usr/local/sbin/backupuniquenamed-api.sh
 $WEB_USER ALL=(root) NOPASSWD: /usr/local/sbin/backuppanel-api.sh
 $WEB_USER ALL=(root) NOPASSWD: /usr/local/sbin/backupfull-api.sh
@@ -1537,16 +2276,28 @@ EOF
 sed -i "s/__WEB_USER__/$WEB_USER/g" /etc/cron.d/apicls-watchdog
 chmod 644 /etc/cron.d/apicls-watchdog
 
+cat > /etc/cron.d/apicls-gm-v2 <<'EOF'
+* * * * * __WEB_USER__ __PHP_BIN__ __INSTALL_DIR__/gm-schedule-worker.php >/dev/null 2>&1
+* * * * * __WEB_USER__ __PHP_BIN__ __INSTALL_DIR__/gm-queue-worker.php >/dev/null 2>&1
+EOF
+sed -i "s/__WEB_USER__/$WEB_USER/g" /etc/cron.d/apicls-gm-v2
+sed -i "s#__PHP_BIN__#$PHP_CLI_BIN#g" /etc/cron.d/apicls-gm-v2
+sed -i "s#__INSTALL_DIR__#$INSTALL_DIR#g" /etc/cron.d/apicls-gm-v2
+chmod 644 /etc/cron.d/apicls-gm-v2
+
 chown -R "$WEB_USER:$WEB_USER" "$INSTALL_DIR"
 chmod 750 "$INSTALL_DIR"
 chmod 640 "$INSTALL_DIR/api_cls.php"
+chmod 640 "$INSTALL_DIR/gm-queue-worker.php" "$INSTALL_DIR/gm-schedule-worker.php"
 find "$INSTALL_DIR/backups" -type d -exec chmod 750 {} \;
 find "$INSTALL_DIR/backups" -type f -exec chmod 640 {} \; 2>/dev/null || true
 chown root:"$WEB_USER" /usr/local/sbin/pw-watchdog-runner.sh
 chmod 750 /usr/local/sbin/pw-watchdog-runner.sh
 
-php -l "$INSTALL_DIR/api_cls.php" >/dev/null || die "api_cls.php instalado com erro de sintaxe."
-php -l /usr/local/bin/pw_send_mail.php >/dev/null || die "pw_send_mail.php instalado com erro de sintaxe."
+"$PHP_CLI_BIN" -l "$INSTALL_DIR/api_cls.php" >/dev/null || die "api_cls.php instalado com erro de sintaxe."
+"$PHP_CLI_BIN" -l "$INSTALL_DIR/gm-queue-worker.php" >/dev/null || die "gm-queue-worker.php instalado com erro de sintaxe."
+"$PHP_CLI_BIN" -l "$INSTALL_DIR/gm-schedule-worker.php" >/dev/null || die "gm-schedule-worker.php instalado com erro de sintaxe."
+"$PHP_CLI_BIN" -l /usr/local/bin/pw_send_mail.php >/dev/null || die "pw_send_mail.php instalado com erro de sintaxe."
 log "api_cls.php instalado em $INSTALL_DIR/api_cls.php"
 
 if [ -d /home/gamedbd ]; then
@@ -1603,6 +2354,33 @@ else
   warn "Teste kickRole falhou. Saida: $KICK_ROUTE_OUT"
 fi
 
+GM_CATALOG_OUT="$(curl -s -H "x-sync-secret: $SECRET" "$BASE_URL?action=getGmCommandCatalog" 2>/dev/null || true)"
+if echo "$GM_CATALOG_OUT" | grep -q '"commands"'; then
+  log "Teste getGmCommandCatalog OK."
+else
+  warn "Teste getGmCommandCatalog falhou. Saida: $GM_CATALOG_OUT"
+fi
+
+if echo "$GM_CATALOG_OUT" | grep -q '"grantMallCash"' && echo "$GM_CATALOG_OUT" | grep -q '"getMallCashBalance"' && echo "$GM_CATALOG_OUT" | grep -q '"grantGmPermission"' && echo "$GM_CATALOG_OUT" | grep -q '"getGmPermissionCatalog"' && echo "$GM_CATALOG_OUT" | grep -q '"getGmPermissionState"'; then
+  log "Catalogo GM inclui mall cash e permissao GM."
+else
+  warn "Catalogo GM ainda nao expoe grantMallCash/getMallCashBalance/grantGmPermission/getGmPermissionCatalog/getGmPermissionState como esperado. Saida: $GM_CATALOG_OUT"
+fi
+
+GM_HISTORY_OUT="$(curl -s -H "x-sync-secret: $SECRET" "$BASE_URL?action=getGmActionHistory&limit=5" 2>/dev/null || true)"
+if echo "$GM_HISTORY_OUT" | grep -q '"entries"'; then
+  log "Teste getGmActionHistory OK."
+else
+  warn "Teste getGmActionHistory falhou. Saida: $GM_HISTORY_OUT"
+fi
+
+MUTE_ROUTE_OUT="$(curl -s -X POST -H "x-sync-secret: $SECRET" -H "Content-Type: application/json" -d '{"userid":1,"reason":"install-test","duration_seconds":60,"dry_run":true}' "$BASE_URL?action=muteAccount" 2>/dev/null || true)"
+if echo "$MUTE_ROUTE_OUT" | grep -q '"success":true'; then
+  log "Teste muteAccount OK (dry_run)."
+else
+  warn "Teste muteAccount falhou. Saida: $MUTE_ROUTE_OUT"
+fi
+
 SERVICE_STATUS_OUT="$(curl -s -H "x-sync-secret: $SECRET" "$BASE_URL?action=getServiceStatus" 2>/dev/null || true)"
 if echo "$SERVICE_STATUS_OUT" | grep -q '"services"'; then
   log "Teste getServiceStatus OK."
@@ -1643,6 +2421,40 @@ if echo "$LIST_BACKUPS_OUT" | grep -q '"backups"'; then
   log "Teste listBackups OK."
 else
   warn "Teste listBackups falhou. Saida: $LIST_BACKUPS_OUT"
+fi
+
+APICLS_ROOT_CODE="$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1/apicls/" 2>/dev/null || true)"
+case "$APICLS_ROOT_CODE" in
+  403|404)
+    log "Protecao do diretorio /apicls OK (HTTP $APICLS_ROOT_CODE)."
+    ;;
+  *)
+    warn "Diretorio /apicls ainda parece exposto (HTTP $APICLS_ROOT_CODE)."
+    ;;
+esac
+
+APICLS_BACKUPS_CODE="$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1/apicls/backups/" 2>/dev/null || true)"
+case "$APICLS_BACKUPS_CODE" in
+  403|404)
+    log "Protecao do diretorio /apicls/backups OK (HTTP $APICLS_BACKUPS_CODE)."
+    ;;
+  *)
+    warn "Diretorio /apicls/backups ainda parece exposto (HTTP $APICLS_BACKUPS_CODE)."
+    ;;
+esac
+
+RESTORE_PLAN_OUT="$(curl -s -H "x-sync-secret: $SECRET" "$BASE_URL?action=getRestorePlan" 2>/dev/null || true)"
+if echo "$RESTORE_PLAN_OUT" | grep -q '"supported_types"'; then
+  log "Teste getRestorePlan OK."
+else
+  warn "Teste getRestorePlan falhou. Saida: $RESTORE_PLAN_OUT"
+fi
+
+RESTORE_HISTORY_OUT="$(curl -s -H "x-sync-secret: $SECRET" "$BASE_URL?action=getRestoreHistory&limit=5" 2>/dev/null || true)"
+if echo "$RESTORE_HISTORY_OUT" | grep -q '"entries"'; then
+  log "Teste getRestoreHistory OK."
+else
+  warn "Teste getRestoreHistory falhou. Saida: $RESTORE_HISTORY_OUT"
 fi
 
 INSTANCE_AUTOSTART_OUT="$(curl -s -X POST -H "x-sync-secret: $SECRET" -H "Content-Type: application/json" -d '{"code":"gs01","enabled":true,"dry_run":true}' "$BASE_URL?action=setInstanceAutoStart" 2>/dev/null || true)"
@@ -1826,10 +2638,15 @@ Observacao:
   Se backupNow type=mysql ou type=full falhar com Access denied no mysqldump,
   crie /root/.my.cnf com credenciais validas do MariaDB antes de repetir o teste.
   O cron do watchdog foi instalado em /etc/cron.d/apicls-watchdog e roda a cada minuto.
+  Os workers do GM Commander V2 foram instalados em /etc/cron.d/apicls-gm-v2 e rodam a cada minuto.
 
 Comandos de validacao:
   php -l $INSTALL_DIR/api_cls.php
+  php -l $INSTALL_DIR/gm-queue-worker.php
+  php -l $INSTALL_DIR/gm-schedule-worker.php
   curl -s -H "x-sync-secret: $SECRET" "$BASE_URL?action=getClasses"
+  curl -s -H "x-sync-secret: $SECRET" "$BASE_URL?action=getBulkSchedules&limit=20"
+  curl -s -X POST -H "x-sync-secret: $SECRET" -H "Content-Type: application/json" -d '{}' "$BASE_URL?action=runDueBulkSchedules"
   curl -s -H "x-sync-secret: $SECRET" "$BASE_URL?action=getServiceStatus"
   curl -s -H "x-sync-secret: $SECRET" "$BASE_URL?action=getControlCenterSnapshot"
   curl -s -H "x-sync-secret: $SECRET" "$BASE_URL?action=getManageableServices"
@@ -1839,8 +2656,12 @@ Comandos de validacao:
   curl -s -H "x-sync-secret: $SECRET" "$BASE_URL?action=getServerLogs&source=gs01&lines=20"
   curl -s -H "x-sync-secret: $SECRET" "$BASE_URL?action=getServerLogs&source=world2.formatlog&lines=20"
   curl -s -H "x-sync-secret: $SECRET" "$BASE_URL?action=listBackups&limit=20"
+  curl -s -H "x-sync-secret: $SECRET" "$BASE_URL?action=getRestorePlan"
+  curl -s -H "x-sync-secret: $SECRET" "$BASE_URL?action=getRestoreHistory&limit=20"
   curl -s -H "x-sync-secret: $SECRET" "$BASE_URL?action=getWatchdogStatus"
   curl -s -H "x-sync-secret: $SECRET" "$BASE_URL?action=getWatchdogHistory&limit=20"
+  curl -s -H "x-sync-secret: $SECRET" "$BASE_URL?action=getGmPermissionCatalog"
+  curl -s -H "x-sync-secret: $SECRET" "$BASE_URL?action=getGmPermissionState&userid=1"
   curl -s -X POST -H "x-sync-secret: $SECRET" -H "Content-Type: application/json" -d '{"enabled":true,"critical_services":["gdeliveryd","glinkd","gamed"],"failure_threshold":2,"cooldown_seconds":60,"max_restart_attempts":3,"verify_restart":true,"pause_during_maintenance":true}' "$BASE_URL?action=saveWatchdogConfig"
   curl -s -X POST -H "x-sync-secret: $SECRET" -H "Content-Type: application/json" -d '{"actor":"manual-test"}' "$BASE_URL?action=enableWatchdog"
   curl -s -X POST -H "x-sync-secret: $SECRET" -H "Content-Type: application/json" -d '{"dry_run":true,"force":true}' "$BASE_URL?action=runWatchdogCheckNow"
@@ -1856,7 +2677,15 @@ Comandos de validacao:
   curl -s -X POST -H "x-sync-secret: $SECRET" -H "Content-Type: application/json" -d '{"type":"mysql","reason":"manual-test","dry_run":true}' "$BASE_URL?action=backupNow"
   curl -s -X POST -H "x-sync-secret: $SECRET" -H "Content-Type: application/json" -d '{"type":"full","reason":"manual-test","dry_run":true}' "$BASE_URL?action=backupNow"
   curl -s -X POST -H "x-sync-secret: $SECRET" -H "Content-Type: application/json" -d '{"reason":"manual-test","force":true}' "$BASE_URL?action=backupGamedbd"
+  curl -s -H "x-sync-secret: $SECRET" "$BASE_URL?action=getGmCommandCatalog"
+  curl -s -H "x-sync-secret: $SECRET" "$BASE_URL?action=getGmActionHistory&limit=20"
+  curl -s -H "x-sync-secret: $SECRET" "$BASE_URL?action=getMallCashBalance&roleid=1024"
   curl -s -X POST -H "x-sync-secret: $SECRET" -H "Content-Type: application/json" -d '{"roleid":1024,"reason":"manual-test","dry_run":true}' "$BASE_URL?action=kickRole"
+  curl -s -X POST -H "x-sync-secret: $SECRET" -H "Content-Type: application/json" -d '{"userid":1,"reason":"manual-test","duration_seconds":60,"dry_run":true}' "$BASE_URL?action=muteAccount"
+  curl -s -X POST -H "x-sync-secret: $SECRET" -H "Content-Type: application/json" -d '{"roleid":1024,"reason":"manual-test","duration_seconds":60,"dry_run":true}' "$BASE_URL?action=muteRole"
+  curl -s -X POST -H "x-sync-secret: $SECRET" -H "Content-Type: application/json" -d '{"roleid":1024,"money":1000,"title":"Compensacao","message":"Teste GM","dry_run":true}' "$BASE_URL?action=sendMailGold"
+  curl -s -X POST -H "x-sync-secret: $SECRET" -H "Content-Type: application/json" -d '{"roleid":1024,"amount":1000,"reason":"manual-test","dry_run":true}' "$BASE_URL?action=grantMallCash"
+  curl -s -X POST -H "x-sync-secret: $SECRET" -H "Content-Type: application/json" -d '{"userid":1,"reason":"manual-test","dry_run":true}' "$BASE_URL?action=grantGmPermission"
   curl -s -X POST -H "x-sync-secret: $SECRET" -H "Content-Type: application/json" -d '{"message":"manual-test","kind":"system","priority":"normal","dry_run":true}' "$BASE_URL?action=sendSystemMessage"
   curl -s -X POST -H "x-sync-secret: $SECRET" -H "Content-Type: application/json" -d '{"verify":true,"dry_run":true}' "$BASE_URL?action=startServer"
   curl -s -X POST -H "x-sync-secret: $SECRET" -H "Content-Type: application/json" -d '{"verify":true,"instances":["is24","is25"],"dry_run":true}' "$BASE_URL?action=startServer"

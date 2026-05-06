@@ -313,33 +313,74 @@ Seletores ja homologados nesta fase:
 
 ## Agendamento semanal de bulk rewards
 
-O proximo passo natural sobre essa fundacao e **agendar recompensas em massa para rodar automaticamente em dia/horario da semana**.
+O backend agora tambem traz a base real para **agendamento semanal** de recompensas em massa.
 
-Esse bloco deve ser tratado como backend real, nao como detalhe de frontend:
-
-- o Lovable deve criar a tela de agendamento
-- a API deve salvar a regra recorrente
-- um worker/cron backend deve criar jobs normais da fila no horario devido
-- a execucao automatica deve reutilizar o mesmo motor de `queueBulkCommand`
-
-Contrato funcional esperado para essa etapa:
+Endpoints disponiveis:
 
 - `scheduleBulkCommand`
 - `getBulkSchedules`
 - `getBulkSchedule`
 - `updateBulkSchedule`
 - `deleteBulkSchedule`
+- `runDueBulkSchedules`
 - `gm-schedule-worker.php`
 
-Escopo minimo do agendamento:
+Arquitetura:
 
-- selecionar dia da semana
-- selecionar horario
-- timezone fixa do servidor/painel
+- o frontend cria/edita o schedule
+- a API persiste a regra
+- o scheduler cria um job normal da fila no horario devido
+- o `gm-queue-worker.php` continua sendo o executor real dos alvos
+
+Escopo atual:
+
+- selecionar `weekdays`
+- selecionar `time_of_day`
+- definir `timezone`
+- ativar/pausar com `enabled`
 - permitir `sendMailItem`, `sendMailGold` e `grantMallCash`
-- suportar os mesmos seletores da Fase A ja homologados
-- gerar log de criacao, alteracao, execucao e falha
-- enfileirar job normal em vez de executar direto no frontend
+- suportar os seletores da Fase A ja homologados
+- registrar criacao, alteracao, disparo e falha no log de auditoria
+
+Observacao importante:
+
+- `name` nesse endpoint e o nome do agendamento
+- para selecionar jogador por nome, use `selection.names`
+
+Exemplo de criacao de schedule semanal:
+
+```bash
+curl -s -X POST -H "x-sync-secret: SEU_SECRET" -H "Content-Type: application/json" \
+-d '{"name":"Gold semanal da guild","command_key":"sendMailGold","selection":{"guild_ids":[1]},"money":1000,"title":"Guild Reward","message":"Entrega semanal","weekdays":[1],"time_of_day":"21:00","timezone":"America/Sao_Paulo","enabled":true}' \
+"http://127.0.0.1/apicls/api_cls.php?action=scheduleBulkCommand"
+```
+
+Listar schedules:
+
+```bash
+curl -s -H "x-sync-secret: SEU_SECRET" \
+"http://127.0.0.1/apicls/api_cls.php?action=getBulkSchedules&limit=20"
+```
+
+Executar schedules vencidos manualmente:
+
+```bash
+curl -s -X POST -H "x-sync-secret: SEU_SECRET" -H "Content-Type: application/json" \
+-d '{}' \
+"http://127.0.0.1/apicls/api_cls.php?action=runDueBulkSchedules"
+```
+
+Rodar o worker CLI:
+
+```bash
+php /var/www/html/apicls/gm-schedule-worker.php
+```
+
+Exemplo de cron para execucao automatica a cada minuto:
+
+```cron
+* * * * * root /usr/bin/php /var/www/html/apicls/gm-schedule-worker.php >/dev/null 2>&1
+```
 
 ## Cadastro no painel
 
