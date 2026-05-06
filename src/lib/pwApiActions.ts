@@ -687,6 +687,45 @@ export const pwApi = {
       body: { ...body, confirm: "REVOKE_GM_PERMISSION" as const },
     });
   },
+  /* ─────────── GM Commander v2 — Bulk Operations ─────────── */
+  searchPlayerDirectory(params: BulkSelectionParams & { limit?: number }) {
+    return callAction<PlayerDirectoryResponse>("searchPlayerDirectory", {
+      method: "POST",
+      body: params,
+    });
+  },
+  resolveBulkTargets(body: ResolveBulkTargetsPayload) {
+    return callAction<ResolveBulkTargetsResponse>("resolveBulkTargets", {
+      method: "POST",
+      body,
+    });
+  },
+  previewBulkTargets(body: PreviewBulkTargetsPayload) {
+    return callAction<PreviewBulkTargetsResponse>("previewBulkTargets", {
+      method: "POST",
+      body,
+    });
+  },
+  queueBulkCommand(body: QueueBulkCommandPayload) {
+    return callAction<QueueBulkCommandResponse>("queueBulkCommand", {
+      method: "POST",
+      body,
+    });
+  },
+  getBulkCommandJob(jobId: string) {
+    return callAction<GetBulkCommandJobResponse>("getBulkCommandJob", {
+      method: "GET",
+      query: { job_id: jobId },
+    });
+  },
+  getBulkCommandJobs(params: { limit?: number } = {}) {
+    const query: Record<string, string | number> = {};
+    if (params.limit != null) query.limit = params.limit;
+    return callAction<GetBulkCommandJobsResponse>("getBulkCommandJobs", {
+      method: "GET",
+      query,
+    });
+  },
 };
 
 /* ─────────── GM Commander v1 — tipos ─────────── */
