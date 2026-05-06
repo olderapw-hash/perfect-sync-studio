@@ -475,13 +475,13 @@ const Pricing = () => {
 
       <PixCheckoutModal
         open={pixModalOpen}
-        onClose={() => {
+        onClose={async () => {
           setPixModalOpen(false);
           if (pixStatus === "approved") {
-            navigate("/onboarding");
+            await refetchSub();
+            navigate("/onboarding", { state: { fromPayment: true } });
           }
           resetPix();
-          refetchSub();
         }}
         pixData={pixData}
         status={pixStatus}

@@ -10,7 +10,7 @@
 //        c) clica "Já instalei, testar conexão"
 //        d) sucesso -> set_active_tenant e vai pro /admin
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   ArrowRight,
   CheckCircle2,
@@ -40,6 +40,8 @@ type Step = "form" | "install" | "test";
 
 const Onboarding = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const fromPayment = !!(location.state as any)?.fromPayment;
   const { session, loading: authLoading, isAdmin, isSuperadmin, signOut } = useAuth();
   const { isActive, loading: subLoading } = useSubscription();
   const { servers, active, loading: serversLoading, refetch, setActive } = useServers();
@@ -63,7 +65,8 @@ const Onboarding = () => {
       navigate("/auth", { replace: true });
       return;
     }
-    if (!isActive && !bypassPayment) {
+    // Se veio do pagamento, dá um tempo pro subscription atualizar
+    if (!isActive && !bypassPayment && !fromPayment) {
       navigate("/pricing", { replace: true });
       return;
     }
@@ -80,6 +83,7 @@ const Onboarding = () => {
     session,
     isActive,
     bypassPayment,
+    fromPayment,
     active,
     navigate,
   ]);
