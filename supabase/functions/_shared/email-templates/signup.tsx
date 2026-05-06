@@ -31,34 +31,40 @@ export const SignupEmail = ({
 }: SignupEmailProps) => (
   <Html lang="pt-BR" dir="ltr">
     <Head />
-    <Preview>Confirme seu email — Orphea Core</Preview>
+    <Preview>🔐 Confirme sua conta Orphea Core</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Section style={headerSection}>
-          <Heading style={brand}>⚔ ORPHEA CORE</Heading>
+        <Section style={card}>
+          <Section style={headerSection}>
+            <Heading style={brand}>⚔ ORPHEA CORE</Heading>
+            <Text style={brandSub}>Tecnologia Premium para Perfect World</Text>
+          </Section>
+          <Hr style={divider} />
+          <Heading style={h1}>Confirme sua conta</Heading>
+          <Text style={text}>
+            Olá, aventureiro.
+          </Text>
+          <Text style={text}>
+            Recebemos uma solicitação de criação de conta em nosso sistema.
+          </Text>
+          <Text style={text}>
+            Para ativar sua conta e acessar todos os recursos da plataforma{' '}
+            <Link href={siteUrl} style={link}><strong>Orphea Core</strong></Link>,
+            confirme seu endereço de email clicando no botão abaixo.
+          </Text>
+          <Section style={buttonSection}>
+            <Button style={button} href={confirmationUrl}>
+              Confirmar Conta
+            </Button>
+          </Section>
+          <Hr style={dividerLight} />
+          <Text style={footer}>
+            Caso você não tenha realizado este cadastro, ignore esta mensagem.
+          </Text>
+          <Text style={footerBrand}>
+            Equipe Orphea Core
+          </Text>
         </Section>
-        <Hr style={divider} />
-        <Heading style={h1}>Confirme seu email</Heading>
-        <Text style={text}>
-          Obrigado por se cadastrar no{' '}
-          <Link href={siteUrl} style={link}>
-            <strong>Orphea Core</strong>
-          </Link>
-          !
-        </Text>
-        <Text style={text}>
-          Confirme seu endereço de email (
-          <Link href={`mailto:${recipient}`} style={link}>
-            {recipient}
-          </Link>
-          ) clicando no botão abaixo:
-        </Text>
-        <Button style={button} href={confirmationUrl}>
-          Verificar Email
-        </Button>
-        <Text style={footer}>
-          Se você não criou uma conta, pode ignorar este email com segurança.
-        </Text>
       </Container>
     </Body>
   </Html>
@@ -66,38 +72,56 @@ export const SignupEmail = ({
 
 export default SignupEmail
 
-const main = { backgroundColor: '#ffffff', fontFamily: 'Inter, Arial, sans-serif' }
-const container = { padding: '20px 25px', maxWidth: '480px', margin: '0 auto' }
-const headerSection = { textAlign: 'center' as const, padding: '10px 0' }
+const main = { backgroundColor: '#ffffff', fontFamily: "'Inter', 'Segoe UI', Arial, sans-serif" }
+const container = { padding: '40px 20px', maxWidth: '600px', margin: '0 auto' }
+const card = {
+  backgroundColor: '#fafafa',
+  borderRadius: '12px',
+  border: '1px solid #e8e8e8',
+  padding: '40px 36px',
+  boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
+}
+const headerSection = { textAlign: 'center' as const, padding: '0 0 8px' }
 const brand = {
-  fontSize: '18px',
-  fontWeight: 'bold' as const,
-  color: '#7F1D1D',
-  letterSpacing: '2px',
+  fontSize: '20px',
+  fontWeight: '800' as const,
+  color: '#5e0b15',
+  letterSpacing: '3px',
   margin: '0',
 }
-const divider = { borderColor: '#C6A15B', margin: '15px 0 25px' }
+const brandSub = {
+  fontSize: '11px',
+  color: '#888',
+  letterSpacing: '1px',
+  textTransform: 'uppercase' as const,
+  margin: '6px 0 0',
+}
+const divider = { borderColor: '#5e0b15', opacity: 0.2, margin: '20px 0 28px' }
+const dividerLight = { borderColor: '#e0e0e0', margin: '28px 0 20px' }
 const h1 = {
-  fontSize: '22px',
-  fontWeight: 'bold' as const,
-  color: '#7F1D1D',
+  fontSize: '24px',
+  fontWeight: '700' as const,
+  color: '#1a1a1a',
   margin: '0 0 20px',
 }
 const text = {
-  fontSize: '14px',
+  fontSize: '15px',
   color: '#3a3a3a',
-  lineHeight: '1.6',
-  margin: '0 0 20px',
+  lineHeight: '1.7',
+  margin: '0 0 16px',
 }
-const link = { color: '#7F1D1D', textDecoration: 'underline' }
+const link = { color: '#5e0b15', textDecoration: 'none', fontWeight: '600' as const }
+const buttonSection = { textAlign: 'center' as const, margin: '28px 0' }
 const button = {
-  backgroundColor: '#7F1D1D',
+  backgroundColor: '#5e0b15',
   color: '#ffffff',
-  fontSize: '14px',
-  fontWeight: 'bold' as const,
-  borderRadius: '6px',
-  padding: '12px 24px',
+  fontSize: '15px',
+  fontWeight: '700' as const,
+  borderRadius: '8px',
+  padding: '14px 36px',
   textDecoration: 'none',
-  border: '1px solid #C6A15B',
+  border: 'none',
+  boxShadow: '0 4px 14px rgba(94,11,21,0.3)',
 }
-const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }
+const footer = { fontSize: '13px', color: '#888', margin: '0 0 8px', lineHeight: '1.5' }
+const footerBrand = { fontSize: '13px', color: '#5e0b15', fontWeight: '600' as const, margin: '0' }

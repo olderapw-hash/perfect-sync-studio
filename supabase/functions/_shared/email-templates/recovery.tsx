@@ -26,25 +26,38 @@ export const RecoveryEmail = ({
 }: RecoveryEmailProps) => (
   <Html lang="pt-BR" dir="ltr">
     <Head />
-    <Preview>Redefinir sua senha — Orphea Core</Preview>
+    <Preview>🔑 Recuperação de senha — Orphea Core</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Section style={headerSection}>
-          <Heading style={brand}>⚔ ORPHEA CORE</Heading>
+        <Section style={card}>
+          <Section style={headerSection}>
+            <Heading style={brand}>⚔ ORPHEA CORE</Heading>
+            <Text style={brandSub}>Tecnologia Premium para Perfect World</Text>
+          </Section>
+          <Hr style={divider} />
+          <Heading style={h1}>Recuperação de senha</Heading>
+          <Text style={text}>
+            Recebemos uma solicitação para redefinição da sua senha.
+          </Text>
+          <Text style={text}>
+            Para continuar o processo, clique no botão abaixo:
+          </Text>
+          <Section style={buttonSection}>
+            <Button style={button} href={confirmationUrl}>
+              Redefinir Senha
+            </Button>
+          </Section>
+          <Text style={textSmall}>
+            Este link possui validade limitada por motivos de segurança.
+          </Text>
+          <Hr style={dividerLight} />
+          <Text style={footer}>
+            Se você não realizou esta solicitação, recomendamos alterar sua senha imediatamente.
+          </Text>
+          <Text style={footerBrand}>
+            Equipe Orphea Core
+          </Text>
         </Section>
-        <Hr style={divider} />
-        <Heading style={h1}>Redefinir senha</Heading>
-        <Text style={text}>
-          Recebemos uma solicitação para redefinir sua senha no Orphea Core.
-          Clique no botão abaixo para escolher uma nova senha.
-        </Text>
-        <Button style={button} href={confirmationUrl}>
-          Redefinir Senha
-        </Button>
-        <Text style={footer}>
-          Se você não solicitou a redefinição de senha, ignore este email.
-          Sua senha não será alterada.
-        </Text>
       </Container>
     </Body>
   </Html>
@@ -52,37 +65,62 @@ export const RecoveryEmail = ({
 
 export default RecoveryEmail
 
-const main = { backgroundColor: '#ffffff', fontFamily: 'Inter, Arial, sans-serif' }
-const container = { padding: '20px 25px', maxWidth: '480px', margin: '0 auto' }
-const headerSection = { textAlign: 'center' as const, padding: '10px 0' }
+const main = { backgroundColor: '#ffffff', fontFamily: "'Inter', 'Segoe UI', Arial, sans-serif" }
+const container = { padding: '40px 20px', maxWidth: '600px', margin: '0 auto' }
+const card = {
+  backgroundColor: '#fafafa',
+  borderRadius: '12px',
+  border: '1px solid #e8e8e8',
+  padding: '40px 36px',
+  boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
+}
+const headerSection = { textAlign: 'center' as const, padding: '0 0 8px' }
 const brand = {
-  fontSize: '18px',
-  fontWeight: 'bold' as const,
-  color: '#7F1D1D',
-  letterSpacing: '2px',
+  fontSize: '20px',
+  fontWeight: '800' as const,
+  color: '#5e0b15',
+  letterSpacing: '3px',
   margin: '0',
 }
-const divider = { borderColor: '#C6A15B', margin: '15px 0 25px' }
+const brandSub = {
+  fontSize: '11px',
+  color: '#888',
+  letterSpacing: '1px',
+  textTransform: 'uppercase' as const,
+  margin: '6px 0 0',
+}
+const divider = { borderColor: '#5e0b15', opacity: 0.2, margin: '20px 0 28px' }
+const dividerLight = { borderColor: '#e0e0e0', margin: '28px 0 20px' }
 const h1 = {
-  fontSize: '22px',
-  fontWeight: 'bold' as const,
-  color: '#7F1D1D',
+  fontSize: '24px',
+  fontWeight: '700' as const,
+  color: '#1a1a1a',
   margin: '0 0 20px',
 }
 const text = {
-  fontSize: '14px',
+  fontSize: '15px',
   color: '#3a3a3a',
-  lineHeight: '1.6',
-  margin: '0 0 20px',
+  lineHeight: '1.7',
+  margin: '0 0 16px',
 }
+const textSmall = {
+  fontSize: '13px',
+  color: '#666',
+  lineHeight: '1.5',
+  margin: '0 0 8px',
+  fontStyle: 'italic' as const,
+}
+const buttonSection = { textAlign: 'center' as const, margin: '28px 0' }
 const button = {
-  backgroundColor: '#7F1D1D',
+  backgroundColor: '#5e0b15',
   color: '#ffffff',
-  fontSize: '14px',
-  fontWeight: 'bold' as const,
-  borderRadius: '6px',
-  padding: '12px 24px',
+  fontSize: '15px',
+  fontWeight: '700' as const,
+  borderRadius: '8px',
+  padding: '14px 36px',
   textDecoration: 'none',
-  border: '1px solid #C6A15B',
+  border: 'none',
+  boxShadow: '0 4px 14px rgba(94,11,21,0.3)',
 }
-const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }
+const footer = { fontSize: '13px', color: '#888', margin: '0 0 8px', lineHeight: '1.5' }
+const footerBrand = { fontSize: '13px', color: '#5e0b15', fontWeight: '600' as const, margin: '0' }
