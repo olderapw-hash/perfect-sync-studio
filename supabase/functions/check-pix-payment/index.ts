@@ -72,8 +72,35 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Already processed
+    // Already processed — ensure subscription exists
     if (pixPayment.status === "approved") {
+      // Garante que a subscription foi criada (pode ter falhado antes)
+      const { data: existingSub } = await supabase
+        .from("subscriptions")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("environment", pixPayment.environment)
+        .maybeSingle();
+
+      if (!existingSub) {
+        const periodEnd = new Date(
+          new Date(pixPayment.paid_at || Date.now()).getTime() + 30 * 24 * 60 * 60 * 1000
+        ).toISOString();
+
+        await supabase.from("subscriptions").insert({
+          user_id: user.id,
+          environment: pixPayment.environment,
+          status: "active",
+          is_trial: false,
+          product_id: pixPayment.product_id,
+          price_id: pixPayment.price_id,
+          paddle_subscription_id: null,
+          paddle_customer_id: null,
+          current_period_start: pixPayment.paid_at || new Date().toISOString(),
+          current_period_end: periodEnd,
+        });
+      }
+
       return new Response(
         JSON.stringify({ status: "approved", paid_at: pixPayment.paid_at }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
