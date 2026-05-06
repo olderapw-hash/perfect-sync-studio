@@ -178,6 +178,37 @@ Deno.serve(async (req: Request) => {
         connection_error: errorText,
       })
       .eq("id", tenantId);
+
+    // Auto-ativar token VPS na licença do usuário ao conectar com sucesso
+    if (upstreamOk) {
+      try {
+        // Extrair IP/hostname da URL do servidor
+        const serverHost = parsedUrl.hostname;
+        const fingerprint = `server:${tenantId}:${serverHost}`;
+
+        // Buscar token de ativação da licença do usuário
+        const { data: license } = await admin
+          .from("licenses")
+          .select("vps_activation_token")
+          .eq("created_by", userId)
+          .eq("status", "active")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (license?.vps_activation_token) {
+          const result = await admin.rpc("validate_vps_activation", {
+            _token: license.vps_activation_token,
+            _fingerprint: fingerprint,
+            _ip: serverHost,
+            _hostname: parsedUrl.host,
+          });
+          console.log("VPS activation result:", JSON.stringify(result.data));
+        }
+      } catch (e) {
+        console.error("Failed to auto-activate VPS token:", e);
+      }
+    }
   }
 
   // Audit log.
