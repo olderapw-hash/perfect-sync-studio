@@ -129,12 +129,10 @@ const Pricing = () => {
   const { session, user, isAdmin, isSuperadmin, loading: authLoading } = useAuth();
   const { isActive, isTrial, plan, loading: subLoading, refetch: refetchSub } = useSubscription();
   const { active, loading: serversLoading } = useServers();
-  const { openCheckout, loading } = usePaddleCheckout();
   const { createPixPayment, pixData, loading: pixLoading, status: pixStatus, checking: pixChecking, reset: resetPix } = usePixCheckout();
   const { settings } = useAppSettings();
   const [trialLoading, setTrialLoading] = useState(false);
   const [cycle, setCycle] = useState<BillingCycle>("monthly");
-  const [checkoutTarget, setCheckoutTarget] = useState<string | null>(null);
   const [pixModalOpen, setPixModalOpen] = useState(false);
   const [pixPlanName, setPixPlanName] = useState("");
   const [pixAmount, setPixAmount] = useState("");
