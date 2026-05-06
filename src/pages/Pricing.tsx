@@ -208,6 +208,28 @@ const Pricing = () => {
     }
   };
 
+  const handlePixCheckout = async (plan: PaidPlan) => {
+    if (!session) {
+      navigate("/auth?next=/pricing");
+      return;
+    }
+    const amountCents = cycle === "monthly" ? plan.monthly * 100 : plan.yearly * 100;
+    const priceId = cycle === "monthly" ? plan.monthlyPriceId : plan.yearlyPriceId;
+    setPixPlanName(`Orphea Core ${plan.name}`);
+    setPixAmount(formatBRL(cycle === "monthly" ? plan.monthly : plan.yearly) + (cycle === "monthly" ? "/mês" : "/ano"));
+    try {
+      await createPixPayment({
+        priceId,
+        productId: plan.monthlyPriceId.replace("_monthly", "").replace("_yearly", ""),
+        amountCents,
+        environment: getPaymentEnvironment(),
+      });
+      setPixModalOpen(true);
+    } catch {
+      // error handled in hook
+    }
+  };
+
   const yearlyDiscountPct = (p: PaidPlan) =>
     Math.round((1 - p.yearly / (p.monthly * 12)) * 100);
 
