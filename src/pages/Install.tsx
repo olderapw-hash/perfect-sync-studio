@@ -237,11 +237,8 @@ const Install = () => {
   const secretDisplay = showRealValues && secret ? secret : "SEU_SECRET";
 
   const installCommand = [
-    `scp api_cls.php root@${ipDisplay}:/root/api_cls.php`,
-    `scp install-apicls-centos7.sh root@${ipDisplay}:/root/install-apicls-centos7.sh`,
-    `scp pw_send_mail.php root@${ipDisplay}:/root/pw_send_mail.php`,
-    `scp sendreward-api.sh root@${ipDisplay}:/root/sendreward-api.sh`,
-    `ssh root@${ipDisplay} "bash /root/install-apicls-centos7.sh --secret ${secretDisplay} --api-src /root/api_cls.php"`,
+    `scp api_cls.php install-apicls-centos7.sh root@${ipDisplay}:/root/`,
+    `ssh root@${ipDisplay} "bash /root/install-apicls-centos7.sh --secret ${secretDisplay}"`,
   ].join("\n");
 
   const handleDownload = (file: InstallerFile) => {
