@@ -1234,7 +1234,7 @@ export type Database = {
           created_at: string
           created_by: string
           email: string
-          expires_at: string
+          expires_at: string | null
           plan: string
           user_id: string
         }
@@ -1242,7 +1242,7 @@ export type Database = {
           created_at?: string
           created_by: string
           email: string
-          expires_at: string
+          expires_at?: string | null
           plan: string
           user_id: string
         }
@@ -1250,7 +1250,7 @@ export type Database = {
           created_at?: string
           created_by?: string
           email?: string
-          expires_at?: string
+          expires_at?: string | null
           plan?: string
           user_id?: string
         }
