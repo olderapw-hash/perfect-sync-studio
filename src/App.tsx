@@ -56,6 +56,9 @@ import InstallerReleasesPage from "./pages/admin/InstallerReleasesPage.tsx";
 import GmCommanderPage from "./pages/admin/GmCommanderPage.tsx";
 import LicensesPage from "./pages/admin/LicensesPage.tsx";
 import AccountSettingsPage from "./pages/admin/AccountSettingsPage.tsx";
+import PrivacyPolicy from "./pages/PrivacyPolicy.tsx";
+import TermsOfService from "./pages/TermsOfService.tsx";
+import RefundPolicy from "./pages/RefundPolicy.tsx";
 
 const queryClient = new QueryClient();
 
@@ -83,6 +86,9 @@ const App = () => (
                   <Route path="/" element={isVpsMode ? <Navigate to="/auth" replace /> : <Landing />} />
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/pricing" element={isVpsMode ? <Navigate to="/auth" replace /> : <Pricing />} />
+                  <Route path="/privacy" element={<PrivacyPolicy />} />
+                  <Route path="/terms" element={<TermsOfService />} />
+                  <Route path="/refund-policy" element={<RefundPolicy />} />
                   <Route path="/checkout/success" element={<CheckoutSuccess />} />
                   <Route
                     path="/onboarding"
