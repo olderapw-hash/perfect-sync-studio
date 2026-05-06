@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Copy, Check, Clock, QrCode, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -29,6 +29,17 @@ export function PixCheckoutModal({
 }: PixCheckoutModalProps) {
   const [copied, setCopied] = useState(false);
   const navigate = useNavigate();
+
+  // Auto-redirect after payment confirmed
+  useEffect(() => {
+    if (status === "approved") {
+      const t = setTimeout(() => {
+        onClose();
+        navigate("/onboarding");
+      }, 2500);
+      return () => clearTimeout(t);
+    }
+  }, [status, onClose, navigate]);
 
   if (!open || !pixData) return null;
 
