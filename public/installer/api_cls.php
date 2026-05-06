@@ -223,12 +223,41 @@ $CONFIG = [
         '/home/gamedbd/valuables_list.txt',
         '/home/gamedbd/visibleid.txt',
     ],
-    // ---- VPS Activation Token ----
+    // ---- VPS Activation Token (loaded from .env file) ----
     'vps_activation_token' => '',
     'vps_activation_url' => '',
     'vps_activation_cache_file' => __DIR__ . '/backups/.vps_activation_cache.json',
     'vps_activation_cache_ttl_seconds' => 21600, // 6 hours
 ];
+
+// ---- Load .env file for secrets (api_secret, activation token, etc.) ----
+$envFile = __DIR__ . '/.env';
+if (file_exists($envFile)) {
+    $envLines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($envLines as $line) {
+        $line = trim($line);
+        if ($line === '' || $line[0] === '#') continue;
+        $eqPos = strpos($line, '=');
+        if ($eqPos === false) continue;
+        $key = trim(substr($line, 0, $eqPos));
+        $val = trim(substr($line, $eqPos + 1));
+        // Remove quotes
+        if ((strlen($val) >= 2) && ($val[0] === '"' || $val[0] === "'") && $val[0] === $val[strlen($val) - 1]) {
+            $val = substr($val, 1, -1);
+        }
+        switch ($key) {
+            case 'API_SECRET':
+                $CONFIG['api_secret'] = $val;
+                break;
+            case 'VPS_ACTIVATION_TOKEN':
+                $CONFIG['vps_activation_token'] = $val;
+                break;
+            case 'VPS_ACTIVATION_URL':
+                $CONFIG['vps_activation_url'] = $val;
+                break;
+        }
+    }
+}
 
 $CULTIVATION_MAP = [
     0  => 'Leal',
