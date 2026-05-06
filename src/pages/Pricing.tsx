@@ -384,52 +384,37 @@ const Pricing = () => {
                     ))}
                   </ul>
 
-                  <button
-                    onClick={() => handleCheckout(priceId)}
-                    disabled={loading || isCurrent}
-                    className={`mt-auto inline-flex w-full items-center justify-center gap-2 rounded-md px-6 py-3 text-sm font-bold transition-smooth disabled:opacity-60 ${
-                      p.highlight
-                        ? "bg-primary text-primary-foreground shadow-glow hover:brightness-110"
-                        : "border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20"
-                    }`}
-                  >
-                    {isThisLoading ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : isCurrent ? (
-                      "Plano atual"
-                    ) : (
-                      <>
-                        Assinar {p.name}
-                        <ArrowRight className="h-4 w-4" />
-                      </>
-                    )}
-                  </button>
-
-                  <p className="mt-3 text-center text-xs text-muted-foreground">
-                    Cartão de crédito via Paddle
-                  </p>
-
-                  {!isCurrent && (
+                  {!isCurrent ? (
                     <button
                       onClick={() => handlePixCheckout(p)}
                       disabled={pixLoading}
-                      className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-6 py-2.5 text-sm font-bold text-emerald-400 transition-smooth hover:bg-emerald-500/20 disabled:opacity-60"
+                      className={`mt-auto inline-flex w-full items-center justify-center gap-2 rounded-md px-6 py-3 text-sm font-bold transition-smooth disabled:opacity-60 ${
+                        p.highlight
+                          ? "bg-primary text-primary-foreground shadow-glow hover:brightness-110"
+                          : "border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20"
+                      }`}
                     >
                       {pixLoading ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
                         <>
                           <QrCode className="h-4 w-4" />
-                          Pagar com Pix
+                          Assinar {p.name} via Pix
                         </>
                       )}
                     </button>
+                  ) : (
+                    <button
+                      disabled
+                      className="mt-auto inline-flex w-full items-center justify-center gap-2 rounded-md px-6 py-3 text-sm font-bold transition-smooth disabled:opacity-60 border border-primary/40 bg-primary/10 text-primary"
+                    >
+                      Plano atual
+                    </button>
                   )}
-                  {!isCurrent && (
-                    <p className="mt-1 text-center text-[11px] text-muted-foreground">
-                      Renovação mensal manual · QR Code instantâneo
-                    </p>
-                  )}
+
+                  <p className="mt-2 text-center text-[11px] text-muted-foreground">
+                    Pagamento via Pix · Renovação mensal manual
+                  </p>
                 </div>
               </div>
             );
