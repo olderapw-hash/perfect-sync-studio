@@ -306,7 +306,7 @@ const PW_ICON_NAMES = [
   "bag", "potion", "gold", "sun", "crystal2", "mail", "quill", "heart", "wand",
 ];
 
-type TabKey = "compensation" | "moderation" | "communication" | "permissions" | "history";
+type TabKey = "compensation" | "moderation" | "communication" | "permissions" | "bulk" | "history";
 
 const DEFAULT_TAB_ICONS: Record<TabKey, string> = {
   compensation: "Gift",
