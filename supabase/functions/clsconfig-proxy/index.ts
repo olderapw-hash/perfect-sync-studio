@@ -230,7 +230,7 @@ async function requireAdmin(req: Request): Promise<Response | { userId: string }
     return jsonError("Unauthorized: token inválido ou expirado", 401);
   }
 
-  const userId = userRes.user.id;
+  const userId = claimsRes.claims.sub as string;
 
   // 1) Tenta admin/superadmin global.
   const { data: roleRows, error: roleErr } = await supabase
