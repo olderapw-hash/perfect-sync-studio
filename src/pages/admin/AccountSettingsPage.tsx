@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useSubscription } from "@/hooks/useSubscription";
+import { usePixCheckout } from "@/hooks/usePixCheckout";
+import { PixCheckoutModal } from "@/components/PixCheckoutModal";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +21,8 @@ import {
   Crown,
   Trash2,
   ArrowUpRight,
+  QrCode,
+  Loader2,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -31,6 +35,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { getPaymentEnvironment } from "@/lib/paddle";
 
 const AccountSettingsPage = () => {
   const { user } = useAuth();
