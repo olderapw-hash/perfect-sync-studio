@@ -53,6 +53,7 @@ Opcoes:
   --web-user USUARIO   Usuario do Apache/PHP. Default: auto-detecta apache.
   --install-dir DIR    Default: /var/www/html/apicls
   --no-yum             Nao tenta instalar httpd/php/curl/sudo.
+  --superadmin-bypass  Marca esta VPS como superadmin (pula validacao de token).
   --no-remi            Nao tenta instalar Remi PHP 8.2 quando PHP for antigo.
   --no-firewall        Nao abre porta HTTP no firewalld.
   --no-backup-existing Nao cria copia do /var/www/html/apicls existente.
