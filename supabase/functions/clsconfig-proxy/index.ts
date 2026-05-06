@@ -455,8 +455,11 @@ Deno.serve(async (req: Request) => {
   const _isBlockedHost = (h: string): boolean => {
     if (!h) return true;
     if (h === "localhost" || h.endsWith(".localhost") || h.endsWith(".local") || h.endsWith(".internal")) return true;
-    if (h === "::1" || h === "[::1]") return true;
-    if (h.startsWith("fe80:") || h.startsWith("fc") || h.startsWith("fd")) return true;
+     if (h === "::1" || h === "[::1]") return true;
+     if (h.startsWith("fe80:") || h.startsWith("fc") || h.startsWith("fd")) return true;
+     // IPv4-mapped IPv6 (e.g. ::ffff:10.0.0.1)
+     const mapped = h.replace(/^\[?/, "").replace(/\]?$/, "");
+     if (/^::ffff:/i.test(mapped)) return true;
     const m = h.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
     if (m) {
       const [a, b] = [parseInt(m[1], 10), parseInt(m[2], 10)];

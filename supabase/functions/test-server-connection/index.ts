@@ -97,6 +97,12 @@ Deno.serve(async (req: Request) => {
     // IPv6 loopback / link-local / unique-local
     if (h === "::1" || h === "[::1]") return true;
     if (h.startsWith("fe80:") || h.startsWith("fc") || h.startsWith("fd")) return true;
+    // IPv4-mapped IPv6 (e.g. ::ffff:10.0.0.1)
+    const mapped = h.replace(/^\[?/, "").replace(/\]?$/, "");
+    if (/^::ffff:/i.test(mapped)) {
+      const ipv4Part = mapped.replace(/^::ffff:/i, "");
+      return true; // block all IPv4-mapped IPv6 addresses
+    }
     // IPv4 numeric ranges
     const m = h.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
     if (m) {
