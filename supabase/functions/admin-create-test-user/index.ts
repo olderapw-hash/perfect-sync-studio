@@ -1,7 +1,7 @@
 // Edge function: superadmin cria um usuário de teste descartável.
 // Gera email + senha aleatórios, cria conta confirmada, registra plano e
 // data de expiração. O cleanup é feito por outra função em cron.
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { createClient } from "npm:@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
