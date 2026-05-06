@@ -1426,6 +1426,18 @@ export type Database = {
       }
       get_my_server_permissions: { Args: { _tenant_id: string }; Returns: Json }
       get_my_tenant_secret: { Args: never; Returns: string }
+      get_my_vps_activation_token: {
+        Args: never
+        Returns: {
+          activated_at: string
+          activation_token: string
+          last_validated_at: string
+          license_status: string
+          vps_hostname: string
+          vps_ip: string
+          vps_status: string
+        }[]
+      }
       get_public_branding: {
         Args: never
         Returns: {

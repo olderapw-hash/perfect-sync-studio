@@ -84,6 +84,8 @@ const Install = () => {
   const [testing, setTesting] = useState(false);
   const [showRealValues, setShowRealValues] = useState(false);
   const [hasStorageZip, setHasStorageZip] = useState(false);
+  const [vpsToken, setVpsToken] = useState<string | null>(null);
+  const [vpsStatus, setVpsStatus] = useState<string | null>(null);
 
   // Check if zip exists in storage
   useEffect(() => {
@@ -96,6 +98,17 @@ const Install = () => {
         }
       });
   }, []);
+
+  // Fetch user's VPS activation token
+  useEffect(() => {
+    if (!session?.user) return;
+    supabase.rpc("get_my_vps_activation_token").then(({ data }) => {
+      if (data && Array.isArray(data) && data.length > 0) {
+        setVpsToken(data[0].activation_token);
+        setVpsStatus(data[0].vps_status);
+      }
+    });
+  }, [session?.user?.id]);
 
   useEffect(() => {
     if (!selectedId) {
@@ -174,7 +187,8 @@ const Install = () => {
 
   // ---- Commands ----
   const step2Command = `scp -r C:\\orphea\\* root@${ipDisplay}:/root/orphea/`;
-  const step3Command = `ssh root@${ipDisplay} "bash /root/orphea/install-apicls-centos7.sh --secret ${secretDisplay}"`;
+  const activationPart = vpsToken ? ` --activation-token ${vpsToken}` : "";
+  const step3Command = `ssh root@${ipDisplay} "bash /root/orphea/install-apicls-centos7.sh --secret ${secretDisplay}${activationPart}"`;
 
   if (authLoading) {
     return (
@@ -475,8 +489,13 @@ const Install = () => {
             <div className="mt-3 space-y-1 text-[11px] text-muted-foreground">
               <p>✅ Instala Apache + PHP automaticamente</p>
               <p>✅ Configura sudoers e scripts auxiliares</p>
-              <p>✅ Injeta o secret no api_cls.php</p>
+              <p>✅ Secrets salvos no .env (nunca no código-fonte)</p>
               <p>✅ Testa a conexão com o gamedbd</p>
+              {vpsToken ? (
+                <p className="text-primary font-semibold">🔒 Token de ativação VPS incluído — protegido contra redistribuição</p>
+              ) : (
+                <p className="text-amber-500">⚠️ Sem token de ativação VPS — sem proteção contra cópia</p>
+              )}
             </div>
 
             {showRealValues && (

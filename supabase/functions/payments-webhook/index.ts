@@ -92,6 +92,45 @@ async function handleSubscriptionCreated(data: any, env: PaddleEnv) {
       onboarding_completed: false,
     });
   }
+
+  // Auto-create license with VPS activation token for paid plans
+  const planName = productId || 'pro';
+  const customerEmail = customData?.email || null;
+  const customerName = customData?.clientName || customData?.email || 'Cliente Paddle';
+
+  const { data: existingLicense } = await supabase
+    .from('licenses')
+    .select('id')
+    .eq('created_by', userId)
+    .maybeSingle();
+
+  if (!existingLicense) {
+    // Get the first superadmin to be the license creator (system-created)
+    const { data: superadminRole } = await supabase
+      .from('user_roles')
+      .select('user_id')
+      .eq('role', 'superadmin')
+      .limit(1)
+      .maybeSingle();
+
+    const creatorId = superadminRole?.user_id || userId;
+
+    const { error: licError } = await supabase.from('licenses').insert({
+      client_name: customerName,
+      client_email: customerEmail,
+      plan: planName.includes('ultimate') ? 'ultimate' : 'pro',
+      status: 'active',
+      created_by: creatorId,
+      payment_method: 'paddle',
+      notes: `Auto-criado via Paddle. Subscription: ${id}`,
+    });
+
+    if (licError) {
+      console.error('Failed to auto-create license:', licError);
+    } else {
+      console.log('Auto-created license with VPS activation token for user:', userId);
+    }
+  }
 }
 
 async function handleSubscriptionUpdated(data: any, env: PaddleEnv) {
