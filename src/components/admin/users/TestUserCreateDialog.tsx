@@ -24,11 +24,13 @@ const DURATIONS = [
   { label: "24 horas", hours: 24 },
   { label: "7 dias", hours: 24 * 7 },
   { label: "30 dias", hours: 24 * 30 },
+  { label: "∞ Ilimitado", hours: 0 },
 ];
 
 export const TestUserCreateDialog = ({ onClose, onCreated }: Props) => {
   const [plan, setPlan] = useState<Plan>("ultimate");
   const [hours, setHours] = useState(24);
+  const isUnlimited = hours === 0;
   const [busy, setBusy] = useState(false);
   const [created, setCreated] = useState<Created | null>(null);
   const [copied, setCopied] = useState<"email" | "password" | "both" | null>(null);
