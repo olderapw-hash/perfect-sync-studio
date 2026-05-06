@@ -224,9 +224,9 @@ async function requireAdmin(req: Request): Promise<Response | { userId: string }
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  const { data: userRes, error: userErr } = await supabase.auth.getUser(token);
-  if (userErr || !userRes?.user) {
-    console.warn("[clsconfig-proxy] getUser failed:", userErr?.message);
+  const { data: claimsRes, error: claimsErr } = await supabase.auth.getClaims(token);
+  if (claimsErr || !claimsRes?.claims?.sub) {
+    console.warn("[clsconfig-proxy] getClaims failed:", claimsErr?.message);
     return jsonError("Unauthorized: token inválido ou expirado", 401);
   }
 
