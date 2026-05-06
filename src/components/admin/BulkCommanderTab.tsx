@@ -763,6 +763,10 @@ export function BulkCommanderTab({ caps, onActed }: BulkCommanderTabProps) {
       {selectedJob && (
         <JobDetailDialog job={selectedJob} onClose={() => setSelectedJob(null)} />
       )}
+
+      {/* Schedule Manager */}
+      <Separator className="bg-border/30" />
+      <BulkScheduleManager />
     </div>
   );
 }
