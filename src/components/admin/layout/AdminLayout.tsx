@@ -27,7 +27,7 @@ import {
   Globe,
   Key,
   LogOut,
-  
+  Settings,
   Shield,
   ShieldCheck,
   UserCog,
@@ -296,6 +296,24 @@ const AdminNavSidebar = () => {
             ))}
           </>
         )}
+
+        {/* Minha Conta — sempre visível, no fim da sidebar */}
+        <div className="mt-auto border-t border-border/60 p-2">
+          <NavLink
+            to="/admin/account"
+            className={({ isActive }) =>
+              cn(
+                "flex items-center gap-2 rounded-md px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent/50 hover:text-foreground",
+                isActive && "bg-primary/10 font-semibold text-primary",
+                collapsed && "justify-center px-0",
+              )
+            }
+            title="Minha Conta"
+          >
+            <Settings className="h-4 w-4" />
+            {!collapsed && <span>Minha Conta</span>}
+          </NavLink>
+        </div>
       </SidebarContent>
     </Sidebar>
   );
