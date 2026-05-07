@@ -379,16 +379,109 @@ function TemplateFormDialog({
   onSaved: () => void;
 }) {
   const isEdit = !!template;
-  const [key, setKey] = useState(template?.template_key ?? "");
-  const [label, setLabel] = useState(template?.label ?? "");
-  const [category, setCategory] = useState<BulkTemplateCategory>(template?.category ?? "recompensa");
-  const [commandKey, setCommandKey] = useState<BulkCommandKey>(template?.command_key ?? "sendMailItem");
-  const [selectionJson, setSelectionJson] = useState(JSON.stringify(template?.selection ?? {}, null, 2));
-  const [payloadJson, setPayloadJson] = useState(JSON.stringify(template?.default_payload ?? {}, null, 2));
+
+  /* ── Default models per command ── */
+  const DEFAULTS: Record<BulkCommandKey, {
+    selection: object;
+    payload: object;
+    key: string;
+    label: string;
+    category: BulkTemplateCategory;
+  }> = {
+    sendMailItem: {
+      selection: { roleids: [1024] },
+      payload: { item_id: 12980, count: 1, title: "Premio", message: "Entrega por template" },
+      key: "reward_item_default",
+      label: "Recompensa Item",
+      category: "recompensa",
+    },
+    sendMailGold: {
+      selection: { guild_ids: [1] },
+      payload: { money: 1000, title: "Guild Reward", message: "Entrega por template" },
+      key: "reward_gold_default",
+      label: "Recompensa Gold",
+      category: "recompensa",
+    },
+    grantMallCash: {
+      selection: { roleids: [1024] },
+      payload: { amount: 1000, reason: "Bulk grant via GM Commander", confirm: "GRANT_MALL_CASH" },
+      key: "reward_cash_default",
+      label: "Recompensa Cash",
+      category: "recompensa",
+    },
+    sendSystemMessage: {
+      selection: {},
+      payload: { message: "Evento diario ativo", kind: "system", priority: "normal" },
+      key: "broadcast_default",
+      label: "Mensagem Global",
+      category: "broadcast",
+    },
+  };
+
+  const initialCmd = template?.command_key ?? "sendMailItem";
+  const initialDefaults = DEFAULTS[initialCmd];
+
+  const [key, setKey] = useState(template?.template_key ?? initialDefaults.key);
+  const [label, setLabel] = useState(template?.label ?? initialDefaults.label);
+  const [category, setCategory] = useState<BulkTemplateCategory>(template?.category ?? initialDefaults.category);
+  const [commandKey, setCommandKey] = useState<BulkCommandKey>(initialCmd);
+  const [selectionJson, setSelectionJson] = useState(
+    JSON.stringify(template?.selection ?? initialDefaults.selection, null, 2)
+  );
+  const [payloadJson, setPayloadJson] = useState(
+    JSON.stringify(template?.default_payload ?? initialDefaults.payload, null, 2)
+  );
   const [requiresPreview, setRequiresPreview] = useState(template?.requires_preview ?? true);
   const [requiresConfirmation, setRequiresConfirmation] = useState(template?.requires_confirmation ?? false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Track if user manually edited selection/payload
+  const [selectionDirty, setSelectionDirty] = useState(isEdit);
+  const [payloadDirty, setPayloadDirty] = useState(isEdit);
+  // Pending overwrite confirmation
+  const [pendingCommand, setPendingCommand] = useState<BulkCommandKey | null>(null);
+
+  // Handle command change with auto-fill logic
+  const handleCommandChange = (newCmd: BulkCommandKey) => {
+    if (newCmd === commandKey) return;
+    const bothClean = !selectionDirty && !payloadDirty;
+    if (bothClean) {
+      applyDefaults(newCmd);
+    } else {
+      setPendingCommand(newCmd);
+    }
+  };
+
+  const applyDefaults = (cmd: BulkCommandKey) => {
+    const d = DEFAULTS[cmd];
+    setCommandKey(cmd);
+    setSelectionJson(JSON.stringify(d.selection, null, 2));
+    setPayloadJson(JSON.stringify(d.payload, null, 2));
+    setSelectionDirty(false);
+    setPayloadDirty(false);
+    if (!isEdit) {
+      setKey(d.key);
+      setLabel(d.label);
+      setCategory(d.category);
+    }
+    if (cmd === "grantMallCash") setRequiresConfirmation(true);
+  };
+
+  const confirmOverwrite = () => {
+    if (pendingCommand) {
+      applyDefaults(pendingCommand);
+      setPendingCommand(null);
+    }
+  };
+
+  const cancelOverwrite = () => {
+    if (pendingCommand) {
+      setCommandKey(pendingCommand);
+      if (pendingCommand === "grantMallCash") setRequiresConfirmation(true);
+      setPendingCommand(null);
+    }
+  };
 
   // Auto-set confirmation for grantMallCash
   useEffect(() => {
