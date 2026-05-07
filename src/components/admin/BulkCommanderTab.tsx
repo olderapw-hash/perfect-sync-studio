@@ -794,6 +794,10 @@ export function BulkCommanderTab({ caps, onActed }: BulkCommanderTabProps) {
         <JobDetailDialog job={selectedJob} onClose={() => setSelectedJob(null)} />
       )}
 
+      {/* Templates Manager */}
+      <Separator className="bg-border/30" />
+      <BulkTemplatesManager />
+
       {/* Schedule Manager */}
       <Separator className="bg-border/30" />
       <BulkScheduleManager />
