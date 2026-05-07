@@ -253,6 +253,14 @@ const FALLBACK_SUPPORTED = new Set([
   "queueBulkCommand",
   "getBulkCommandJob",
   "getBulkCommandJobs",
+  // GM Commander v2 — Bulk Templates (Fase B homologada).
+  "saveBulkTemplate",
+  "getBulkTemplate",
+  "getBulkTemplates",
+  "updateBulkTemplate",
+  "deleteBulkTemplate",
+  "previewBulkTemplate",
+  "executeBulkTemplate",
 ]);
 
 const FALLBACK_UNSUPPORTED = new Set<string>([]);
