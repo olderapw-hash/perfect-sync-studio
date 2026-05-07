@@ -92,49 +92,7 @@ const NO_AUDIENCE_COMMANDS = new Set(["sendSystemMessage"]);
  * `timeLocal` is in the schedule's timezone (HH:MM).
  * We compute relative to the schedule timezone.
  */
-function getNextFire(dayOfWeek: number, timeLocal: string, tz: string, everyDay?: boolean): { date: Date; pushed: boolean } {
-  const [hh, mm] = timeLocal.split(":").map(Number);
-
-  // Build a "now" string in the target timezone to compare
-  const now = new Date();
-  const nowInTz = new Date(now.toLocaleString("en-US", { timeZone: tz }));
-
-  // Build today's fire time in the target timezone
-  const todayFire = new Date(nowInTz);
-  todayFire.setHours(hh || 0, mm || 0, 0, 0);
-
-  if (everyDay) {
-    if (todayFire > nowInTz) {
-      return { date: todayFire, pushed: false };
-    }
-    todayFire.setDate(todayFire.getDate() + 1);
-    return { date: todayFire, pushed: true };
-  }
-
-  // Weekly
-  const currentDay = nowInTz.getDay();
-  let daysAhead = dayOfWeek - currentDay;
-  const sameDay = daysAhead === 0;
-  if (daysAhead < 0 || (sameDay && todayFire <= nowInTz)) daysAhead += 7;
-  const pushed = sameDay && todayFire <= nowInTz;
-  const next = new Date(todayFire);
-  next.setDate(nowInTz.getDate() + daysAhead);
-  next.setHours(hh || 0, mm || 0, 0, 0);
-  return { date: next, pushed };
-}
-
-/** Format a date as dd/MM HH:mm in a given timezone label */
-function formatInTz(date: Date, tz: string): string {
-  try {
-    return date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", timeZone: tz }) +
-      " " +
-      date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: tz });
-  } catch {
-    return date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) +
-      " " +
-      date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-  }
-}
+/* getNextFire removed — next_run_at comes from backend */
 
 /** Convert a local time to UTC display string */
 function localTimeToUtcDisplay(timeLocal: string, tz: string): string {
