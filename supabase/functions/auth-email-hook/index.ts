@@ -17,12 +17,12 @@ const corsHeaders = {
 }
 
 const EMAIL_SUBJECTS: Record<string, string> = {
-  signup: 'Confirm your email',
-  invite: "You've been invited",
-  magiclink: 'Your login link',
-  recovery: 'Reset your password',
-  email_change: 'Confirm your new email',
-  reauthentication: 'Your verification code',
+  signup: 'Confirme seu email — Orphea Core',
+  invite: 'Você foi convidado — Orphea Core',
+  magiclink: 'Seu link de login — Orphea Core',
+  recovery: 'Redefinir senha — Orphea Core',
+  email_change: 'Confirme seu novo email — Orphea Core',
+  reauthentication: 'Código de verificação — Orphea Core',
 }
 
 // Template mapping
