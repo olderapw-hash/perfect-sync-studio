@@ -500,6 +500,32 @@ Deno.serve(async (req: Request) => {
     "backupNow", "saveWatchdogConfig", "enableWatchdog", "disableWatchdog", "runWatchdogCheckNow",
   ]);
 
+  // Actions that require at least the "pro" plan (write actions beyond view/read).
+  const PRO_REQUIRED_ACTIONS = new Set([
+    "saveRoleEditable", "saveClsconfigTemplate", "restoreBackup", "exportClsconfig",
+    "sendMailItem", "sendMailGold", "sendSystemMessage",
+    "kickRole", "banAccount", "unbanAccount", "clearRolePk",
+    "grantMallCash", "muteAccount", "muteRole",
+    "grantGmPermission", "revokeGmPermission",
+    "searchPlayerDirectory", "getPlayerTargetProfile",
+    "resolveBulkTargets", "previewBulkTargets", "queueBulkCommand",
+  ]);
+
+  /** Checks if the caller has at least a pro (or ultimate) subscription. */
+  async function callerHasProPlan(): Promise<boolean> {
+    if (!admin) return false;
+    const { data, error } = await admin
+      .from("subscriptions")
+      .select("product_id")
+      .eq("user_id", callerUserId)
+      .in("status", ["active", "trialing"])
+      .or("current_period_end.is.null,current_period_end.gt.now()")
+      .eq("environment", "live")
+      .limit(1);
+    if (error || !data || data.length === 0) return false;
+    return ["pw_admin_pro", "pw_admin_ultimate", "pw_admin"].includes(data[0].product_id);
+  }
+
   /** Checks if the caller has an active ultimate subscription. */
   async function callerHasUltimatePlan(): Promise<boolean> {
     if (!admin) return false;
@@ -530,6 +556,12 @@ Deno.serve(async (req: Request) => {
       if (!hasUltimate) {
         void logAction(action, `plan_denied:ultimate_required`, false, 403, "Plan upgrade required");
         return jsonError("Ação disponível apenas no plano Ultimate. Faça upgrade para continuar.", 403);
+      }
+    } else if (PRO_REQUIRED_ACTIONS.has(action)) {
+      const hasPro = await callerHasProPlan();
+      if (!hasPro) {
+        void logAction(action, `plan_denied:pro_required`, false, 403, "Plan upgrade required");
+        return jsonError("Ação disponível apenas nos planos Pro ou Ultimate. Faça upgrade para continuar.", 403);
       }
     }
     return null;

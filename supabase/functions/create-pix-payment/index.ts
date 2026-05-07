@@ -7,6 +7,14 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+/** Canonical server-side price catalogue — client-supplied amounts are rejected
+ *  if they don't match. Keys = productId, values = amount in centavos (BRL). */
+const PRICE_CATALOGUE: Record<string, number> = {
+  pw_admin_iniciante: 2500,   // R$ 25,00
+  pw_admin_pro: 15000,        // R$ 150,00
+  pw_admin_ultimate: 30000,   // R$ 300,00
+};
+
 const BodySchema = z.object({
   priceId: z.string().min(1),
   productId: z.string().min(1),
@@ -60,6 +68,21 @@ Deno.serve(async (req) => {
       );
     }
     const { priceId, productId, amountCents, environment } = parsed.data;
+
+    // Server-side price enforcement: reject if amount doesn't match catalogue
+    const canonicalPrice = PRICE_CATALOGUE[productId];
+    if (canonicalPrice === undefined) {
+      return new Response(
+        JSON.stringify({ error: `Produto desconhecido: ${productId}` }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    if (amountCents !== canonicalPrice) {
+      return new Response(
+        JSON.stringify({ error: `Valor incorreto para o produto ${productId}. Esperado: R$ ${(canonicalPrice / 100).toFixed(2)}` }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // Generate external reference
     const externalRef = `pix_${user.id}_${Date.now()}`;
