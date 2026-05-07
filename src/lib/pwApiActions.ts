@@ -726,6 +726,30 @@ export const pwApi = {
       query,
     });
   },
+  /* ─────────── GM Commander v2 — Bulk Templates ─────────── */
+  saveBulkTemplate(body: SaveBulkTemplatePayload) {
+    return callAction<BulkTemplateResponse>("saveBulkTemplate", { method: "POST", body });
+  },
+  getBulkTemplate(template_key: string) {
+    return callAction<BulkTemplateResponse>("getBulkTemplate", { method: "GET", query: { template_key } });
+  },
+  getBulkTemplates(params: { category?: string } = {}) {
+    const query: Record<string, string> = {};
+    if (params.category) query.category = params.category;
+    return callAction<BulkTemplatesListResponse>("getBulkTemplates", { method: "GET", query });
+  },
+  updateBulkTemplate(body: UpdateBulkTemplatePayload) {
+    return callAction<BulkTemplateResponse>("updateBulkTemplate", { method: "POST", body });
+  },
+  deleteBulkTemplate(template_key: string) {
+    return callAction<{ success: boolean; error?: string }>("deleteBulkTemplate", { method: "POST", body: { template_key } });
+  },
+  previewBulkTemplate(template_key: string) {
+    return callAction<PreviewBulkTargetsResponse>("previewBulkTemplate", { method: "POST", body: { template_key } });
+  },
+  executeBulkTemplate(body: ExecuteBulkTemplatePayload) {
+    return callAction<QueueBulkCommandResponse>("executeBulkTemplate", { method: "POST", body });
+  },
 };
 
 /* ─────────── GM Commander v1 — tipos ─────────── */
