@@ -9,7 +9,7 @@ import {
   Calendar,
   CheckCircle2,
   Clock,
-  Info,
+  // Info removed — no longer used
   Loader2,
   Megaphone,
   Pause,
@@ -67,6 +67,7 @@ interface BulkSchedule {
   last_run_status: string | null;
   last_run_job_id: string | null;
   last_error: string | null;
+  next_run_at: string | null;
   created_at: string;
   updated_at: string;
   every_day?: boolean;
@@ -91,49 +92,7 @@ const NO_AUDIENCE_COMMANDS = new Set(["sendSystemMessage"]);
  * `timeLocal` is in the schedule's timezone (HH:MM).
  * We compute relative to the schedule timezone.
  */
-function getNextFire(dayOfWeek: number, timeLocal: string, tz: string, everyDay?: boolean): { date: Date; pushed: boolean } {
-  const [hh, mm] = timeLocal.split(":").map(Number);
-
-  // Build a "now" string in the target timezone to compare
-  const now = new Date();
-  const nowInTz = new Date(now.toLocaleString("en-US", { timeZone: tz }));
-
-  // Build today's fire time in the target timezone
-  const todayFire = new Date(nowInTz);
-  todayFire.setHours(hh || 0, mm || 0, 0, 0);
-
-  if (everyDay) {
-    if (todayFire > nowInTz) {
-      return { date: todayFire, pushed: false };
-    }
-    todayFire.setDate(todayFire.getDate() + 1);
-    return { date: todayFire, pushed: true };
-  }
-
-  // Weekly
-  const currentDay = nowInTz.getDay();
-  let daysAhead = dayOfWeek - currentDay;
-  const sameDay = daysAhead === 0;
-  if (daysAhead < 0 || (sameDay && todayFire <= nowInTz)) daysAhead += 7;
-  const pushed = sameDay && todayFire <= nowInTz;
-  const next = new Date(todayFire);
-  next.setDate(nowInTz.getDate() + daysAhead);
-  next.setHours(hh || 0, mm || 0, 0, 0);
-  return { date: next, pushed };
-}
-
-/** Format a date as dd/MM HH:mm in a given timezone label */
-function formatInTz(date: Date, tz: string): string {
-  try {
-    return date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", timeZone: tz }) +
-      " " +
-      date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: tz });
-  } catch {
-    return date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) +
-      " " +
-      date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-  }
-}
+/* getNextFire removed — next_run_at comes from backend */
 
 /** Convert a local time to UTC display string */
 function localTimeToUtcDisplay(timeLocal: string, tz: string): string {
@@ -234,13 +193,13 @@ export function BulkScheduleManager() {
       .from("gm_bulk_schedules")
       .update({ is_active: active })
       .eq("id", id);
-    setSchedules(prev => prev.map(s => s.id === id ? { ...s, is_active: active } : s));
-  }, []);
+    void loadSchedules();
+  }, [loadSchedules]);
 
   const deleteSchedule = useCallback(async (id: string) => {
     await supabase.from("gm_bulk_schedules").delete().eq("id", id);
-    setSchedules(prev => prev.filter(s => s.id !== id));
-  }, []);
+    void loadSchedules();
+  }, [loadSchedules]);
 
   return (
     <div className="space-y-4">
@@ -284,7 +243,6 @@ export function BulkScheduleManager() {
             const everyDay = isEveryDay(s);
             const tz = s.timezone || DEFAULT_TIMEZONE;
             const timeLocal = s.time_utc; // stored as local time despite column name
-            const { date: nextFireDate, pushed } = getNextFire(s.day_of_week, timeLocal, tz, everyDay);
             const utcTime = localTimeToUtcDisplay(timeLocal, tz);
 
             return (
@@ -326,29 +284,17 @@ export function BulkScheduleManager() {
                           UTC: {utcTime}
                         </span>
 
-                        {/* Next execution */}
-                        {s.is_active && (
+                        {/* Next execution — from backend */}
+                        {s.is_active && s.next_run_at && (
                           <div className="flex items-center gap-1 ml-4">
                             <span className="text-primary/80">
-                              Próximo: {formatInTz(nextFireDate, tz)} ({formatRelative(nextFireDate)})
-                            </span>
-                          </div>
-                        )}
-
-                        {/* Pushed explanation */}
-                        {s.is_active && pushed && (
-                          <div className="flex items-center gap-1 ml-4 text-amber-400/70">
-                            <Info className="h-3 w-3 shrink-0" />
-                            <span>
-                              {everyDay
-                                ? "Horário de hoje já passou; próxima execução amanhã."
-                                : "Horário desta semana já passou; próxima execução calculada para a semana seguinte."}
+                              Próximo: {new Date(s.next_run_at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: tz })} ({formatRelative(new Date(s.next_run_at))})
                             </span>
                           </div>
                         )}
 
                         {/* Last run info */}
-                        {s.last_run_at && (
+                        {s.last_run_at ? (
                           <div className="flex items-center gap-3 flex-wrap">
                             <span className="flex items-center gap-1">
                               {s.last_run_status === "ok" ? (
@@ -371,6 +317,8 @@ export function BulkScheduleManager() {
                               </span>
                             )}
                           </div>
+                        ) : (
+                          <span className="ml-4 text-muted-foreground/50 italic">Ainda não executado</span>
                         )}
                       </div>
                     </div>
