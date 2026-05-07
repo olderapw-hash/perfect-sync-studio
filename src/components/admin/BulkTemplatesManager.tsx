@@ -609,10 +609,13 @@ function ExecuteTemplateDialog({
       }
       if (mode === "schedule") {
         payload.schedule = {
-          day_of_week: dayOfWeek,
-          time_utc: timeUtc,
+          ...(everyDay
+            ? { every_day: true }
+            : { weekdays: [dayOfWeek] }),
+          time_of_day: timeUtc,
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
           name: scheduleName,
+          enabled: true,
         };
       }
       const res = await pwApi.executeBulkTemplate(payload as any);
