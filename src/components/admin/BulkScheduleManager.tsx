@@ -510,16 +510,28 @@ function ScheduleFormDialog({
 
     let err;
     if (isEdit && schedule) {
-      const { error: e } = await supabase
+      const { data: updated, error: e } = await supabase
         .from("gm_bulk_schedules")
         .update({ ...row, updated_by: userId } as never)
-        .eq("id", schedule.id);
+        .eq("id", schedule.id)
+        .select("id");
       err = e;
+      if (!e && (!updated || updated.length === 0)) {
+        setError("Falha ao salvar: o backend não confirmou a atualização. Verifique suas permissões.");
+        setSaving(false);
+        return;
+      }
     } else {
-      const { error: e } = await supabase
+      const { data: inserted, error: e } = await supabase
         .from("gm_bulk_schedules")
-        .insert({ ...row, created_by: userId } as never);
+        .insert({ ...row, created_by: userId } as never)
+        .select("id");
       err = e;
+      if (!e && (!inserted || inserted.length === 0)) {
+        setError("Falha ao salvar: o backend não confirmou a criação. Verifique suas permissões.");
+        setSaving(false);
+        return;
+      }
     }
 
     if (err) {
