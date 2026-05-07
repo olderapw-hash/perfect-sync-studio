@@ -66,13 +66,15 @@ Deno.serve(async (req: Request) => {
   if (tenantId && (!url || !secret)) {
     const { data: t, error: tErr } = await admin
       .from("tenants")
-      .select("owner_id, pw_api_base_url, pw_api_secret")
+      .select("owner_id, pw_api_base_url")
       .eq("id", tenantId)
       .maybeSingle();
     if (tErr || !t) return jsonResponse({ success: false, error: "Servidor não encontrado" }, 404);
     if (t.owner_id !== userId) return jsonResponse({ success: false, error: "Acesso negado" }, 403);
     url = (t.pw_api_base_url ?? "").replace(/\/+$/, "");
-    secret = t.pw_api_secret ?? "";
+    // Read secret from separate protected table
+    const { data: sec } = await admin.from("tenant_secrets").select("pw_api_secret").eq("tenant_id", tenantId).maybeSingle();
+    secret = sec?.pw_api_secret ?? "";
   }
 
   if (!url || !secret) {
