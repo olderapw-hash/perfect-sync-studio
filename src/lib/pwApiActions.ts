@@ -750,6 +750,24 @@ export const pwApi = {
   executeBulkTemplate(body: ExecuteBulkTemplatePayload) {
     return callAction<QueueBulkCommandResponse>("executeBulkTemplate", { method: "POST", body });
   },
+  /* ─────────── GM Commander v2 — Bulk Schedules ─────────── */
+  scheduleBulkCommand(body: ScheduleBulkCommandPayload) {
+    return callAction<ScheduleBulkCommandResponse>("scheduleBulkCommand", { method: "POST", body });
+  },
+  getBulkSchedules(params: { limit?: number } = {}) {
+    const query: Record<string, string | number> = {};
+    if (params.limit != null) query.limit = params.limit;
+    return callAction<GetBulkSchedulesResponse>("getBulkSchedules", { method: "GET", query });
+  },
+  getBulkSchedule(scheduleId: string) {
+    return callAction<GetBulkScheduleResponse>("getBulkSchedule", { method: "GET", query: { schedule_id: scheduleId } });
+  },
+  updateBulkSchedule(scheduleId: string, body: Partial<ScheduleBulkCommandPayload>) {
+    return callAction<ScheduleBulkCommandResponse>("updateBulkSchedule", { method: "POST", body: { ...body, schedule_id: scheduleId } });
+  },
+  deleteBulkSchedule(scheduleId: string) {
+    return callAction<{ success: boolean; deleted: boolean; schedule_id: string; error?: string }>("deleteBulkSchedule", { method: "POST", body: { schedule_id: scheduleId } });
+  },
 };
 
 /* ─────────── GM Commander v1 — tipos ─────────── */
@@ -2135,5 +2153,69 @@ export interface BulkTemplatesListResponse {
   success: boolean;
   templates: BulkTemplate[];
   count: number;
+  error?: string;
+}
+
+/* ─────────── GM Commander v2 — Bulk Schedule types ─────────── */
+
+/** Summary returned by the VPS for each schedule */
+export interface VpsBulkScheduleSummary {
+  id: string;
+  name: string;
+  command_key: BulkCommandKey | string;
+  enabled: boolean;
+  weekdays: number[];
+  time_of_day: string;
+  timezone: string;
+  created_at: string | null;
+  updated_at: string | null;
+  actor?: { name?: string; ip?: string };
+  updated_by?: { name?: string; ip?: string };
+  selection: Record<string, unknown>;
+  preview_count: number;
+  preview_warnings: string[];
+  next_run_at: string | null;
+  next_retry_at: string | null;
+  last_run_at: string | null;
+  last_job_id: string | null;
+  last_result: string | null;
+  last_error: string | null;
+  last_error_at: string | null;
+}
+
+export interface ScheduleBulkCommandPayload {
+  name?: string;
+  command_key: BulkCommandKey | string;
+  weekdays: number[];
+  time_of_day: string;
+  timezone?: string;
+  enabled?: boolean;
+  /** Selection params flattened or nested */
+  selection?: BulkSelectionParams;
+  /** Command-specific fields (item_id, count, amount, message, confirm, etc.) */
+  [k: string]: unknown;
+}
+
+export interface ScheduleBulkCommandResponse {
+  success: boolean;
+  schedule: VpsBulkScheduleSummary;
+  schedule_file?: string;
+  audit_file?: string;
+  error?: string;
+}
+
+export interface GetBulkSchedulesResponse {
+  success: boolean;
+  schedules: VpsBulkScheduleSummary[];
+  limit: number;
+  collected_at: string;
+  error?: string;
+}
+
+export interface GetBulkScheduleResponse {
+  success: boolean;
+  schedule: Record<string, unknown>;
+  summary: VpsBulkScheduleSummary;
+  schedule_file?: string;
   error?: string;
 }
