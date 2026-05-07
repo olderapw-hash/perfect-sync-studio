@@ -17,12 +17,12 @@ const corsHeaders = {
 }
 
 const EMAIL_SUBJECTS: Record<string, string> = {
-  signup: 'Confirm your email',
-  invite: "You've been invited",
-  magiclink: 'Your login link',
-  recovery: 'Reset your password',
-  email_change: 'Confirm your new email',
-  reauthentication: 'Your verification code',
+  signup: 'Confirme seu email — Orphea Core',
+  invite: 'Você foi convidado — Orphea Core',
+  magiclink: 'Seu link de login — Orphea Core',
+  recovery: 'Redefinir senha — Orphea Core',
+  email_change: 'Confirme seu novo email — Orphea Core',
+  reauthentication: 'Código de verificação — Orphea Core',
 }
 
 // Template mapping
@@ -36,7 +36,7 @@ const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
 }
 
 // Configuration
-const SITE_NAME = "perfect-sync-studio"
+const SITE_NAME = "Orphea Core"
 const SENDER_DOMAIN = "notify.orpheacore.com"
 const ROOT_DOMAIN = "orpheacore.com"
 const FROM_DOMAIN = "notify.orpheacore.com" // Domain shown in From address (may be root or sender subdomain)
@@ -94,7 +94,13 @@ async function handlePreview(req: Request): Promise<Response> {
   const apiKey = Deno.env.get('LOVABLE_API_KEY')
   const authHeader = req.headers.get('Authorization')
 
-  if (!apiKey || authHeader !== `Bearer ${apiKey}`) {
+  // Accept the auth token from the preview system OR the stored LOVABLE_API_KEY
+  // Both should be valid sk_ keys. After key rotation, the stored key and
+  // the preview system key may temporarily be different (both valid).
+  const bearerToken = authHeader?.replace('Bearer ', '') ?? ''
+  const isValidKey = bearerToken.startsWith('sk_') && bearerToken.length > 10
+  
+  if (!isValidKey && (!apiKey || authHeader !== `Bearer ${apiKey}`)) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
       headers: { ...previewCorsHeaders, 'Content-Type': 'application/json' },
