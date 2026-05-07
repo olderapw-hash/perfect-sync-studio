@@ -69,6 +69,21 @@ Deno.serve(async (req) => {
     }
     const { priceId, productId, amountCents, environment } = parsed.data;
 
+    // Server-side price enforcement: reject if amount doesn't match catalogue
+    const canonicalPrice = PRICE_CATALOGUE[productId];
+    if (canonicalPrice === undefined) {
+      return new Response(
+        JSON.stringify({ error: `Produto desconhecido: ${productId}` }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    if (amountCents !== canonicalPrice) {
+      return new Response(
+        JSON.stringify({ error: `Valor incorreto para o produto ${productId}. Esperado: R$ ${(canonicalPrice / 100).toFixed(2)}` }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Generate external reference
     const externalRef = `pix_${user.id}_${Date.now()}`;
 
