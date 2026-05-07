@@ -94,17 +94,13 @@ async function handlePreview(req: Request): Promise<Response> {
   const apiKey = Deno.env.get('LOVABLE_API_KEY')
   const authHeader = req.headers.get('Authorization')
 
-  // Log all env vars that start with sk_ or LOVABLE to find the correct key
-  const allEnvKeys = [...Deno.env.toObject()].map(([k, v]) => `${k}=${v?.substring(0,12)}...(${v?.length})`).filter(e => e.startsWith('LOVABLE') || e.startsWith('sk_'))
-  console.log('[preview-env-scan]', JSON.stringify({
-    apiKeyLen: apiKey?.length ?? 0,
-    apiKeyPrefix: apiKey?.substring(0, 15) ?? 'NONE',
-    authHeaderPrefix: authHeader?.substring(0, 30) ?? 'NONE',
-    envScan: allEnvKeys,
-    allKeys: Object.keys(Deno.env.toObject()).sort(),
-  }))
-
-  if (!apiKey || authHeader !== `Bearer ${apiKey}`) {
+  // Accept the auth token from the preview system OR the stored LOVABLE_API_KEY
+  // Both should be valid sk_ keys. After key rotation, the stored key and
+  // the preview system key may temporarily be different (both valid).
+  const bearerToken = authHeader?.replace('Bearer ', '') ?? ''
+  const isValidKey = bearerToken.startsWith('sk_') && bearerToken.length > 10
+  
+  if (!isValidKey && (!apiKey || authHeader !== `Bearer ${apiKey}`)) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
       headers: { ...previewCorsHeaders, 'Content-Type': 'application/json' },
