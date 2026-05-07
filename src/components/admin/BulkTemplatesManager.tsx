@@ -589,7 +589,7 @@ function TemplateFormDialog({
               </div>
               <div className="space-y-1.5">
                 <Label className="text-[11px]">Comando</Label>
-                <Select value={commandKey} onValueChange={(v) => setCommandKey(v as BulkCommandKey)}>
+                <Select value={commandKey} onValueChange={(v) => handleCommandChange(v as BulkCommandKey)}>
                   <SelectTrigger className="h-8 border-border/40 bg-card/60 text-xs">
                     <SelectValue />
                   </SelectTrigger>
