@@ -471,6 +471,7 @@ export type Database = {
           created_at: string
           created_by: string
           day_of_week: number
+          every_day: boolean
           id: string
           is_active: boolean
           last_error: string | null
@@ -478,6 +479,7 @@ export type Database = {
           last_run_job_id: string | null
           last_run_status: string | null
           name: string
+          next_run_at: string | null
           selection: Json
           tenant_id: string
           time_utc: string
@@ -491,6 +493,7 @@ export type Database = {
           created_at?: string
           created_by: string
           day_of_week: number
+          every_day?: boolean
           id?: string
           is_active?: boolean
           last_error?: string | null
@@ -498,6 +501,7 @@ export type Database = {
           last_run_job_id?: string | null
           last_run_status?: string | null
           name: string
+          next_run_at?: string | null
           selection?: Json
           tenant_id: string
           time_utc?: string
@@ -511,6 +515,7 @@ export type Database = {
           created_at?: string
           created_by?: string
           day_of_week?: number
+          every_day?: boolean
           id?: string
           is_active?: boolean
           last_error?: string | null
@@ -518,6 +523,7 @@ export type Database = {
           last_run_job_id?: string | null
           last_run_status?: string | null
           name?: string
+          next_run_at?: string | null
           selection?: Json
           tenant_id?: string
           time_utc?: string
