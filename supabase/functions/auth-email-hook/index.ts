@@ -94,6 +94,13 @@ async function handlePreview(req: Request): Promise<Response> {
   const apiKey = Deno.env.get('LOVABLE_API_KEY')
   const authHeader = req.headers.get('Authorization')
 
+  console.log('[preview-diag]', JSON.stringify({
+    apiKeyLen: apiKey?.length ?? 0,
+    apiKeyPrefix: apiKey?.substring(0, 12) ?? 'NONE',
+    authHeaderPrefix: authHeader?.substring(0, 25) ?? 'NONE',
+    match: authHeader === `Bearer ${apiKey}`,
+  }))
+
   if (!apiKey || authHeader !== `Bearer ${apiKey}`) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
