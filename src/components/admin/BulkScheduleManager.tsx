@@ -193,12 +193,12 @@ export function BulkScheduleManager() {
       .from("gm_bulk_schedules")
       .update({ is_active: active })
       .eq("id", id);
-    void loadSchedules();
+    await loadSchedules();
   }, [loadSchedules]);
 
   const deleteSchedule = useCallback(async (id: string) => {
     await supabase.from("gm_bulk_schedules").delete().eq("id", id);
-    void loadSchedules();
+    await loadSchedules();
   }, [loadSchedules]);
 
   return (
