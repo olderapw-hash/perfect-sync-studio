@@ -398,6 +398,7 @@ function ScheduleFormDialog({
       case "grantMallCash":
         command_payload.amount = parseInt(cashAmount) || 0;
         command_payload.reason = subject || "Agendamento automático";
+        command_payload.confirm = "GRANT_MALL_CASH";
         break;
     }
 
