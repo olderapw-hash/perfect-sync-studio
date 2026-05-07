@@ -121,12 +121,16 @@ Deno.serve(async (req) => {
 
         // Call the VPS queueBulkCommand directly
         const apiUrl = `${tenant.pw_api_base_url.replace(/\/$/, "")}/api_cls.php?action=queueBulkCommand`;
-        const payload = {
+        const payload: Record<string, unknown> = {
           command_key: schedule.command_key,
           ...(typeof schedule.selection === "object" ? schedule.selection : {}),
           ...(typeof schedule.command_payload === "object" ? schedule.command_payload : {}),
           actor: `scheduler:${schedule.id}`,
         };
+        // Auto-inject confirmation token for grantMallCash
+        if (schedule.command_key === "grantMallCash") {
+          payload.confirm = "GRANT_MALL_CASH";
+        }
 
         const vpsResp = await fetch(apiUrl, {
           method: "POST",
