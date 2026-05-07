@@ -176,14 +176,15 @@ Deno.serve(async (req) => {
 
     for (const schedule of dueSchedules) {
       try {
-        const { data: tenant, error: tenantErr } = await supabase
-          .from("tenants")
-          .select("pw_api_base_url, pw_api_secret")
-          .eq("id", schedule.tenant_id)
-          .single();
+        const [{ data: tenantInfo, error: tenantInfoErr }, { data: tenantSecret }] = await Promise.all([
+          supabase.from("tenants").select("pw_api_base_url").eq("id", schedule.tenant_id).single(),
+          supabase.from("tenant_secrets").select("pw_api_secret").eq("tenant_id", schedule.tenant_id).maybeSingle(),
+        ]);
+        const pw_api_base_url = tenantInfo?.pw_api_base_url;
+        const pw_api_secret = tenantSecret?.pw_api_secret;
 
-        if (tenantErr || !tenant?.pw_api_base_url || !tenant?.pw_api_secret) {
-          const errMsg = tenantErr?.message || "Tenant sem API configurada";
+        if (tenantInfoErr || !pw_api_base_url || !pw_api_secret) {
+          const errMsg = tenantInfoErr?.message || "Tenant sem API configurada";
           const tz = schedule.timezone || "America/Sao_Paulo";
           const isDaily = schedule.every_day || (schedule.selection as Record<string, unknown>)?.every_day === true;
           const nextRun = computeNextRunAt(isDaily, schedule.day_of_week, schedule.time_utc, tz);
