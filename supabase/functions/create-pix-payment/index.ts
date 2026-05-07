@@ -7,6 +7,14 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+/** Canonical server-side price catalogue — client-supplied amounts are rejected
+ *  if they don't match. Keys = productId, values = amount in centavos (BRL). */
+const PRICE_CATALOGUE: Record<string, number> = {
+  pw_admin_iniciante: 2500,   // R$ 25,00
+  pw_admin_pro: 15000,        // R$ 150,00
+  pw_admin_ultimate: 30000,   // R$ 300,00
+};
+
 const BodySchema = z.object({
   priceId: z.string().min(1),
   productId: z.string().min(1),
