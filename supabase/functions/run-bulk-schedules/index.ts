@@ -200,7 +200,7 @@ Deno.serve(async (req) => {
 
         let parsedUrl: URL;
         try {
-          parsedUrl = new URL(tenant.pw_api_base_url);
+          parsedUrl = new URL(pw_api_base_url);
         } catch {
           const errMsg = "Invalid pw_api_base_url";
           await supabase.from("gm_bulk_schedules").update({ last_run_at: now.toISOString(), last_run_status: "error", last_error: errMsg }).eq("id", schedule.id);
@@ -214,7 +214,7 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        const apiUrl = `${tenant.pw_api_base_url.replace(/\/$/, "")}/api_cls.php?action=queueBulkCommand`;
+        const apiUrl = `${pw_api_base_url.replace(/\/$/, "")}/api_cls.php?action=queueBulkCommand`;
         const payload: Record<string, unknown> = {
           command_key: schedule.command_key,
           ...(typeof schedule.selection === "object" ? schedule.selection : {}),
@@ -229,7 +229,7 @@ Deno.serve(async (req) => {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "x-sync-secret": tenant.pw_api_secret,
+            "x-sync-secret": pw_api_secret,
           },
           body: JSON.stringify(payload),
         });
