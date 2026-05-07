@@ -105,6 +105,14 @@ const ALLOWED_ACTIONS = new Set([
   "queueBulkCommand",
   "getBulkCommandJob",
   "getBulkCommandJobs",
+  // GM Commander v2 — Bulk Templates (Phase B).
+  "saveBulkTemplate",
+  "getBulkTemplate",
+  "getBulkTemplates",
+  "updateBulkTemplate",
+  "deleteBulkTemplate",
+  "previewBulkTemplate",
+  "executeBulkTemplate",
 ]);
 
 // Mapa Action → permissão exigida (deve refletir src/lib/serverPermissions.ts).
