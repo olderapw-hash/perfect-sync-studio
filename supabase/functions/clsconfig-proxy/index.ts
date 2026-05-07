@@ -272,6 +272,7 @@ Deno.serve(async (req: Request) => {
   const authResult = await requireAdmin(req);
   if (authResult instanceof Response) return authResult;
   const callerUserId = authResult.userId;
+  const callerIsGlobalAdmin = authResult.isGlobalAdmin;
 
   const url = new URL(req.url);
   const segments = url.pathname.split("/").filter(Boolean);
