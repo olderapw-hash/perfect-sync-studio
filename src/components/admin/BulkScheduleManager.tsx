@@ -294,12 +294,14 @@ function ScheduleFormDialog({
   tenantId,
   userId,
   schedule,
+  existingSchedules,
   onClose,
   onSaved,
 }: {
   tenantId: string;
   userId: string;
   schedule: BulkSchedule | null;
+  existingSchedules: BulkSchedule[];
   onClose: () => void;
   onSaved: () => void;
 }) {
