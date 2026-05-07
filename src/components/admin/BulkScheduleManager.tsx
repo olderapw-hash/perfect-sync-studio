@@ -76,6 +76,30 @@ const COMMAND_LABELS: Record<string, string> = {
   grantMallCash: "Creditar Cash",
 };
 
+/** Calculate next fire date for a weekly schedule */
+function getNextFire(dayOfWeek: number, timeUtc: string): Date {
+  const now = new Date();
+  const [hh, mm] = timeUtc.split(":").map(Number);
+  const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), hh || 0, mm || 0, 0));
+  // Move to next matching day
+  const currentDay = now.getUTCDay();
+  let daysAhead = dayOfWeek - currentDay;
+  if (daysAhead < 0 || (daysAhead === 0 && next <= now)) daysAhead += 7;
+  next.setUTCDate(next.getUTCDate() + daysAhead);
+  return next;
+}
+
+function formatRelative(date: Date): string {
+  const now = new Date();
+  const diffMs = date.getTime() - now.getTime();
+  const diffH = Math.floor(diffMs / 3600000);
+  const diffD = Math.floor(diffH / 24);
+  if (diffD > 0) return `em ${diffD}d ${diffH % 24}h`;
+  if (diffH > 0) return `em ${diffH}h`;
+  const diffM = Math.floor(diffMs / 60000);
+  return diffM > 0 ? `em ${diffM}min` : "agora";
+}
+
 const PW_CLASSES_SCHEDULE = [
   { id: 0, name: "Guerreiro" },
   { id: 1, name: "Mágico" },
