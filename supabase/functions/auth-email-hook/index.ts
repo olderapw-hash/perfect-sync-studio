@@ -94,11 +94,14 @@ async function handlePreview(req: Request): Promise<Response> {
   const apiKey = Deno.env.get('LOVABLE_API_KEY')
   const authHeader = req.headers.get('Authorization')
 
-  console.log('[preview-diag]', JSON.stringify({
+  // Log all env vars that start with sk_ or LOVABLE to find the correct key
+  const allEnvKeys = [...Deno.env.toObject()].map(([k, v]) => `${k}=${v?.substring(0,12)}...(${v?.length})`).filter(e => e.startsWith('LOVABLE') || e.startsWith('sk_'))
+  console.log('[preview-env-scan]', JSON.stringify({
     apiKeyLen: apiKey?.length ?? 0,
-    apiKeyPrefix: apiKey?.substring(0, 12) ?? 'NONE',
-    authHeaderPrefix: authHeader?.substring(0, 25) ?? 'NONE',
-    match: authHeader === `Bearer ${apiKey}`,
+    apiKeyPrefix: apiKey?.substring(0, 15) ?? 'NONE',
+    authHeaderPrefix: authHeader?.substring(0, 30) ?? 'NONE',
+    envScan: allEnvKeys,
+    allKeys: Object.keys(Deno.env.toObject()).sort(),
   }))
 
   if (!apiKey || authHeader !== `Bearer ${apiKey}`) {
