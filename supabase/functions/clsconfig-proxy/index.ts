@@ -526,6 +526,8 @@ Deno.serve(async (req: Request) => {
     "grantGmPermission", "revokeGmPermission",
     "searchPlayerDirectory", "getPlayerTargetProfile",
     "resolveBulkTargets", "previewBulkTargets", "queueBulkCommand",
+    "saveBulkTemplate", "updateBulkTemplate", "deleteBulkTemplate",
+    "previewBulkTemplate", "executeBulkTemplate",
   ]);
 
   /** Checks if the caller has at least a pro (or ultimate) subscription. */
