@@ -351,12 +351,18 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
+    // Helper: fetch secret from tenant_secrets table
+    const fetchTenantSecret = async (tenantId: string): Promise<string> => {
+      const { data } = await admin!.from("tenant_secrets").select("pw_api_secret").eq("tenant_id", tenantId).maybeSingle();
+      return data?.pw_api_secret ?? "";
+    };
+
     if (admin) {
       // 1) Tenant explícito via header (validar membership)
       if (requestedServerId) {
         const { data: tRow } = await admin
           .from("tenants")
-          .select("id, owner_id, pw_api_base_url, pw_api_secret")
+          .select("id, owner_id, pw_api_base_url")
           .eq("id", requestedServerId)
           .maybeSingle();
         if (tRow) {
@@ -374,7 +380,7 @@ Deno.serve(async (req: Request) => {
           }
           if (isMember) {
             PW_API_BASE_URL = tRow.pw_api_base_url ?? "";
-            PW_API_SECRET = tRow.pw_api_secret ?? "";
+            PW_API_SECRET = await fetchTenantSecret(tRow.id);
             resolvedTenantId = tRow.id;
             credSource = "tenant_explicit";
           }
@@ -385,43 +391,46 @@ Deno.serve(async (req: Request) => {
       if (credSource === "env") {
         const { data: tenantRow } = await admin
           .from("tenants")
-          .select("id, pw_api_base_url, pw_api_secret")
+          .select("id, pw_api_base_url")
           .eq("owner_id", callerUserId)
           .eq("is_active", true)
           .maybeSingle();
-        if (tenantRow?.pw_api_base_url && tenantRow?.pw_api_secret) {
-          PW_API_BASE_URL = tenantRow.pw_api_base_url;
-          PW_API_SECRET = tenantRow.pw_api_secret;
-          resolvedTenantId = tenantRow.id;
-          credSource = "tenant_active";
+        if (tenantRow?.pw_api_base_url) {
+          const secret = await fetchTenantSecret(tenantRow.id);
+          if (secret) {
+            PW_API_BASE_URL = tenantRow.pw_api_base_url;
+            PW_API_SECRET = secret;
+            resolvedTenantId = tenantRow.id;
+            credSource = "tenant_active";
+          }
         }
       }
 
       // 2.5) Convidado: nenhum tenant próprio. Pega via server_members.
-      // Se for membro de exatamente 1 servidor, usa ele direto. Se for múltiplos,
-      // pega o mais recente (cliente deveria mandar x-server-id pra ser explícito).
       if (credSource === "env") {
         const { data: memberships } = await admin
           .from("server_members")
-          .select("tenant_id, created_at, tenants:tenant_id(id, pw_api_base_url, pw_api_secret)")
+          .select("tenant_id, created_at, tenants:tenant_id(id, pw_api_base_url)")
           .eq("user_id", callerUserId)
           .order("created_at", { ascending: false });
-        type TenantCreds = { id: string; pw_api_base_url: string | null; pw_api_secret: string | null };
-        const pickTenant = (m: unknown): TenantCreds | null => {
-          const raw = (m as { tenants: TenantCreds | TenantCreds[] | null }).tenants;
+        type TenantInfo = { id: string; pw_api_base_url: string | null };
+        const pickTenant = (m: unknown): TenantInfo | null => {
+          const raw = (m as { tenants: TenantInfo | TenantInfo[] | null }).tenants;
           if (!raw) return null;
           return Array.isArray(raw) ? (raw[0] ?? null) : raw;
         };
-        const firstWithCreds = (memberships ?? [])
+        const tenantsWithUrl = (memberships ?? [])
           .map(pickTenant)
-          .find((t): t is TenantCreds & { pw_api_base_url: string; pw_api_secret: string } =>
-            !!(t?.pw_api_base_url && t?.pw_api_secret),
-          );
-        if (firstWithCreds) {
-          PW_API_BASE_URL = firstWithCreds.pw_api_base_url;
-          PW_API_SECRET = firstWithCreds.pw_api_secret;
-          resolvedTenantId = firstWithCreds.id;
-          credSource = "tenant_active";
+          .filter((t): t is TenantInfo & { pw_api_base_url: string } => !!t?.pw_api_base_url);
+        for (const t of tenantsWithUrl) {
+          const secret = await fetchTenantSecret(t.id);
+          if (secret) {
+            PW_API_BASE_URL = t.pw_api_base_url;
+            PW_API_SECRET = secret;
+            resolvedTenantId = t.id;
+            credSource = "tenant_active";
+            break;
+          }
         }
       }
 
