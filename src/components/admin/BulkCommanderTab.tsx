@@ -133,6 +133,7 @@ export function BulkCommanderTab({ caps, onActed }: BulkCommanderTabProps) {
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [sysMessage, setSysMessage] = useState("");
+  const [confirmToken, setConfirmToken] = useState("");
 
   // Preview/Queue state
   const [preview, setPreview] = useState<PreviewBulkTargetsResponse | null>(null);
