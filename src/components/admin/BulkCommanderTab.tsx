@@ -563,6 +563,24 @@ export function BulkCommanderTab({ caps, onActed }: BulkCommanderTabProps) {
                     <Label className="text-[11px] text-muted-foreground">Motivo</Label>
                     <Input value={subject} onChange={e => setSubject(e.target.value)} placeholder="Premiação de evento" className="h-9 text-xs border-border/60 bg-card/60" />
                   </div>
+                  <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 space-y-2">
+                    <div className="flex items-start gap-2 text-[10px] text-amber-400">
+                      <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
+                      <span>Operação sensível: digite <code className="font-mono font-bold text-amber-300">GRANT_MALL_CASH</code> para autorizar o envio.</span>
+                    </div>
+                    <Input
+                      value={confirmToken}
+                      onChange={e => setConfirmToken(e.target.value)}
+                      placeholder="Digite GRANT_MALL_CASH"
+                      className={cn(
+                        "h-9 text-xs font-mono border-border/60 bg-card/60",
+                        confirmToken === "GRANT_MALL_CASH" && "border-emerald-500/50 bg-emerald-500/5"
+                      )}
+                    />
+                    {confirmToken && confirmToken !== "GRANT_MALL_CASH" && (
+                      <p className="text-[10px] text-red-400">Token inválido. Digite exatamente: GRANT_MALL_CASH</p>
+                    )}
+                  </div>
                 </div>
               )}
 
