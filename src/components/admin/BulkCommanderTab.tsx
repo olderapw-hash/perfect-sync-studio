@@ -238,13 +238,8 @@ export function BulkCommanderTab({ caps, onActed }: BulkCommanderTabProps) {
   }, [commandKey, buildSelection, buildCommandPayload]);
 
   const needsConfirmation = commandKey === "grantMallCash";
-  const confirmationValid = !needsConfirmation || confirmToken === "GRANT_MALL_CASH";
 
   const handleQueue = useCallback(async () => {
-    if (needsConfirmation && !confirmationValid) {
-      setError("Confirmação obrigatória: digite GRANT_MALL_CASH para autorizar esta operação.");
-      return;
-    }
     setQueueLoading(true);
     setError(null);
     try {
