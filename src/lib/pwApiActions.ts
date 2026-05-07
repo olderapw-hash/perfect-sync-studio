@@ -2155,3 +2155,67 @@ export interface BulkTemplatesListResponse {
   count: number;
   error?: string;
 }
+
+/* ─────────── GM Commander v2 — Bulk Schedule types ─────────── */
+
+/** Summary returned by the VPS for each schedule */
+export interface VpsBulkScheduleSummary {
+  id: string;
+  name: string;
+  command_key: BulkCommandKey | string;
+  enabled: boolean;
+  weekdays: number[];
+  time_of_day: string;
+  timezone: string;
+  created_at: string | null;
+  updated_at: string | null;
+  actor?: { name?: string; ip?: string };
+  updated_by?: { name?: string; ip?: string };
+  selection: Record<string, unknown>;
+  preview_count: number;
+  preview_warnings: string[];
+  next_run_at: string | null;
+  next_retry_at: string | null;
+  last_run_at: string | null;
+  last_job_id: string | null;
+  last_result: string | null;
+  last_error: string | null;
+  last_error_at: string | null;
+}
+
+export interface ScheduleBulkCommandPayload {
+  name?: string;
+  command_key: BulkCommandKey | string;
+  weekdays: number[];
+  time_of_day: string;
+  timezone?: string;
+  enabled?: boolean;
+  /** Selection params flattened or nested */
+  selection?: BulkSelectionParams;
+  /** Command-specific fields (item_id, count, amount, message, confirm, etc.) */
+  [k: string]: unknown;
+}
+
+export interface ScheduleBulkCommandResponse {
+  success: boolean;
+  schedule: VpsBulkScheduleSummary;
+  schedule_file?: string;
+  audit_file?: string;
+  error?: string;
+}
+
+export interface GetBulkSchedulesResponse {
+  success: boolean;
+  schedules: VpsBulkScheduleSummary[];
+  limit: number;
+  collected_at: string;
+  error?: string;
+}
+
+export interface GetBulkScheduleResponse {
+  success: boolean;
+  schedule: Record<string, unknown>;
+  summary: VpsBulkScheduleSummary;
+  schedule_file?: string;
+  error?: string;
+}
