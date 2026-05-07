@@ -234,13 +234,13 @@ export function BulkScheduleManager() {
       .from("gm_bulk_schedules")
       .update({ is_active: active })
       .eq("id", id);
-    setSchedules(prev => prev.map(s => s.id === id ? { ...s, is_active: active } : s));
-  }, []);
+    void loadSchedules();
+  }, [loadSchedules]);
 
   const deleteSchedule = useCallback(async (id: string) => {
     await supabase.from("gm_bulk_schedules").delete().eq("id", id);
-    setSchedules(prev => prev.filter(s => s.id !== id));
-  }, []);
+    void loadSchedules();
+  }, [loadSchedules]);
 
   return (
     <div className="space-y-4">
