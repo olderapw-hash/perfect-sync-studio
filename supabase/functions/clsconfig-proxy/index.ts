@@ -205,7 +205,7 @@ function jsonError(message: string, status: number): Response {
  * A checagem fina (qual permissão dentro do servidor) acontece adiante
  * via `has_server_permission` para a action específica.
  */
-async function requireAdmin(req: Request): Promise<Response | { userId: string }> {
+async function requireAdmin(req: Request): Promise<Response | { userId: string; isGlobalAdmin: boolean }> {
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) {
     return jsonError("Unauthorized: missing bearer token (sessão expirou? faça login novamente)", 401);
@@ -243,7 +243,7 @@ async function requireAdmin(req: Request): Promise<Response | { userId: string }
     return jsonError("Forbidden", 403);
   }
   if (roleRows && roleRows.length > 0) {
-    return { userId };
+    return { userId, isGlobalAdmin: true };
   }
 
   // 2) Senão, aceita se for membro de algum servidor.
@@ -260,7 +260,7 @@ async function requireAdmin(req: Request): Promise<Response | { userId: string }
     return jsonError("Forbidden: você não tem acesso a nenhum servidor", 403);
   }
 
-  return { userId };
+  return { userId, isGlobalAdmin: false };
 }
 
 Deno.serve(async (req: Request) => {
