@@ -667,20 +667,26 @@ function ExecuteTemplateDialog({
                   className="h-8 border-border/40 bg-card/60 text-xs"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label className="text-[11px]">Dia da semana</Label>
-                  <Select value={String(dayOfWeek)} onValueChange={(v) => setDayOfWeek(Number(v))}>
-                    <SelectTrigger className="h-8 border-border/40 bg-card/60 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {DAY_NAMES.map((d, i) => (
-                        <SelectItem key={i} value={String(i)}>{d}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+              <label className="flex items-center gap-2 text-xs cursor-pointer">
+                <Switch checked={everyDay} onCheckedChange={setEveryDay} />
+                Todo dia
+              </label>
+              <div className={cn("grid gap-3", everyDay ? "grid-cols-1" : "grid-cols-2")}>
+                {!everyDay && (
+                  <div className="space-y-1.5">
+                    <Label className="text-[11px]">Dia da semana</Label>
+                    <Select value={String(dayOfWeek)} onValueChange={(v) => setDayOfWeek(Number(v))}>
+                      <SelectTrigger className="h-8 border-border/40 bg-card/60 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {DAY_NAMES.map((d, i) => (
+                          <SelectItem key={i} value={String(i)}>{d}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 <div className="space-y-1.5">
                   <Label className="text-[11px]">Horário UTC</Label>
                   <Input
