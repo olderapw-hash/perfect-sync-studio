@@ -505,6 +505,7 @@ function ScheduleFormDialog({
       time_utc: timeLocal,
       timezone: DEFAULT_TIMEZONE,
       is_active: isActive,
+      every_day: everyDay,
     };
 
     let err;
