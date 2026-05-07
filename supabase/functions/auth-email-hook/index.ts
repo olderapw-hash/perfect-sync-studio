@@ -17,12 +17,12 @@ const corsHeaders = {
 }
 
 const EMAIL_SUBJECTS: Record<string, string> = {
-  signup: 'Confirme seu email — Orphea Core',
-  invite: 'Você foi convidado — Orphea Core',
-  magiclink: 'Seu link de login — Orphea Core',
-  recovery: 'Redefinir senha — Orphea Core',
-  email_change: 'Confirmar alteração de email — Orphea Core',
-  reauthentication: 'Código de verificação — Orphea Core',
+  signup: 'Confirm your email',
+  invite: "You've been invited",
+  magiclink: 'Your login link',
+  recovery: 'Reset your password',
+  email_change: 'Confirm your new email',
+  reauthentication: 'Your verification code',
 }
 
 // Template mapping
@@ -36,7 +36,7 @@ const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
 }
 
 // Configuration
-const SITE_NAME = "Orphea Core"
+const SITE_NAME = "perfect-sync-studio"
 const SENDER_DOMAIN = "notify.orpheacore.com"
 const ROOT_DOMAIN = "orpheacore.com"
 const FROM_DOMAIN = "notify.orpheacore.com" // Domain shown in From address (may be root or sender subdomain)
@@ -87,8 +87,6 @@ async function handlePreview(req: Request): Promise<Response> {
     'Access-Control-Allow-Headers': 'authorization, content-type',
   }
 
-  console.log('[preview] request received', { method: req.method, url: req.url })
-
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: previewCorsHeaders })
   }
@@ -96,10 +94,7 @@ async function handlePreview(req: Request): Promise<Response> {
   const apiKey = Deno.env.get('LOVABLE_API_KEY')
   const authHeader = req.headers.get('Authorization')
 
-  console.log('[preview] auth check', { hasApiKey: !!apiKey, hasAuthHeader: !!authHeader, apiKeyLength: apiKey?.length ?? 0 })
-
   if (!apiKey || authHeader !== `Bearer ${apiKey}`) {
-    console.error('[preview] AUTH FAILED', { hasApiKey: !!apiKey, authHeaderPrefix: authHeader?.substring(0, 20) })
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
       headers: { ...previewCorsHeaders, 'Content-Type': 'application/json' },
@@ -110,9 +105,7 @@ async function handlePreview(req: Request): Promise<Response> {
   try {
     const body = await req.json()
     type = body.type
-    console.log('[preview] parsed type', { type })
   } catch (error) {
-    console.error('[preview] JSON parse error', { error: String(error) })
     return new Response(JSON.stringify({ error: 'Invalid JSON in request body' }), {
       status: 400,
       headers: { ...previewCorsHeaders, 'Content-Type': 'application/json' },
@@ -122,30 +115,19 @@ async function handlePreview(req: Request): Promise<Response> {
   const EmailTemplate = EMAIL_TEMPLATES[type]
 
   if (!EmailTemplate) {
-    console.error('[preview] unknown type', { type, availableTypes: Object.keys(EMAIL_TEMPLATES) })
     return new Response(JSON.stringify({ error: `Unknown email type: ${type}` }), {
       status: 400,
       headers: { ...previewCorsHeaders, 'Content-Type': 'application/json' },
     })
   }
 
-  try {
-    const sampleData = SAMPLE_DATA[type] || {}
-    console.log('[preview] rendering template', { type })
-    const html = await renderAsync(React.createElement(EmailTemplate, sampleData))
-    console.log('[preview] render SUCCESS', { type, htmlLength: html.length })
+  const sampleData = SAMPLE_DATA[type] || {}
+  const html = await renderAsync(React.createElement(EmailTemplate, sampleData))
 
-    return new Response(html, {
-      status: 200,
-      headers: { ...previewCorsHeaders, 'Content-Type': 'text/html; charset=utf-8' },
-    })
-  } catch (renderError) {
-    console.error('[preview] RENDER FAILED', { type, error: String(renderError), stack: (renderError as Error)?.stack })
-    return new Response(JSON.stringify({ error: `Render failed: ${String(renderError)}` }), {
-      status: 500,
-      headers: { ...previewCorsHeaders, 'Content-Type': 'application/json' },
-    })
-  }
+  return new Response(html, {
+    status: 200,
+    headers: { ...previewCorsHeaders, 'Content-Type': 'text/html; charset=utf-8' },
+  })
 }
 
 // Webhook handler - verifies signature and sends email
