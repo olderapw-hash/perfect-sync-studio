@@ -551,18 +551,21 @@ Deno.serve(async (req: Request) => {
       void logAction(action, `permission_denied:${perm}`, false, 403, `Missing permission: ${perm}`);
       return jsonError(`Permissão negada: ${perm}`, 403);
     }
-    // Server-side plan enforcement: ultimate-only actions require pw_admin_ultimate subscription.
-    if (ULTIMATE_ONLY_ACTIONS.has(action)) {
-      const hasUltimate = await callerHasUltimatePlan();
-      if (!hasUltimate) {
-        void logAction(action, `plan_denied:ultimate_required`, false, 403, "Plan upgrade required");
-        return jsonError("Ação disponível apenas no plano Ultimate. Faça upgrade para continuar.", 403);
-      }
-    } else if (PRO_REQUIRED_ACTIONS.has(action)) {
-      const hasPro = await callerHasProPlan();
-      if (!hasPro) {
-        void logAction(action, `plan_denied:pro_required`, false, 403, "Plan upgrade required");
-        return jsonError("Ação disponível apenas nos planos Pro ou Ultimate. Faça upgrade para continuar.", 403);
+    // Global admins (admin/superadmin in user_roles) bypass plan checks entirely.
+    if (!callerIsGlobalAdmin) {
+      // Server-side plan enforcement: ultimate-only actions require pw_admin_ultimate subscription.
+      if (ULTIMATE_ONLY_ACTIONS.has(action)) {
+        const hasUltimate = await callerHasUltimatePlan();
+        if (!hasUltimate) {
+          void logAction(action, `plan_denied:ultimate_required`, false, 403, "Plan upgrade required");
+          return jsonError("Ação disponível apenas no plano Ultimate. Faça upgrade para continuar.", 403);
+        }
+      } else if (PRO_REQUIRED_ACTIONS.has(action)) {
+        const hasPro = await callerHasProPlan();
+        if (!hasPro) {
+          void logAction(action, `plan_denied:pro_required`, false, 403, "Plan upgrade required");
+          return jsonError("Ação disponível apenas nos planos Pro ou Ultimate. Faça upgrade para continuar.", 403);
+        }
       }
     }
     return null;
