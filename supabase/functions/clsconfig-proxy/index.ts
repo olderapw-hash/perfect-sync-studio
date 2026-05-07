@@ -105,6 +105,14 @@ const ALLOWED_ACTIONS = new Set([
   "queueBulkCommand",
   "getBulkCommandJob",
   "getBulkCommandJobs",
+  // GM Commander v2 — Bulk Templates (Phase B).
+  "saveBulkTemplate",
+  "getBulkTemplate",
+  "getBulkTemplates",
+  "updateBulkTemplate",
+  "deleteBulkTemplate",
+  "previewBulkTemplate",
+  "executeBulkTemplate",
 ]);
 
 // Mapa Action → permissão exigida (deve refletir src/lib/serverPermissions.ts).
@@ -188,6 +196,14 @@ const ACTION_PERMISSION: Record<string, string> = {
   queueBulkCommand: "manage_security",
   getBulkCommandJob: "view_audit",
   getBulkCommandJobs: "view_audit",
+  // GM Commander v2 — Bulk Templates (Phase B).
+  getBulkTemplates: "view",
+  getBulkTemplate: "view",
+  saveBulkTemplate: "manage_security",
+  updateBulkTemplate: "manage_security",
+  deleteBulkTemplate: "manage_security",
+  previewBulkTemplate: "manage_security",
+  executeBulkTemplate: "manage_security",
 };
 
 function jsonError(message: string, status: number): Response {
@@ -510,6 +526,8 @@ Deno.serve(async (req: Request) => {
     "grantGmPermission", "revokeGmPermission",
     "searchPlayerDirectory", "getPlayerTargetProfile",
     "resolveBulkTargets", "previewBulkTargets", "queueBulkCommand",
+    "saveBulkTemplate", "updateBulkTemplate", "deleteBulkTemplate",
+    "previewBulkTemplate", "executeBulkTemplate",
   ]);
 
   /** Checks if the caller has at least a pro (or ultimate) subscription. */
