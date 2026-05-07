@@ -357,7 +357,7 @@ export function BulkScheduleManager() {
           schedule={editSchedule}
           existingSchedules={schedules}
           onClose={() => { setShowCreate(false); setEditSchedule(null); }}
-          onSaved={() => { setShowCreate(false); setEditSchedule(null); void loadSchedules(); }}
+          onSaved={async () => { await loadSchedules(); setShowCreate(false); setEditSchedule(null); }}
         />
       )}
     </div>
