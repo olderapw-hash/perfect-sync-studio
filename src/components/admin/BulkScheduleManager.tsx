@@ -279,6 +279,7 @@ export function BulkScheduleManager() {
           tenantId={tenantId}
           userId={user.id}
           schedule={editSchedule}
+          existingSchedules={schedules}
           onClose={() => { setShowCreate(false); setEditSchedule(null); }}
           onSaved={() => { setShowCreate(false); setEditSchedule(null); void loadSchedules(); }}
         />
