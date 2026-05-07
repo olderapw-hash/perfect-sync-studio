@@ -9,6 +9,7 @@ import {
   Calendar,
   CheckCircle2,
   Clock,
+  Info,
   Loader2,
   Megaphone,
   Pause,
@@ -71,6 +72,8 @@ interface BulkSchedule {
   every_day?: boolean;
 }
 
+const DEFAULT_TIMEZONE = "America/Sao_Paulo";
+
 const DAY_NAMES = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 
 const COMMAND_LABELS: Record<string, string> = {
@@ -83,25 +86,80 @@ const COMMAND_LABELS: Record<string, string> = {
 /** Commands that don't need audience selection */
 const NO_AUDIENCE_COMMANDS = new Set(["sendSystemMessage"]);
 
-/** Calculate next fire date for a weekly schedule */
-function getNextFire(dayOfWeek: number, timeUtc: string, everyDay?: boolean): Date {
+/**
+ * Calculate next fire date for a schedule.
+ * `timeLocal` is in the schedule's timezone (HH:MM).
+ * We compute relative to the schedule timezone.
+ */
+function getNextFire(dayOfWeek: number, timeLocal: string, tz: string, everyDay?: boolean): { date: Date; pushed: boolean } {
+  const [hh, mm] = timeLocal.split(":").map(Number);
+
+  // Build a "now" string in the target timezone to compare
   const now = new Date();
-  const [hh, mm] = timeUtc.split(":").map(Number);
+  const nowInTz = new Date(now.toLocaleString("en-US", { timeZone: tz }));
+
+  // Build today's fire time in the target timezone
+  const todayFire = new Date(nowInTz);
+  todayFire.setHours(hh || 0, mm || 0, 0, 0);
 
   if (everyDay) {
-    // Next fire is today if time hasn't passed, otherwise tomorrow
-    const todayFire = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), hh || 0, mm || 0, 0));
-    if (todayFire > now) return todayFire;
-    todayFire.setUTCDate(todayFire.getUTCDate() + 1);
-    return todayFire;
+    if (todayFire > nowInTz) {
+      return { date: todayFire, pushed: false };
+    }
+    todayFire.setDate(todayFire.getDate() + 1);
+    return { date: todayFire, pushed: true };
   }
 
-  const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), hh || 0, mm || 0, 0));
-  const currentDay = now.getUTCDay();
+  // Weekly
+  const currentDay = nowInTz.getDay();
   let daysAhead = dayOfWeek - currentDay;
-  if (daysAhead < 0 || (daysAhead === 0 && next <= now)) daysAhead += 7;
-  next.setUTCDate(next.getUTCDate() + daysAhead);
-  return next;
+  const sameDay = daysAhead === 0;
+  if (daysAhead < 0 || (sameDay && todayFire <= nowInTz)) daysAhead += 7;
+  const pushed = sameDay && todayFire <= nowInTz;
+  const next = new Date(todayFire);
+  next.setDate(nowInTz.getDate() + daysAhead);
+  next.setHours(hh || 0, mm || 0, 0, 0);
+  return { date: next, pushed };
+}
+
+/** Format a date as dd/MM HH:mm in a given timezone label */
+function formatInTz(date: Date, tz: string): string {
+  try {
+    return date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", timeZone: tz }) +
+      " " +
+      date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: tz });
+  } catch {
+    return date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) +
+      " " +
+      date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  }
+}
+
+/** Convert a local time to UTC display string */
+function localTimeToUtcDisplay(timeLocal: string, tz: string): string {
+  try {
+    // Create a date with the local time, then format in UTC
+    const now = new Date();
+    const ref = new Date(now.toLocaleString("en-US", { timeZone: tz }));
+    const [hh, mm] = timeLocal.split(":").map(Number);
+    ref.setHours(hh || 0, mm || 0, 0, 0);
+    // Offset: real UTC = local + offset
+    const offsetMs = ref.getTime() - now.getTime();
+    const utcDate = new Date(now.getTime() + (ref.getTime() - new Date(now.toLocaleString("en-US", { timeZone: tz })).getTime()));
+    // Simpler: just create a proper date and format in UTC
+    const fakeDate = new Date();
+    fakeDate.setHours(hh || 0, mm || 0, 0, 0);
+    // Get tz offset difference
+    const localStr = new Date().toLocaleString("en-US", { timeZone: tz });
+    const localDate = new Date(localStr);
+    const utcStr = new Date().toLocaleString("en-US", { timeZone: "UTC" });
+    const utcDate2 = new Date(utcStr);
+    const diffMs = utcDate2.getTime() - localDate.getTime();
+    const resultH = ((hh || 0) + Math.round(diffMs / 3600000) + 24) % 24;
+    return `${String(resultH).padStart(2, "0")}:${String(mm || 0).padStart(2, "0")}`;
+  } catch {
+    return timeLocal;
+  }
 }
 
 function formatRelative(date: Date): string {
@@ -135,6 +193,12 @@ function isEveryDay(s: BulkSchedule): boolean {
   if (s.every_day) return true;
   if (s.selection?.every_day) return true;
   return false;
+}
+
+/** Short timezone label */
+function tzShort(tz: string): string {
+  if (tz === "America/Sao_Paulo") return "BRT";
+  return tz;
 }
 
 /* ─── Main Component ─── */
@@ -187,7 +251,7 @@ export function BulkScheduleManager() {
             Agendamentos Semanais
           </h4>
           <p className="text-[10px] text-muted-foreground mt-0.5">
-            Recompensas automáticas executadas semanalmente pelo scheduler.
+            Recompensas automáticas executadas pelo scheduler. Horários em {DEFAULT_TIMEZONE}.
           </p>
         </div>
         <div className="flex gap-2">
@@ -218,6 +282,11 @@ export function BulkScheduleManager() {
         <div className="grid gap-3">
           {schedules.map(s => {
             const everyDay = isEveryDay(s);
+            const tz = s.timezone || DEFAULT_TIMEZONE;
+            const timeLocal = s.time_utc; // stored as local time despite column name
+            const { date: nextFireDate, pushed } = getNextFire(s.day_of_week, timeLocal, tz, everyDay);
+            const utcTime = localTimeToUtcDisplay(timeLocal, tz);
+
             return (
               <Card key={s.id} className={cn("border-border/40 bg-card/40 backdrop-blur-sm transition-all", !s.is_active && "opacity-60")}>
                 <CardContent className="py-4">
@@ -228,30 +297,57 @@ export function BulkScheduleManager() {
                         <Badge variant="outline" className="text-[10px] border-primary/30 text-primary">
                           {COMMAND_LABELS[s.command_key] || s.command_key}
                         </Badge>
-                        {everyDay && (
-                          <Badge variant="outline" className="text-[10px] border-amber-500/30 text-amber-400">
-                            Todo dia
-                          </Badge>
-                        )}
+                        <Badge variant="outline" className={cn("text-[10px]",
+                          everyDay
+                            ? "border-amber-500/30 text-amber-400"
+                            : "border-blue-500/30 text-blue-400"
+                        )}>
+                          {everyDay ? "Diário" : "Semanal"}
+                        </Badge>
                         <Badge variant="outline" className={cn("text-[10px]", s.is_active ? "border-emerald-500/30 text-emerald-400" : "border-muted-foreground/30 text-muted-foreground")}>
                           {s.is_active ? "Ativo" : "Pausado"}
                         </Badge>
                       </div>
+
                       <div className="mt-1.5 flex flex-col gap-1 text-[10px] text-muted-foreground">
-                        <div className="flex items-center gap-3 flex-wrap">
+                        {/* Main schedule line — local timezone */}
+                        <div className="flex items-center gap-1 text-foreground/80 font-medium">
+                          <Clock className="h-3 w-3 text-primary/60" />
                           <span>
-                            {everyDay ? "Todo dia" : DAY_NAMES[s.day_of_week]} às {s.time_utc} UTC
+                            {everyDay
+                              ? `Todos os dias às ${timeLocal}`
+                              : `${DAY_NAMES[s.day_of_week]} às ${timeLocal}`}
                           </span>
-                          {s.is_active && (
-                            <span className="flex items-center gap-1 text-primary/80">
-                              <Clock className="h-3 w-3" />
-                              Próximo: {(() => {
-                                const nf = getNextFire(s.day_of_week, s.time_utc, everyDay);
-                                return `${nf.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })} ${nf.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" })} UTC (${formatRelative(nf)})`;
-                              })()}
-                            </span>
-                          )}
+                          <span className="text-muted-foreground font-normal">({tz})</span>
                         </div>
+
+                        {/* Secondary: UTC equivalent */}
+                        <span className="text-muted-foreground/60 text-[9px] ml-4">
+                          UTC: {utcTime}
+                        </span>
+
+                        {/* Next execution */}
+                        {s.is_active && (
+                          <div className="flex items-center gap-1 ml-4">
+                            <span className="text-primary/80">
+                              Próximo: {formatInTz(nextFireDate, tz)} ({formatRelative(nextFireDate)})
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Pushed explanation */}
+                        {s.is_active && pushed && (
+                          <div className="flex items-center gap-1 ml-4 text-amber-400/70">
+                            <Info className="h-3 w-3 shrink-0" />
+                            <span>
+                              {everyDay
+                                ? "Horário de hoje já passou; próxima execução amanhã."
+                                : "Horário desta semana já passou; próxima execução calculada para a semana seguinte."}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Last run info */}
                         {s.last_run_at && (
                           <div className="flex items-center gap-3 flex-wrap">
                             <span className="flex items-center gap-1">
@@ -262,7 +358,7 @@ export function BulkScheduleManager() {
                               ) : (
                                 <Clock className="h-3 w-3" />
                               )}
-                              Último disparo: {new Date(s.last_run_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
+                              Último disparo: {new Date(s.last_run_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short", timeZone: tz })}
                             </span>
                             {s.last_run_job_id && (
                               <span className="font-mono text-muted-foreground/60" title={`Job ID: ${s.last_run_job_id}`}>
@@ -342,7 +438,7 @@ function ScheduleFormDialog({
   const [commandKey, setCommandKey] = useState<string>(schedule?.command_key || "sendMailItem");
   const [everyDay, setEveryDay] = useState(schedule ? isEveryDay(schedule) : false);
   const [dayOfWeek, setDayOfWeek] = useState(String(schedule?.day_of_week ?? 1));
-  const [timeUtc, setTimeUtc] = useState(schedule?.time_utc || "12:00");
+  const [timeLocal, setTimeLocal] = useState(schedule?.time_utc || "12:00");
   const [isActive, setIsActive] = useState(schedule?.is_active ?? true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -398,7 +494,7 @@ function ScheduleFormDialog({
     // Duplicate detection: same command + day + time (skip for every_day)
     if (!isEdit && !everyDay) {
       const dup = existingSchedules.find(
-        s => s.command_key === commandKey && s.day_of_week === parseInt(dayOfWeek) && s.time_utc === timeUtc
+        s => s.command_key === commandKey && s.day_of_week === parseInt(dayOfWeek) && s.time_utc === timeLocal
       );
       if (dup) {
         setError(`Já existe um agendamento "${dup.name}" com o mesmo comando, dia e horário. Edite o existente ou escolha outro horário.`);
@@ -458,8 +554,8 @@ function ScheduleFormDialog({
       selection: selection as unknown as Record<string, never>,
       command_payload: command_payload as unknown as Record<string, never>,
       day_of_week: everyDay ? 0 : parseInt(dayOfWeek),
-      time_utc: timeUtc,
-      timezone: "America/Sao_Paulo",
+      time_utc: timeLocal,
+      timezone: DEFAULT_TIMEZONE,
       is_active: isActive,
     };
 
@@ -485,15 +581,17 @@ function ScheduleFormDialog({
     }
   };
 
+  const utcPreview = localTimeToUtcDisplay(timeLocal, DEFAULT_TIMEZONE);
+
   return (
     <Dialog open onOpenChange={() => onClose()}>
       <DialogContent className="max-w-lg border-border/40 bg-card/95 backdrop-blur-xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-sm font-extrabold">
-            {isEdit ? "Editar Agendamento" : "Novo Agendamento Semanal"}
+            {isEdit ? "Editar Agendamento" : "Novo Agendamento"}
           </DialogTitle>
           <DialogDescription className="text-[11px]">
-            O scheduler executa automaticamente e cria um job na fila da VPS.
+            Horários em {DEFAULT_TIMEZONE}. O scheduler converte automaticamente para UTC.
           </DialogDescription>
         </DialogHeader>
 
@@ -517,7 +615,7 @@ function ScheduleFormDialog({
                 checked={everyDay}
                 onCheckedChange={(v) => setEveryDay(!!v)}
               />
-              <Label htmlFor="every-day" className="text-[11px] cursor-pointer">Todo dia (executar diariamente)</Label>
+              <Label htmlFor="every-day" className="text-[11px] cursor-pointer">Todos os dias (executar diariamente)</Label>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -533,8 +631,16 @@ function ScheduleFormDialog({
                 </div>
               )}
               <div className={cn("space-y-1", everyDay && "col-span-2")}>
-                <Label className="text-[11px]">Horário (UTC)</Label>
-                <Input value={timeUtc} onChange={e => setTimeUtc(e.target.value)} placeholder="12:00" className="h-9 text-xs" />
+                <Label className="text-[11px]">Horário ({tzShort(DEFAULT_TIMEZONE)})</Label>
+                <Input
+                  type="time"
+                  value={timeLocal}
+                  onChange={e => setTimeLocal(e.target.value)}
+                  className="h-9 text-xs"
+                />
+                <p className="text-[9px] text-muted-foreground/60 mt-0.5">
+                  UTC equivalente: {utcPreview}
+                </p>
               </div>
             </div>
           </div>
