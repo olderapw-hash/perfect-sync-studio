@@ -16,8 +16,6 @@ INSTALL_DIR="/var/www/html/apicls"
 API_SRC=""
 API_URL=""
 SECRET="${PW_API_SECRET:-}"
-ACTIVATION_TOKEN=""
-ACTIVATION_URL=""
 WEB_USER=""
 OPEN_FIREWALL=1
 INSTALL_PACKAGES=1
@@ -46,21 +44,18 @@ Instalador PW Admin API CLS para CentOS 7
 
 Opcoes:
   --secret VALOR       Secret da VPS gerado no painel. Se omitir, gera um novo.
-  --activation-token T Token de ativacao da VPS (gerado ao criar licenca no painel).
-  --activation-url URL URL de validacao do token. Default: URL do painel + /functions/v1/validate-vps-activation
   --api-src CAMINHO    Caminho local do api_cls.php. Default: ./api_cls.php.
   --api-url URL        Baixa api_cls.php desta URL.
   --web-user USUARIO   Usuario do Apache/PHP. Default: auto-detecta apache.
   --install-dir DIR    Default: /var/www/html/apicls
   --no-yum             Nao tenta instalar httpd/php/curl/sudo.
-  --superadmin-bypass  Marca esta VPS como superadmin (pula validacao de token).
   --no-remi            Nao tenta instalar Remi PHP 8.2 quando PHP for antigo.
   --no-firewall        Nao abre porta HTTP no firewalld.
   --no-backup-existing Nao cria copia do /var/www/html/apicls existente.
   -h, --help           Mostra esta ajuda.
 
 Exemplo:
-  bash install-apicls-centos7.sh --secret 8f74c4d4e7fbe1d0f3e420ef85a0a --activation-token abc123def456
+  bash install-apicls-centos7.sh --secret 8f74c4d4e7fbe1d0f3e420ef85a0a
 EOF
 }
 
@@ -68,14 +63,6 @@ while [ "$#" -gt 0 ]; do
   case "$1" in
     --secret)
       SECRET="${2:-}"
-      shift 2
-      ;;
-    --activation-token)
-      ACTIVATION_TOKEN="${2:-}"
-      shift 2
-      ;;
-    --activation-url)
-      ACTIVATION_URL="${2:-}"
       shift 2
       ;;
     --api-src)
@@ -108,10 +95,6 @@ while [ "$#" -gt 0 ]; do
       ;;
     --no-backup-existing)
       BACKUP_EXISTING=0
-      shift
-      ;;
-    --superadmin-bypass)
-      SUPERADMIN_BYPASS=1
       shift
       ;;
     -h|--help)
@@ -245,10 +228,12 @@ if ! grep -q "scheduleBulkCommand" "$TMP_API" || ! grep -q "getBulkSchedules" "$
   die "api_cls.php parece desatualizado. Ele precisa conter scheduleBulkCommand, getBulkSchedules e runDueBulkSchedules."
 fi
 
-# Nao faz mais sed no api_cls.php — secrets vao no .env
-# Mantemos compatibilidade: se o PHP ainda tiver api_secret hardcoded, limpamos
 if grep -q "'api_secret'" "$TMP_API"; then
-  sed -i -E "s/('api_secret'[[:space:]]*=>[[:space:]]*)'[^']*'/\1''/" "$TMP_API"
+  sed -i -E "s/('api_secret'[[:space:]]*=>[[:space:]]*)'[^']*'/\1'$SECRET'/" "$TMP_API"
+elif grep -q "\$SECRET[[:space:]]*=" "$TMP_API"; then
+  sed -i -E "s/(\$SECRET[[:space:]]*=[[:space:]]*)'[^']*'/\1'$SECRET'/" "$TMP_API"
+else
+  die "Nao encontrei campo api_secret/\$SECRET no api_cls.php."
 fi
 
 php -l "$TMP_API" >/dev/null || die "api_cls.php baixado/copied tem erro de sintaxe."
@@ -2308,39 +2293,6 @@ find "$INSTALL_DIR/backups" -type d -exec chmod 750 {} \;
 find "$INSTALL_DIR/backups" -type f -exec chmod 640 {} \; 2>/dev/null || true
 chown root:"$WEB_USER" /usr/local/sbin/pw-watchdog-runner.sh
 chmod 750 /usr/local/sbin/pw-watchdog-runner.sh
-
-# ---- Create .env with secrets ----
-ENV_FILE="$INSTALL_DIR/.env"
-log "Criando $ENV_FILE com secrets..."
-
-if [ -z "$ACTIVATION_URL" ] && [ -n "$ACTIVATION_TOKEN" ]; then
-  ACTIVATION_URL="https://ezgjmioxmyqgxgdpigeb.supabase.co/functions/v1/validate-vps-activation"
-fi
-
-cat > "$ENV_FILE" <<ENVEOF
-# Orphea Core API - Secrets
-# Este arquivo contem credenciais sensiveis. NAO compartilhe.
-# Gerado automaticamente pelo instalador em $(date -u +%Y-%m-%dT%H:%M:%SZ)
-
-API_SECRET=$SECRET
-VPS_ACTIVATION_TOKEN=${ACTIVATION_TOKEN:-}
-VPS_ACTIVATION_URL=${ACTIVATION_URL:-}
-SUPERADMIN_BYPASS=${SUPERADMIN_BYPASS:-0}
-ENVEOF
-
-chown "$WEB_USER:$WEB_USER" "$ENV_FILE"
-chmod 600 "$ENV_FILE"
-log ".env criado com permissoes restritas (600)."
-
-if [ "${SUPERADMIN_BYPASS:-0}" = "1" ]; then
-  log "SUPERADMIN_BYPASS ativado — esta VPS nao precisa de token de ativacao."
-elif [ -n "$ACTIVATION_TOKEN" ]; then
-  log "Token de ativacao VPS configurado."
-  log "URL de validacao: $ACTIVATION_URL"
-else
-  warn "ATENCAO: Nenhum token de ativacao informado e SUPERADMIN_BYPASS nao esta ativo."
-  warn "A API BLOQUEARA todas as requisicoes ate configurar VPS_ACTIVATION_TOKEN no .env."
-fi
 
 "$PHP_CLI_BIN" -l "$INSTALL_DIR/api_cls.php" >/dev/null || die "api_cls.php instalado com erro de sintaxe."
 "$PHP_CLI_BIN" -l "$INSTALL_DIR/gm-queue-worker.php" >/dev/null || die "gm-queue-worker.php instalado com erro de sintaxe."

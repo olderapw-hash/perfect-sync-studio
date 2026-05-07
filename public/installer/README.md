@@ -65,17 +65,6 @@ Ao finalizar, ele imprime:
 ## Comando recomendado
 
 ```bash
-bash /root/install-apicls-centos7.sh --secret SEU_SECRET --activation-token SEU_TOKEN_VPS --api-src /root/api_cls.php
-```
-
-> **Token de ativação VPS**: cada licença gera automaticamente um token de ativação único.
-> Na primeira execução, o token se vincula ao fingerprint da VPS (hostname + machine-id + IP).
-> Se alguém copiar os arquivos para outra VPS, a API para de funcionar.
-> Copie o comando completo com o token na página de Licenças (ícone de terminal).
-
-Sem token de ativação (sem proteção VPS):
-
-```bash
 bash /root/install-apicls-centos7.sh --secret SEU_SECRET --api-src /root/api_cls.php
 ```
 
@@ -268,6 +257,11 @@ curl -s -X POST -H "x-sync-secret: SEU_SECRET" -H "Content-Type: application/jso
 "http://127.0.0.1/apicls/api_cls.php?action=previewBulkTargets"
 ```
 
+Observacao de seguranca:
+
+- `grantMallCash` em `queueBulkCommand` e `scheduleBulkCommand` exige `confirm:"GRANT_MALL_CASH"`
+- sem esse token o backend agora rejeita a criacao do job/schedule antes de entrar em retry
+
 Preview de bulk por classe:
 
 ```bash
@@ -354,6 +348,9 @@ Escopo atual:
 - registrar criacao, alteracao, disparo e falha no log de auditoria
 
 Observacao importante:
+
+- `grantMallCash` agendado tambem exige `confirm:"GRANT_MALL_CASH"` no payload salvo
+- o scheduler nao deve criar jobs de cash sem essa confirmacao explicita
 
 - `name` nesse endpoint e o nome do agendamento
 - para selecionar jogador por nome, use `selection.names`

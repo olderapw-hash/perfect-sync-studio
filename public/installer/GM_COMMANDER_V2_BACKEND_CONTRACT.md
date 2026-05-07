@@ -602,6 +602,12 @@ Limitacoes atuais aceitas nesta fase:
 5. templates
 6. agendamento semanal de recompensas em massa
 
+Regra de seguranca ja homologada:
+
+- `grantMallCash` em bulk/schedule exige confirmacao operacional explicita com `confirm=GRANT_MALL_CASH`
+- o backend deve rejeitar a criacao do job ou do schedule quando esse token nao vier no payload
+- erro de confirmacao/validacao nao deve consumir retries da fila
+
 #### Requisito adicional aprovado
 
 O `Lovable` deve implementar fluxo de **agendamento automatico semanal** para recompensas em massa.
@@ -617,10 +623,15 @@ Escopo obrigatorio do agendamento:
 - suportar pelo menos:
   - `sendMailItem`
   - `sendMailGold`
-  - `grantMallCash`
+- `grantMallCash`
 - suportar seletores ja homologados da Fase A
 - criar jobs normais da fila no horario devido
 - registrar logs de criacao, alteracao, execucao, falha e ultimo disparo
+
+Regra adicional obrigatoria:
+
+- se o comando agendado for `grantMallCash`, o schedule salvo deve persistir `confirm=GRANT_MALL_CASH`
+- a UI nao deve permitir salvar esse schedule sem a confirmacao explicita
 
 Endpoints/backend esperados para essa etapa:
 

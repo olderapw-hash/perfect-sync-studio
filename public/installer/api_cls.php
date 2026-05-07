@@ -62,7 +62,7 @@
 $CONFIG = [
     'gamedbd_ip'   => '127.0.0.1',
     'gamedbd_port' => 29400,
-    'api_secret'   => '', // loaded from .env
+    'api_secret'   => '91639268',
     'game_version' => '101',
     'clsconfig_export_workdir' => '/',
     'clsconfig_export_command' => '/usr/bin/sudo -n /usr/local/sbin/exportclsconfig-api.sh',
@@ -223,45 +223,7 @@ $CONFIG = [
         '/home/gamedbd/valuables_list.txt',
         '/home/gamedbd/visibleid.txt',
     ],
-    // ---- VPS Activation Token (loaded from .env file) ----
-    'vps_activation_token' => '',
-    'vps_activation_url' => '',
-    'vps_activation_cache_file' => __DIR__ . '/backups/.vps_activation_cache.json',
-    'vps_activation_cache_ttl_seconds' => 21600, // 6 hours
-    'superadmin_bypass' => false, // When true, skips VPS activation check (superadmin only)
 ];
-
-// ---- Load .env file for secrets (api_secret, activation token, etc.) ----
-$envFile = __DIR__ . '/.env';
-if (file_exists($envFile)) {
-    $envLines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-    foreach ($envLines as $line) {
-        $line = trim($line);
-        if ($line === '' || $line[0] === '#') continue;
-        $eqPos = strpos($line, '=');
-        if ($eqPos === false) continue;
-        $key = trim(substr($line, 0, $eqPos));
-        $val = trim(substr($line, $eqPos + 1));
-        // Remove quotes
-        if ((strlen($val) >= 2) && ($val[0] === '"' || $val[0] === "'") && $val[0] === $val[strlen($val) - 1]) {
-            $val = substr($val, 1, -1);
-        }
-        switch ($key) {
-            case 'API_SECRET':
-                $CONFIG['api_secret'] = $val;
-                break;
-            case 'VPS_ACTIVATION_TOKEN':
-                $CONFIG['vps_activation_token'] = $val;
-                break;
-            case 'VPS_ACTIVATION_URL':
-                $CONFIG['vps_activation_url'] = $val;
-                break;
-            case 'SUPERADMIN_BYPASS':
-                $CONFIG['superadmin_bypass'] = ($val === 'true' || $val === '1');
-                break;
-        }
-    }
-}
 
 $CULTIVATION_MAP = [
     0  => 'Leal',
@@ -5707,7 +5669,25 @@ function gmV2CommandPayloadFromRequest($commandKey, array $request)
     return $merged;
 }
 
-function gmV2ValidateBulkCommandTemplate($commandKey, array $commandPayload)
+function gmV2BulkCommandConfirmationMeta($commandKey, array $commandPayload = [])
+{
+    switch (trim((string) $commandKey)) {
+        case 'grantMallCash':
+            return [
+                'required' => true,
+                'token' => 'GRANT_MALL_CASH',
+                'provided' => grantMallCashConfirmOk($commandPayload),
+            ];
+    }
+
+    return [
+        'required' => false,
+        'token' => '',
+        'provided' => false,
+    ];
+}
+
+function gmV2ValidateBulkCommandTemplate($commandKey, array $commandPayload, $requireConfirmation = false)
 {
     switch (trim((string) $commandKey)) {
         case 'sendMailItem':
@@ -5731,6 +5711,9 @@ function gmV2ValidateBulkCommandTemplate($commandKey, array $commandPayload)
             if (floatval($amount) <= 0 && intval($cashUnits) <= 0) {
                 throw new InvalidArgumentException('amount ou cash_units obrigatorio para grantMallCash');
             }
+            if ($requireConfirmation && !grantMallCashConfirmOk($commandPayload)) {
+                throw new InvalidArgumentException('Confirmacao obrigatoria para grantMallCash em bulk. Envie confirm=GRANT_MALL_CASH');
+            }
             return;
     }
 }
@@ -5742,6 +5725,7 @@ function gmV2PreviewBulkTargetsPayload(array $config, array $request)
     $sample = array_slice((array) array_value($resolved, 'targets', []), 0, $previewLimit);
     $commandKey = trim((string) array_value($resolved, 'command_key', ''));
     $commandPayload = gmV2CommandPayloadFromRequest($commandKey, $request);
+    $confirmation = gmV2BulkCommandConfirmationMeta($commandKey, $commandPayload);
 
     return [
         'success' => true,
@@ -5757,7 +5741,9 @@ function gmV2PreviewBulkTargetsPayload(array $config, array $request)
             'money' => intval(firstArrayValue($commandPayload, ['money'], 0)),
             'amount' => firstArrayValue($commandPayload, ['amount', 'gold', 'cash_units'], null),
             'message' => trim((string) firstArrayValue($commandPayload, ['message', 'title'], '')),
+            'confirm' => trim((string) firstArrayValue($commandPayload, ['confirm', 'confirmation', 'confirm_token'], '')),
         ],
+        'confirmation' => $confirmation,
         'previewed_at' => gmdate('c'),
     ];
 }
@@ -5928,6 +5914,8 @@ function gmV2CreateQueuedJob(array $config, array $request)
     $resolved = gmV2ResolveBulkTargetsPayload($config, $request);
     $commandKey = trim((string) array_value($resolved, 'command_key', ''));
     $targets = array_values((array) array_value($resolved, 'targets', []));
+    $commandPayload = gmV2CommandPayloadFromRequest($commandKey, $request);
+    gmV2ValidateBulkCommandTemplate($commandKey, $commandPayload, true);
     $maxTargets = max(1, intval(array_value($config, 'gm_v2_max_targets_per_job', 500)));
     if (count($targets) > $maxTargets) {
         throw new InvalidArgumentException('Quantidade de alvos excede o limite de ' . $maxTargets . ' por job');
@@ -5947,7 +5935,7 @@ function gmV2CreateQueuedJob(array $config, array $request)
         ],
         'selection' => array_value($resolved, 'selection', []),
         'warnings' => array_value($resolved, 'warnings', []),
-        'command_payload' => gmV2CommandPayloadFromRequest($commandKey, $request),
+        'command_payload' => $commandPayload,
         'target_count' => count($targets),
         'targets_pending' => $targets,
         'targets_retry' => [],
@@ -6099,6 +6087,22 @@ function gmV2ProcessQueueJob(array $config, array $job)
                 'success' => true,
                 'attempts' => ($attempts + 1),
             ];
+        } catch (InvalidArgumentException $e) {
+            $error = $e->getMessage();
+            $attemptRecord['items'][] = [
+                'target' => $target,
+                'success' => false,
+                'attempts' => ($attempts + 1),
+                'error' => $error,
+                'retryable' => false,
+            ];
+            $job['targets_failed'][] = [
+                'target' => $target,
+                'error' => $error,
+                'failed_at' => gmdate('c'),
+                'attempts' => ($attempts + 1),
+                'retryable' => false,
+            ];
         } catch (Exception $e) {
             $error = $e->getMessage();
             $attemptRecord['items'][] = [
@@ -6106,6 +6110,7 @@ function gmV2ProcessQueueJob(array $config, array $job)
                 'success' => false,
                 'attempts' => ($attempts + 1),
                 'error' => $error,
+                'retryable' => true,
             ];
 
             if (($attempts + 1) < $retryLimit) {
@@ -6424,7 +6429,7 @@ function gmV2NormalizeScheduleRequest(array $config, array $request, array $exis
         $commandSource['id']
     );
     $commandPayload = gmV2CommandPayloadFromRequest($commandKey, $commandSource);
-    gmV2ValidateBulkCommandTemplate($commandKey, $commandPayload);
+    gmV2ValidateBulkCommandTemplate($commandKey, $commandPayload, true);
     $preview = gmV2BuildSchedulePreviewSnapshot($config, array_merge($commandPayload, [
         'command_key' => $commandKey,
         'selection' => $selection,
@@ -16694,136 +16699,13 @@ function respondJson($payload, $status = 200)
     echo safeJsonEncode($payload);
 }
 
-/**
- * Gera fingerprint unico da VPS baseado em hostname, IPs e machine-id.
- */
-function vpsFingerprint()
-{
-    $parts = [];
-    $parts[] = gethostname() ?: 'unknown';
-
-    // Machine ID (Linux)
-    $machineId = @file_get_contents('/etc/machine-id');
-    if ($machineId) {
-        $parts[] = trim($machineId);
-    } else {
-        // Fallback: product UUID (works on most VPS providers)
-        $productUuid = @file_get_contents('/sys/class/dmi/id/product_uuid');
-        if ($productUuid) {
-            $parts[] = trim($productUuid);
-        }
-    }
-
-    // Primary IP
-    $ip = @file_get_contents('https://api.ipify.org');
-    if ($ip) {
-        $parts[] = trim($ip);
-    }
-
-    return hash('sha256', implode('|', $parts));
-}
-
-/**
- * Valida o token de ativacao da VPS com cache local.
- * Retorna ['valid' => bool, 'reason' => string, ...].
- */
-function vpsActivationCheck($config)
-{
-    $cacheFile = $config['vps_activation_cache_file'];
-    $ttl = $config['vps_activation_cache_ttl_seconds'];
-
-    // Check cache
-    if (file_exists($cacheFile)) {
-        $cached = @json_decode(@file_get_contents($cacheFile), true);
-        if ($cached && isset($cached['valid'], $cached['checked_at'])) {
-            $age = time() - $cached['checked_at'];
-            if ($age < $ttl) {
-                return $cached;
-            }
-        }
-    }
-
-    $fingerprint = vpsFingerprint();
-    $hostname = gethostname() ?: 'unknown';
-    $ip = @file_get_contents('https://api.ipify.org') ?: null;
-
-    $payload = json_encode([
-        'activation_token' => $config['vps_activation_token'],
-        'fingerprint' => $fingerprint,
-        'ip' => $ip ? trim($ip) : null,
-        'hostname' => $hostname,
-    ]);
-
-    $ch = curl_init($config['vps_activation_url']);
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_POST => true,
-        CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
-        CURLOPT_POSTFIELDS => $payload,
-        CURLOPT_TIMEOUT => 15,
-        CURLOPT_CONNECTTIMEOUT => 10,
-    ]);
-    $response = curl_exec($ch);
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $curlErr = curl_error($ch);
-    curl_close($ch);
-
-    if ($curlErr || $httpCode < 200 || $httpCode >= 500) {
-        // Network error: if we have a valid cache (even expired), allow gracefully
-        if (isset($cached) && $cached && isset($cached['valid']) && $cached['valid']) {
-            return $cached;
-        }
-        // No cache and server unreachable: allow (fail-open for first install resilience)
-        return ['valid' => true, 'status' => 'offline_grace', 'checked_at' => time()];
-    }
-
-    $result = @json_decode($response, true);
-    if (!$result || !isset($result['valid'])) {
-        return ['valid' => false, 'reason' => 'invalid_response'];
-    }
-
-    $result['checked_at'] = time();
-
-    // Cache result
-    $cacheDir = dirname($cacheFile);
-    if (!is_dir($cacheDir)) {
-        @mkdir($cacheDir, 0750, true);
-    }
-    @file_put_contents($cacheFile, json_encode($result));
-
-    return $result;
-}
-
-
+if (php_sapi_name() !== 'cli' || isset($_GET['action'])) {
     header('Content-Type: application/json; charset=utf-8');
 
     $secret = isset($_SERVER['HTTP_X_SYNC_SECRET']) ? $_SERVER['HTTP_X_SYNC_SECRET'] : (isset($_GET['secret']) ? $_GET['secret'] : '');
     if ($secret !== $CONFIG['api_secret']) {
         respondJson(['error' => 'Unauthorized'], 401);
         exit;
-    }
-
-    // ---- VPS Activation Token Validation ----
-    if ($CONFIG['superadmin_bypass']) {
-        // Superadmin VPS — skip activation check entirely
-    } elseif (empty($CONFIG['vps_activation_token']) || empty($CONFIG['vps_activation_url'])) {
-        // Token NOT configured — block access
-        respondJson([
-            'error' => 'VPS_ACTIVATION_REQUIRED',
-            'reason' => 'no_token',
-            'message' => 'Esta VPS nao possui token de ativacao configurado. Configure VPS_ACTIVATION_TOKEN e VPS_ACTIVATION_URL no .env.',
-        ], 403);
-        exit;
-    } else {
-        $vpsValid = vpsActivationCheck($CONFIG);
-        if (!$vpsValid['valid']) {
-            respondJson([
-                'error' => 'VPS_ACTIVATION_FAILED',
-                'reason' => isset($vpsValid['reason']) ? $vpsValid['reason'] : 'unknown',
-                'message' => isset($vpsValid['message']) ? $vpsValid['message'] : 'Este token de ativacao nao e valido para esta VPS.',
-            ], 403);
-            exit;
-        }
     }
 
     $action = isset($_GET['action']) ? $_GET['action'] : (isset($_POST['action']) ? $_POST['action'] : '');
