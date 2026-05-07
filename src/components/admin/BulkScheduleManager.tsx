@@ -147,10 +147,10 @@ const PW_CLASSES_SCHEDULE = [
   { id: 11, name: "Conjuradora" },
 ];
 
-/** Detect if schedule has every_day from selection or day_of_week sentinel */
+/** Detect if schedule is daily — column is authoritative, fallback to selection JSON */
 function isEveryDay(s: BulkSchedule): boolean {
-  if (s.every_day) return true;
-  if (s.selection?.every_day) return true;
+  if (s.every_day === true) return true;
+  if (s.selection?.every_day === true) return true;
   return false;
 }
 
