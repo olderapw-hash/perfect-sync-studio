@@ -210,6 +210,12 @@ const ACTION_PERMISSION: Record<string, string> = {
   deleteBulkTemplate: "manage_security",
   previewBulkTemplate: "manage_security",
   executeBulkTemplate: "manage_security",
+  // GM Commander v2 — Bulk Schedules
+  scheduleBulkCommand: "manage_security",
+  getBulkSchedules: "manage_security",
+  getBulkSchedule: "manage_security",
+  updateBulkSchedule: "manage_security",
+  deleteBulkSchedule: "manage_security",
 };
 
 function jsonError(message: string, status: number): Response {
