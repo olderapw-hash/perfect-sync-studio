@@ -2077,3 +2077,63 @@ export interface GetBulkCommandJobsResponse {
   collected_at: string;
   error?: string;
 }
+
+/* ─────────── GM Commander v2 — Bulk Templates tipos ─────────── */
+
+export type BulkTemplateCategory = "evento" | "punicao" | "recompensa" | "broadcast";
+
+export interface BulkTemplate {
+  template_key: string;
+  label: string;
+  category: BulkTemplateCategory;
+  command_key: BulkCommandKey;
+  selection: BulkSelectionParams;
+  default_payload: Record<string, unknown>;
+  requires_preview: boolean;
+  requires_confirmation: boolean;
+  created_by?: string;
+  updated_by?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface SaveBulkTemplatePayload {
+  template_key: string;
+  label: string;
+  category: BulkTemplateCategory;
+  command_key: BulkCommandKey;
+  selection: BulkSelectionParams;
+  default_payload: Record<string, unknown>;
+  requires_preview?: boolean;
+  requires_confirmation?: boolean;
+}
+
+export interface UpdateBulkTemplatePayload extends SaveBulkTemplatePayload {}
+
+export interface ExecuteBulkTemplatePayload {
+  template_key: string;
+  mode: "queue" | "schedule";
+  /** For schedule mode */
+  schedule?: {
+    day_of_week: number;
+    time_utc: string;
+    timezone?: string;
+    name?: string;
+  };
+  /** Override default_payload */
+  payload_overrides?: Record<string, unknown>;
+  confirm?: string;
+}
+
+export interface BulkTemplateResponse {
+  success: boolean;
+  template: BulkTemplate;
+  error?: string;
+}
+
+export interface BulkTemplatesListResponse {
+  success: boolean;
+  templates: BulkTemplate[];
+  count: number;
+  error?: string;
+}
