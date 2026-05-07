@@ -4,6 +4,7 @@ import * as React from 'npm:react@18.3.1'
 
 import {
   Body,
+  Button,
   Container,
   Head,
   Heading,
@@ -15,32 +16,48 @@ import {
 
 interface EmailChangeEmailProps {
   siteName: string
-  siteUrl: string
-  recipient: string
+  // oldEmail is the user's current address (HookData.OldEmail). For the
+  // NEW-recipient half of a secure email_change fanout, `email` equals the
+  // recipient (NEW), so the "from" line must render oldEmail to read
+  // "from OLD to NEW" instead of "from NEW to NEW".
+  oldEmail: string
+  email: string
+  newEmail: string
   confirmationUrl: string
-  tokenHash: string
 }
 
 export const EmailChangeEmail = ({
   siteName,
-  siteUrl,
-  recipient,
+  oldEmail,
+  newEmail,
   confirmationUrl,
-  tokenHash,
 }: EmailChangeEmailProps) => (
-  <Html lang="pt-BR" dir="ltr">
+  <Html lang="en" dir="ltr">
     <Head />
-    <Preview>Confirme seu novo email — {siteName}</Preview>
+    <Preview>Confirm your email change for {siteName}</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Heading style={h1}>📧 Alteração de Email</Heading>
+        <Heading style={h1}>Confirm your email change</Heading>
         <Text style={text}>
-          Use o código abaixo para confirmar a alteração de email no{' '}
-          <Link href={siteUrl} style={link}><strong>{siteName}</strong></Link>:
+          You requested to change your email address for {siteName} from{' '}
+          <Link href={`mailto:${oldEmail}`} style={link}>
+            {oldEmail}
+          </Link>{' '}
+          to{' '}
+          <Link href={`mailto:${newEmail}`} style={link}>
+            {newEmail}
+          </Link>
+          .
         </Text>
-        <Text style={codeStyle}>{tokenHash}</Text>
+        <Text style={text}>
+          Click the button below to confirm this change:
+        </Text>
+        <Button style={button} href={confirmationUrl}>
+          Confirm Email Change
+        </Button>
         <Text style={footer}>
-          Se você não solicitou esta alteração, pode ignorar este email.
+          If you didn't request this change, please secure your account
+          immediately.
         </Text>
       </Container>
     </Body>
@@ -49,10 +66,27 @@ export const EmailChangeEmail = ({
 
 export default EmailChangeEmail
 
-const main = { backgroundColor: '#ffffff', fontFamily: 'Inter, Arial, sans-serif' }
-const container = { padding: '20px 25px', borderTop: '4px solid #7F1D1D' }
-const h1 = { fontSize: '22px', fontWeight: 'bold' as const, color: '#7F1D1D', margin: '0 0 20px' }
-const text = { fontSize: '14px', color: '#55575d', lineHeight: '1.5', margin: '0 0 25px' }
-const link = { color: '#7F1D1D', textDecoration: 'underline' }
-const codeStyle = { fontSize: '28px', fontWeight: 'bold' as const, color: '#7F1D1D', letterSpacing: '4px', textAlign: 'center' as const, padding: '16px', backgroundColor: '#FFF5F5', borderRadius: '8px', margin: '0 0 25px' }
+const main = { backgroundColor: '#ffffff', fontFamily: 'Arial, sans-serif' }
+const container = { padding: '20px 25px' }
+const h1 = {
+  fontSize: '22px',
+  fontWeight: 'bold' as const,
+  color: '#000000',
+  margin: '0 0 20px',
+}
+const text = {
+  fontSize: '14px',
+  color: '#55575d',
+  lineHeight: '1.5',
+  margin: '0 0 25px',
+}
+const link = { color: 'inherit', textDecoration: 'underline' }
+const button = {
+  backgroundColor: '#000000',
+  color: '#ffffff',
+  fontSize: '14px',
+  borderRadius: '8px',
+  padding: '12px 20px',
+  textDecoration: 'none',
+}
 const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }
