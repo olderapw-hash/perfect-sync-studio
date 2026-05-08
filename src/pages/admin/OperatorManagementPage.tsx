@@ -40,7 +40,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useOperatorPermissions } from "@/hooks/useOperatorPermissions";
+import { OperatorPermissionsProvider, useOperatorPermissions } from "@/hooks/useOperatorPermissions";
 import {
   pwApi,
   EndpointMissingError,
