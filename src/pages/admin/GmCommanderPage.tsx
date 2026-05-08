@@ -316,7 +316,14 @@ const PW_ICON_NAMES = [
   "bag", "potion", "gold", "sun", "crystal2", "mail", "quill", "heart", "wand",
 ];
 
-type TabKey = "compensation" | "moderation" | "communication" | "permissions" | "bulk" | "history";
+const ROLE_LABELS: Record<string, string> = {
+  viewer: "Viewer",
+  gm_operator: "GM Operator",
+  gm_supervisor: "GM Supervisor",
+  gm_admin: "GM Admin",
+  super_admin: "Super Admin",
+};
+
 
 const DEFAULT_TAB_ICONS: Record<TabKey, string> = {
   compensation: "Gift",
