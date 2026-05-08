@@ -33,7 +33,7 @@ export const EmailChangeEmail = ({
     <Preview>Confirme seu novo email — {siteName}</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Heading style={h1}>✉️ Alteração de Email</Heading>
+        <Heading style={h1}>📧 Confirme seu Novo Email</Heading>
         <Text style={text}>
           Você solicitou a alteração do email no {siteName} de{' '}
           <Link href={`mailto:${oldEmail}`} style={link}>

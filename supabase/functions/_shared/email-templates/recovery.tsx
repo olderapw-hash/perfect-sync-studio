@@ -29,7 +29,7 @@ export const RecoveryEmail = ({
       <Container style={container}>
         <Heading style={h1}>🔑 Redefinir Senha</Heading>
         <Text style={text}>
-          Recebemos uma solicitação para redefinir sua senha no <strong>{siteName}</strong>.
+          Recebemos uma solicitação para redefinir sua senha no {siteName}.
           Clique no botão abaixo para escolher uma nova senha.
         </Text>
         <Button style={button} href={confirmationUrl}>

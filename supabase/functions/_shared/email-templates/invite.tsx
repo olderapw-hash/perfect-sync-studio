@@ -30,7 +30,7 @@ export const InviteEmail = ({
     <Preview>Você foi convidado — {siteName}</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Heading style={h1}>📜 Convite Recebido</Heading>
+        <Heading style={h1}>📜 Você foi Convidado</Heading>
         <Text style={text}>
           Você foi convidado para o{' '}
           <Link href={siteUrl} style={link}>
@@ -42,7 +42,7 @@ export const InviteEmail = ({
           Aceitar Convite
         </Button>
         <Text style={footer}>
-          Se você não esperava este convite, pode ignorar este email.
+          Se você não esperava este convite, pode ignorar este email com segurança.
         </Text>
       </Container>
     </Body>
