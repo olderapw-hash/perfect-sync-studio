@@ -17,12 +17,12 @@ const corsHeaders = {
 }
 
 const EMAIL_SUBJECTS: Record<string, string> = {
-  signup: 'Confirme seu email — Orphea Core',
-  invite: 'Você foi convidado — Orphea Core',
-  magiclink: 'Seu link de login — Orphea Core',
-  recovery: 'Redefinir senha — Orphea Core',
-  email_change: 'Confirme seu novo email — Orphea Core',
-  reauthentication: 'Código de verificação — Orphea Core',
+  signup: 'Confirm your email',
+  invite: "You've been invited",
+  magiclink: 'Your login link',
+  recovery: 'Reset your password',
+  email_change: 'Confirm your new email',
+  reauthentication: 'Your verification code',
 }
 
 // Template mapping
@@ -36,7 +36,7 @@ const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
 }
 
 // Configuration
-const SITE_NAME = "Orphea Core"
+const SITE_NAME = "perfect-sync-studio"
 const SENDER_DOMAIN = "notify.orpheacore.com"
 const ROOT_DOMAIN = "orpheacore.com"
 const FROM_DOMAIN = "notify.orpheacore.com" // Domain shown in From address (may be root or sender subdomain)
