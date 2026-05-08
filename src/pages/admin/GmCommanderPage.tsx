@@ -1081,9 +1081,12 @@ function ActionPicker({
 } & VisibilityProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const active = items.find((i) => i.id === activeId) ?? null;
+  const { canAction: opCan, loading: opLoading } = useOperatorPermissions();
 
-  // Filter hidden cards for non-superadmin
-  const visibleItems = isSuperadmin ? items : items.filter((i) => isCardVisible(i.id, cardVisibility));
+  // Filter hidden cards for non-superadmin, then filter by operator permissions.
+  // Items the operator has no permission for are hidden entirely (not just disabled).
+  const visibleItems = (isSuperadmin ? items : items.filter((i) => isCardVisible(i.id, cardVisibility)))
+    .filter((i) => opLoading || opCan(i.action));
 
   return (
     <div>
