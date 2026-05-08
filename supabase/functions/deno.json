@@ -1,5 +1,4 @@
 {
-  "nodeModulesDir": "auto",
   "imports": {
     "@paddle/paddle-node-sdk": "npm:@paddle/paddle-node-sdk"
   }
