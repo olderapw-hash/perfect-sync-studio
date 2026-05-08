@@ -122,6 +122,10 @@ const ALLOWED_ACTIONS = new Set([
   // Operator Permissions v1 — consulta de permissões do operador na VPS.
   "getOperatorPermissionCatalog",
   "getOperatorPermissionState",
+  // Operator Registry — CRUD de operadores (operators.json).
+  "getOperatorRegistry",
+  "saveOperatorRegistryEntry",
+  "deleteOperatorRegistryEntry",
 ]);
 
 // Mapa Action → permissão exigida (deve refletir src/lib/serverPermissions.ts).
