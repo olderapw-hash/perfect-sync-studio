@@ -316,6 +316,15 @@ Deno.serve(async (req: Request) => {
   // Validamos ownership/membership antes de usar.
   const requestedServerId = req.headers.get("x-server-id");
 
+  // Extrai headers do operador para repassar à VPS (enforce mode).
+  const operatorHeaders: Record<string, string> = {};
+  const opId = req.headers.get("x-operator-id");
+  const opEmail = req.headers.get("x-operator-email");
+  const opName = req.headers.get("x-operator-name");
+  if (opId) operatorHeaders["x-operator-id"] = opId;
+  if (opEmail) operatorHeaders["x-operator-email"] = opEmail;
+  if (opName) operatorHeaders["x-operator-name"] = opName;
+
   // Resolução de credenciais por tenant (multi-servidor):
   // 1. Se x-server-id veio E user é membro → usa esse tenant.
   // 2. Senão lê o tenant ATIVO do user (is_active=true).
@@ -624,7 +633,7 @@ Deno.serve(async (req: Request) => {
       const target = `${endpoint}?action=getClsconfig`;
       const upstream = await fetch(target, {
         method: "GET",
-        headers: { Accept: "application/json", "x-sync-secret": PW_API_SECRET },
+        headers: { Accept: "application/json", "x-sync-secret": PW_API_SECRET, ...operatorHeaders },
       });
       const out = await relay(upstream, undefined, { softFail: true, context: "getClsconfig" });
       void logAction("getClsconfig", target, out.status === 200, upstream.status);
@@ -683,6 +692,7 @@ Deno.serve(async (req: Request) => {
           Accept: "application/json",
           "Content-Type": "application/json",
           "x-sync-secret": PW_API_SECRET,
+          ...operatorHeaders,
         },
         body: JSON.stringify(body),
       });
@@ -726,6 +736,7 @@ Deno.serve(async (req: Request) => {
         headers: {
           Accept: "application/json",
           "x-sync-secret": PW_API_SECRET,
+          ...operatorHeaders,
         },
       };
       if (req.method === "POST") {
