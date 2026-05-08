@@ -547,16 +547,18 @@ function GmCommanderPageInner() {
       </header>
 
       <main className="flex-1 overflow-y-auto px-4 py-4">
-        <Tabs defaultValue="compensation" className="space-y-5">
+        <Tabs defaultValue={opPerms.canAction("sendMailItem") ? "compensation" : "history"} className="space-y-5">
           <TabsList className="h-auto flex-wrap gap-1 rounded-xl border border-border/40 bg-card/30 p-1 backdrop-blur-sm">
             {([
-              { key: "compensation" as TabKey, label: "Compensação" },
-              { key: "moderation" as TabKey, label: "Moderação" },
-              { key: "communication" as TabKey, label: "Comunicação" },
-              { key: "permissions" as TabKey, label: "Permissões GM" },
-              { key: "bulk" as TabKey, label: "Bulk Commander" },
-              { key: "history" as TabKey, label: "Histórico" },
-            ] as const).map(({ key, label }) => {
+              { key: "compensation" as TabKey, label: "Compensação", gateAction: "sendMailItem" },
+              { key: "moderation" as TabKey, label: "Moderação", gateAction: "kickRole" },
+              { key: "communication" as TabKey, label: "Comunicação", gateAction: "sendSystemMessage" },
+              { key: "permissions" as TabKey, label: "Permissões GM", gateAction: "grantGmPermission" },
+              { key: "bulk" as TabKey, label: "Bulk Commander", gateAction: "queueBulkCommand" },
+              { key: "history" as TabKey, label: "Histórico", gateAction: "getGmActionHistory" },
+            ] as const)
+              .filter(({ gateAction }) => opPerms.loading || opPerms.canAction(gateAction))
+              .map(({ key, label }) => {
               return (
                 <TabsTrigger key={key} value={key} className="gap-2 rounded-lg px-4 py-2 text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-[0_0_12px_-3px_hsl(210_85%_60%/0.3)]">
                   <TabIconRenderer name={tabIcons[key]} className="h-3.5 w-3.5" />
