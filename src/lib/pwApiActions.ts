@@ -2272,6 +2272,23 @@ export interface OperatorPermissionCatalogResponse {
   error?: string;
 }
 
+/* ─────────── Operator Registry — tipos ─────────── */
+
+export interface OperatorRegistryEntry {
+  id: string;
+  email: string;
+  name?: string;
+  role: OperatorRole;
+  enabled: boolean;
+  allowed_ips?: string[];
+}
+
+export interface OperatorRegistryResponse {
+  success: boolean;
+  operators: OperatorRegistryEntry[];
+  error?: string;
+}
+
 export interface GetBulkScheduleResponse {
   success: boolean;
   schedule: Record<string, unknown>;
