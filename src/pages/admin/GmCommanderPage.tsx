@@ -391,7 +391,9 @@ function isCardVisible(cardId: string, visibility: Record<string, boolean>): boo
 export default function GmCommanderPage() {
   return (
     <FeedbackProvider>
-      <GmCommanderPageInner />
+      <OperatorPermissionsProvider>
+        <GmCommanderPageInner />
+      </OperatorPermissionsProvider>
     </FeedbackProvider>
   );
 }
