@@ -56,6 +56,7 @@ import SitePage from "./pages/admin/SitePage.tsx";
 import InstallerReleasesPage from "./pages/admin/InstallerReleasesPage.tsx";
 import GmCommanderPage from "./pages/admin/GmCommanderPage.tsx";
 import LicensesPage from "./pages/admin/LicensesPage.tsx";
+import OperatorManagementPage from "./pages/admin/OperatorManagementPage.tsx";
 import AccountSettingsPage from "./pages/admin/AccountSettingsPage.tsx";
 import PrivacyPolicy from "./pages/PrivacyPolicy.tsx";
 import TermsOfService from "./pages/TermsOfService.tsx";
@@ -150,6 +151,7 @@ const App = () => (
 
                     {/* GM Commander — compensação, moderação e comunicação. */}
                     <Route path="gm" element={<GmCommanderPage />} />
+                    <Route path="operators" element={<OperatorManagementPage />} />
 
                     {/* Segurança v1 — moderação operacional (kick/ban/mute) consolidada em GM Commander. */}
                     <Route path="security" element={<SecurityOverviewPage />}>

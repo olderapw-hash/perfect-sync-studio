@@ -196,6 +196,13 @@ const SUPERADMIN_SECTIONS: NavSection[] = [
     basePath: "/admin/licenses",
     children: [{ to: "/admin/licenses", label: "Gerenciar licenças", end: true }],
   },
+  {
+    id: "operators",
+    label: "Gestão de Operadores",
+    icon: UserCog,
+    basePath: "/admin/operators",
+    children: [{ to: "/admin/operators", label: "Gerenciar operadores", end: true }],
+  },
 ];
 
 export const AdminLayout = () => {
