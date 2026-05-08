@@ -736,6 +736,7 @@ Deno.serve(async (req: Request) => {
         headers: {
           Accept: "application/json",
           "x-sync-secret": PW_API_SECRET,
+          ...operatorHeaders,
         },
       };
       if (req.method === "POST") {
