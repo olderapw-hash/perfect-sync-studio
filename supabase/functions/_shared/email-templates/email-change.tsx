@@ -9,6 +9,7 @@ import {
   Head,
   Heading,
   Html,
+  Link,
   Preview,
   Text,
 } from 'npm:@react-email/components@0.0.22'
@@ -16,6 +17,7 @@ import {
 interface EmailChangeEmailProps {
   siteName: string
   oldEmail: string
+  email: string
   newEmail: string
   confirmationUrl: string
 }
@@ -31,17 +33,26 @@ export const EmailChangeEmail = ({
     <Preview>Confirme seu novo email — {siteName}</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Heading style={h1}>📧 Alteração de Email</Heading>
+        <Heading style={h1}>✉️ Alteração de Email</Heading>
         <Text style={text}>
-          Você solicitou a alteração do email da sua conta no <strong>{siteName}</strong>
-          {oldEmail ? <> de <strong>{oldEmail}</strong></> : null}
-          {newEmail ? <> para <strong>{newEmail}</strong></> : null}.
+          Você solicitou a alteração do email no {siteName} de{' '}
+          <Link href={`mailto:${oldEmail}`} style={link}>
+            {oldEmail}
+          </Link>{' '}
+          para{' '}
+          <Link href={`mailto:${newEmail}`} style={link}>
+            {newEmail}
+          </Link>
+          .
+        </Text>
+        <Text style={text}>
+          Clique no botão abaixo para confirmar esta alteração:
         </Text>
         <Button style={button} href={confirmationUrl}>
-          Confirmar Novo Email
+          Confirmar Alteração
         </Button>
         <Text style={footer}>
-          Se você não solicitou esta alteração, pode ignorar este email.
+          Se você não solicitou esta alteração, proteja sua conta imediatamente.
         </Text>
       </Container>
     </Body>
@@ -54,5 +65,6 @@ const main = { backgroundColor: '#ffffff', fontFamily: 'Inter, Arial, sans-serif
 const container = { padding: '20px 25px', borderTop: '4px solid #7F1D1D' }
 const h1 = { fontSize: '22px', fontWeight: 'bold' as const, color: '#7F1D1D', margin: '0 0 20px' }
 const text = { fontSize: '14px', color: '#55575d', lineHeight: '1.5', margin: '0 0 25px' }
+const link = { color: '#7F1D1D', textDecoration: 'underline' }
 const button = { backgroundColor: '#7F1D1D', color: '#ffffff', fontSize: '14px', borderRadius: '8px', padding: '12px 20px', textDecoration: 'none' }
 const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }

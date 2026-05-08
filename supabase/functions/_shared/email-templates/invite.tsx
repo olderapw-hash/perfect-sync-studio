@@ -30,13 +30,13 @@ export const InviteEmail = ({
     <Preview>Você foi convidado — {siteName}</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Heading style={h1}>📩 Convite</Heading>
+        <Heading style={h1}>📜 Convite Recebido</Heading>
         <Text style={text}>
-          Você foi convidado para participar do{' '}
+          Você foi convidado para o{' '}
           <Link href={siteUrl} style={link}>
             <strong>{siteName}</strong>
           </Link>
-          !
+          . Clique no botão abaixo para aceitar o convite e criar sua conta.
         </Text>
         <Button style={button} href={confirmationUrl}>
           Aceitar Convite
