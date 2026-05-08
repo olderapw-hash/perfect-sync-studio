@@ -113,6 +113,7 @@ import { EndpointMissingNotice } from "@/components/admin/EndpointMissingNotice"
 import { BulkCommanderTab } from "@/components/admin/BulkCommanderTab";
 
 import { useAuth } from "@/hooks/useAuth";
+import { OperatorPermissionsProvider, useOperatorPermissions } from "@/hooks/useOperatorPermissions";
 import { useServers } from "@/hooks/useServers";
 import { useServerPermissions } from "@/hooks/useServerPermissions";
 import { logAuditEvent } from "@/lib/auditLog";
