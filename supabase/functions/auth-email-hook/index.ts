@@ -94,7 +94,10 @@ async function handlePreview(req: Request): Promise<Response> {
   const apiKey = Deno.env.get('LOVABLE_API_KEY')
   const authHeader = req.headers.get('Authorization')
 
+  console.log('Preview request received', { hasApiKey: !!apiKey, hasAuth: !!authHeader, method: req.method })
+
   if (!apiKey || authHeader !== `Bearer ${apiKey}`) {
+    console.error('Preview auth failed', { hasApiKey: !!apiKey, authMatch: authHeader === `Bearer ${apiKey}` })
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
       headers: { ...previewCorsHeaders, 'Content-Type': 'application/json' },
@@ -105,7 +108,9 @@ async function handlePreview(req: Request): Promise<Response> {
   try {
     const body = await req.json()
     type = body.type
+    console.log('Preview type requested', { type })
   } catch (error) {
+    console.error('Preview JSON parse failed', { error: String(error) })
     return new Response(JSON.stringify({ error: 'Invalid JSON in request body' }), {
       status: 400,
       headers: { ...previewCorsHeaders, 'Content-Type': 'application/json' },
@@ -115,19 +120,30 @@ async function handlePreview(req: Request): Promise<Response> {
   const EmailTemplate = EMAIL_TEMPLATES[type]
 
   if (!EmailTemplate) {
+    console.error('Unknown email type for preview', { type })
     return new Response(JSON.stringify({ error: `Unknown email type: ${type}` }), {
       status: 400,
       headers: { ...previewCorsHeaders, 'Content-Type': 'application/json' },
     })
   }
 
-  const sampleData = SAMPLE_DATA[type] || {}
-  const html = await renderAsync(React.createElement(EmailTemplate, sampleData))
+  try {
+    const sampleData = SAMPLE_DATA[type] || {}
+    console.log('Rendering preview template', { type, sampleData: JSON.stringify(sampleData) })
+    const html = await renderAsync(React.createElement(EmailTemplate, sampleData))
+    console.log('Preview rendered successfully', { type, htmlLength: html.length })
 
-  return new Response(html, {
-    status: 200,
-    headers: { ...previewCorsHeaders, 'Content-Type': 'text/html; charset=utf-8' },
-  })
+    return new Response(html, {
+      status: 200,
+      headers: { ...previewCorsHeaders, 'Content-Type': 'text/html; charset=utf-8' },
+    })
+  } catch (renderError) {
+    console.error('Preview render FAILED', { type, error: String(renderError), stack: renderError instanceof Error ? renderError.stack : undefined })
+    return new Response(JSON.stringify({ error: 'Template render failed', details: String(renderError) }), {
+      status: 500,
+      headers: { ...previewCorsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
 }
 
 // Webhook handler - verifies signature and sends email
