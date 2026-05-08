@@ -17,12 +17,12 @@ const corsHeaders = {
 }
 
 const EMAIL_SUBJECTS: Record<string, string> = {
-  signup: 'Confirme seu email — Orphea Core',
-  invite: 'Você foi convidado — Orphea Core',
-  magiclink: 'Seu link de acesso — Orphea Core',
-  recovery: 'Redefinir senha — Orphea Core',
-  email_change: 'Confirme a alteração de email — Orphea Core',
-  reauthentication: 'Seu código de verificação — Orphea Core',
+  signup: 'Confirm your email',
+  invite: "You've been invited",
+  magiclink: 'Your login link',
+  recovery: 'Reset your password',
+  email_change: 'Confirm your new email',
+  reauthentication: 'Your verification code',
 }
 
 // Template mapping
@@ -36,7 +36,7 @@ const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
 }
 
 // Configuration
-const SITE_NAME = "Orphea Core"
+const SITE_NAME = "perfect-sync-studio"
 const SENDER_DOMAIN = "notify.orpheacore.com"
 const ROOT_DOMAIN = "orpheacore.com"
 const FROM_DOMAIN = "notify.orpheacore.com" // Domain shown in From address (may be root or sender subdomain)
@@ -91,14 +91,10 @@ async function handlePreview(req: Request): Promise<Response> {
     return new Response(null, { headers: previewCorsHeaders })
   }
 
-  // Validate the Bearer token against LOVABLE_API_KEY.
-  // After key rotation, the edge-function env may hold a newer key while the
-  // Cloud preview system still sends the previous one.  Accept any token that
-  // starts with "sk_" (Lovable-issued signing key) so preview keeps working
-  // across rotations.  The webhook path uses full HMAC signature verification
-  // via @lovable.dev/webhooks-js, so security is not weakened.
+  const apiKey = Deno.env.get('LOVABLE_API_KEY')
   const authHeader = req.headers.get('Authorization')
-  if (!authHeader || !authHeader.startsWith('Bearer sk_')) {
+
+  if (!apiKey || authHeader !== `Bearer ${apiKey}`) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
       headers: { ...previewCorsHeaders, 'Content-Type': 'application/json' },
